@@ -1,0 +1,49 @@
+#! /bin/sh
+     
+      # This is a very simple implementation. It handles only "ln -s" syntax and
+      # replaces it by a copy. This is used to build GNAT Mingw32 based using Cygwin
+      # toolset.
+     
+      if test "$3" = "symtest.tem"; then
+      # GNAT configure check if "ln -s" works to setup bootstrap symlink for stage1,
+      # stage2, stage3, include. See src/configure. Here we really do not want to be
+      # nice, just pretend we do not support symlinks. Here is the line we are
+      # responding to:
+      #    if $symbolic_link $srcdir/gcc.c symtest.tem 2>/dev/null
+          exit 1;
+      fi;
+     
+      # In all others cases, try to be as helpful as possible.
+     
+      SYM=0
+      while [ "$#" -ne 0 ]; do
+          case $1 in
+            -*) case $1 in
+                  -s) SYM=1;; 
+                esac
+                shift
+                ;;
+             *) break
+          esac
+      done
+     
+      if test "$SYM" = "1"; then
+          if [ -f $1 ]; then
+              cp -pf $@;
+          elif [ -d $1 ]; then
+              echo "ln -s not supported on this system"
+              exit 1;
+          else
+              # symlink for non-existing file/directory can't be emulated.
+              exit 1;
+          fi;
+          exit 0;
+     
+      else
+          if [ -e $1 ]; then
+              cp -pfr $@;
+              exit 0;
+          else
+              exit 1;
+          fi;
+      fi;

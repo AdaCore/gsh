@@ -1,0 +1,132 @@
+Making check in intl
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/intl' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/intl' wordt verlaten
+Making check in lib
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/lib' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/lib' wordt verlaten
+Making check in po
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/po' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/po' wordt verlaten
+Making check in sed
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/sed' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/sed' wordt verlaten
+Making check in doc
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/doc' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/doc' wordt verlaten
+Making check in testsuite
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/testsuite' wordt binnengegaan
+make  bug-regex7.exe bug-regex8.exe bug-regex9.exe bug-regex10.exe bug-regex11.exe bug-regex12.exe bug-regex13.exe bug-regex14.exe bug-regex15.exe bug-regex16.exe bug-regex21.exe tst-pcre.exe tst-boost.exe runtests.exe runptests.exe tst-rxspencer.exe tst-regex2.exe
+make[2]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/testsuite' wordt binnengegaan
+make[2]: 'bug-regex7.exe' is bijgewerkt.
+make[2]: 'bug-regex8.exe' is bijgewerkt.
+make[2]: 'bug-regex9.exe' is bijgewerkt.
+make[2]: 'bug-regex10.exe' is bijgewerkt.
+make[2]: 'bug-regex11.exe' is bijgewerkt.
+make[2]: 'bug-regex12.exe' is bijgewerkt.
+make[2]: 'bug-regex13.exe' is bijgewerkt.
+make[2]: 'bug-regex14.exe' is bijgewerkt.
+make[2]: 'bug-regex15.exe' is bijgewerkt.
+make[2]: 'bug-regex16.exe' is bijgewerkt.
+make[2]: 'bug-regex21.exe' is bijgewerkt.
+make[2]: 'tst-pcre.exe' is bijgewerkt.
+make[2]: 'tst-boost.exe' is bijgewerkt.
+make[2]: 'runtests.exe' is bijgewerkt.
+make[2]: 'runptests.exe' is bijgewerkt.
+make[2]: 'tst-rxspencer.exe' is bijgewerkt.
+make[2]: 'tst-regex2.exe' is bijgewerkt.
+make[2]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/testsuite' wordt verlaten
+make  check-TESTS
+make[2]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/testsuite' wordt binnengegaan
+PASS: bug-regex7.exe
+PASS: bug-regex8.exe
+PASS: bug-regex9.exe
+PASS: bug-regex10.exe
+PASS: bug-regex11.exe
+PASS: bug-regex12.exe
+PASS: bug-regex13.exe
+PASS: bug-regex14.exe
+PASS: bug-regex15.exe
+PASS: bug-regex16.exe
+PASS: bug-regex21.exe
+PASS: tst-pcre.exe
+PASS: tst-boost.exe
+PASS: runtests.exe
+PASS: runptests.exe
+PASS: tst-rxspencer.exe
+PASS: tst-regex2.exe
+PASS: space
+PASS: appquit
+PASS: enable
+PASS: sep
+PASS: inclib
+PASS: 8bit
+PASS: newjis
+PASS: xabcx
+PASS: dollar
+PASS: noeol
+PASS: noeolw
+PASS: modulo
+PASS: numsub
+PASS: numsub2
+PASS: numsub3
+PASS: numsub4
+PASS: numsub5
+PASS: 0range
+PASS: bkslashes
+PASS: head
+PASS: madding
+PASS: mac-mf
+PASS: empty
+PASS: xbxcx
+PASS: xbxcx3
+PASS: recall
+PASS: recall2
+PASS: xemacs
+PASS: fasts
+PASS: uniq
+PASS: manis
+PASS: khadafy
+PASS: linecnt
+PASS: eval
+PASS: distrib
+PASS: 8to7
+PASS: y-bracket
+PASS: y-newline
+PASS: allsub
+PASS: cv-vars
+PASS: classes
+PASS: middle
+PASS: bsd
+PASS: stdin
+PASS: flipcase
+PASS: insens
+PASS: subwrite
+PASS: writeout
+PASS: readin
+PASS: help
+PASS: version
+PASS: file
+PASS: quiet
+PASS: factor
+PASS: binary3
+PASS: binary2
+../../sed-4.1.5-src/testsuite/runtest: line 11: tmp.test: Permission denied
+cat: tmp.test: Permission denied
+FAIL: binary
+../../sed-4.1.5-src/testsuite/runtest: line 11: tmp.test: Permission denied
+cat: tmp.test: Permission denied
+FAIL: dc
+================================
+2 of 75 tests failed
+Please report to bonzini@gnu.org
+================================
+make[2]: [check-TESTS] Fout 1 (genegeerd)
+make[2]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/testsuite' wordt verlaten
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5/testsuite' wordt verlaten
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5' wordt binnengegaan
+make[1]: Map '/cygdrive/j/Textproc/sed/4.1.5/sed-4.1.5' wordt verlaten

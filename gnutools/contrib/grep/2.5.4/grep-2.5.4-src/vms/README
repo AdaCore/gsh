@@ -1,0 +1,23 @@
+  Copyright (C) 1992, 1997, 1998, 1999, 2000, 2001, 2002, 2004,
+  2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+  
+  Copying and distribution of this file, with or without modification,
+  are permitted in any medium without royalty provided the copyright
+  notice and this notice are preserved.
+
+** VMS
+
+Warning: untested
+  VMS users should try running the enclosed command file "make.com".
+  It may be necessary to add :
+
+#ifdef vms
+#include <perror.h>
+#endif
+
+in system.h (see HAVE_STRERROR).
+
+  If you do not have NLS :
+
+#define ENABLE_NLS 0
+#define HAVE_LIBINTL_H 0

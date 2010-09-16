@@ -1,0 +1,53 @@
+* Grep-2.5.4 for Windows *
+==========================
+
+What is it?
+-----------
+Grep: print lines matching a pattern
+
+Description
+-----------
+Grep searches one or more input files for lines containing a match to a specified pattern. By default, grep prints the matching lines.
+	 
+Homepage
+--------
+http://www.gnu.org/software/grep/grep.html
+Sources: http://ftp.gnu.org/gnu/grep/grep-2.5.4.tar.gz
+	 
+System
+------
+- Win32, i.e. MS-Windows 95 / 98 / ME / NT / 2000 / XP / 2003 / Vista / 2008 with msvcrt.dll
+- if msvcrt.dll is not in your Windows/System folder, get it from
+  Microsoft <http://support.microsoft.com/kb/259403>
+  or by installing Internet Explorer 4.0 or higher
+  <http://www.microsoft.com/windows/ie> 
+- libintl-2 <http://gnuwin32.sourceforge.net/packages/libintl.htm> 
+- libiconv-2 <http://gnuwin32.sourceforge.net/packages/libiconv.htm> 
+- regex <http://gnuwin32.sourceforge.net/packages/regex.htm> 
+- pcre <http://gnuwin32.sourceforge.net/packages/pcre.htm> 
+
+Notes
+-----
+- Bugs and questions on this MS-Windows port: gnuwin32@users.sourceforge.net
+
+Package Availability
+--------------------
+- in: http://gnuwin32.sourceforge.net
+Installation
+------------
+
+Sources
+-------
+- grep-2.5.4-src.zip
+
+Compilation
+-----------
+The package has been compiled with GNU auto-tools, GNU make, and Mingw
+(GCC for MS-Windows). Any differences from the original sources are given
+in grep-2.5.4-GnuWin32.diffs in grep-2.5.4-src.zip. Libraries needed
+for compilation can be found at the lines starting with 'LIBS = ' in the
+Makefiles. Usually, these are standard libraries provided with Mingw, or
+libraries from the package itself; 'gw32c' refers to the libgw32c package,
+which provides MS-Windows substitutes or stubs for functions normally found in
+Unix. For more information, see: http://gnuwin32.sourceforge.net/compile.html
+and http://gnuwin32.sourceforge.net/packages/libgw32c.htm.

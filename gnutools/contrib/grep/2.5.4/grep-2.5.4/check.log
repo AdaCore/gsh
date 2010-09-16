@@ -1,0 +1,73 @@
+Making check in intl
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/intl' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/intl' wordt verlaten
+Making check in po
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/po' wordt binnengegaan
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/po' wordt verlaten
+Making check in lib
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/lib' wordt binnengegaan
+Making check in posix
+make[2]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/lib/posix' wordt binnengegaan
+make[2]: Er is niets te doen voor 'check'.
+make[2]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/lib/posix' wordt verlaten
+make[2]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/lib' wordt binnengegaan
+make[2]: Er is niets te doen voor 'check-am'.
+make[2]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/lib' wordt verlaten
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/lib' wordt verlaten
+Making check in doc
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/doc' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/doc' wordt verlaten
+Making check in src
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/src' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/src' wordt verlaten
+Making check in tests
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/tests' wordt binnengegaan
+make.exe  check-TESTS
+make[2]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/tests' wordt binnengegaan
+
+Please, do not be alarmed if some of the tests failed.
+Report them to <bug-grep@gnu.org>,
+with the line number, the name of the file,
+and grep version number 'grep --version'.
+Thank You.
+
+PASS: warning.sh
+PASS: khadafy.sh
+Spencer test #37 failed
+FAIL: spencer1.sh
+PASS: bre.sh
+PASS: ere.sh
+PASS: pcre.sh
+PASS: status.sh
+PASS: empty.sh
+PASS: options.sh
+PASS: backref.sh
+PASS: file.sh
+PASS: foad1.sh
+SKIP: fmbtest.sh
+PASS: yesno.sh
+=================================
+1 of 13 tests failed
+(1 tests were not run)
+Please report to bug-grep@gnu.org
+=================================
+make[2]: [check-TESTS] Fout 1 (genegeerd)
+make[2]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/tests' wordt verlaten
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/tests' wordt verlaten
+Making check in m4
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/m4' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/m4' wordt verlaten
+Making check in vms
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/vms' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/vms' wordt verlaten
+Making check in bootstrap
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/bootstrap' wordt binnengegaan
+make[1]: Er is niets te doen voor 'check'.
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4/bootstrap' wordt verlaten
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4' wordt binnengegaan
+make[1]: Map '/cygdrive/j/Textproc/grep/2.5.4/grep-2.5.4' wordt verlaten
