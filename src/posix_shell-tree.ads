@@ -20,11 +20,6 @@ package Posix_Shell.Tree is
       Kind : List_Kind;
    end record;
 
-   type Case_Node_Id is record
-      N       : Node_Id;
-      Pattern : Annotated_String_List;
-   end record;
-
    Null_And_Or_Node : constant And_Or_Node_Id := (0, OR_LIST);
 
    package Node_Id_Tables is new GNAT.Dynamic_Tables
@@ -36,13 +31,6 @@ package Posix_Shell.Tree is
 
    package And_Or_Node_Id_Tables is new GNAT.Dynamic_Tables
      (And_Or_Node_Id,
-      Positive,
-      1,
-      16,
-      100);
-
-   package Case_Node_Id_Tables is new GNAT.Dynamic_Tables
-     (Case_Node_Id,
       Positive,
       1,
       16,
