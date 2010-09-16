@@ -1,5 +1,5 @@
 all:
-	gprbuild -P posix_shell
+	gprbuild -p -P posix_shell
 
 check:
 	cd testsuite && ./run.sh
