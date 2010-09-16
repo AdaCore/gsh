@@ -1,0 +1,70 @@
+project Posix_Shell is
+
+   type Build_Type is ("dev", "prod");
+   type Boolean_Type is ("true", "false");
+
+   Build     : Build_Type   := external ("BUILD", "dev");
+   Build_Dir : Build_Type   := Build;
+   Coverage  : Boolean_Type := external ("COVERAGE", "false");
+   Gnatmem   : Boolean_Type := external ("GNATMEM", "false");
+
+   Default_Switches := ("-gnat05", "-gnatwcfijklmopruvz", "-gnaty", "-gnatwe");
+   Default_Libs     := ("");
+
+   Dev_Switches := ("-g", "-O0");
+
+   case Coverage is
+      when "true" =>  Default_Switches := Default_Switches & ("-fprofile-arcs", "-ftest-coverage");
+                      Default_Libs     := Default_Libs & ("-lgcov");
+                      Build_Dir        := Build_Dir & "/cov";
+      when "false" => Build_Dir        := Build_Dir & "/no-cov";
+   end case;
+
+   case Gnatmem is
+      when "true" =>  Default_Libs     := Default_Libs & ("-lgmem");
+                      Build_Dir        := Build_Dir & "/gmem";
+      when "false" => Build_Dir        := Build_Dir & "/no-gmem";
+   end case;
+
+   for Main use ("gsh.adb");
+   for Source_Dirs use (".", "src");
+   for Languages use ("Ada", "C");
+
+   for Object_Dir use "obj/" & Build_Dir;
+
+   package Linker is
+      case Build is
+         when "prod" => for Default_Switches ("ada") use Default_Libs;
+         when "dev" =>  for Default_Switches ("ada") use Default_Libs;
+      end case;
+   end Linker;
+
+   package Binder is
+      case Build is
+         when "prod" => for Default_Switches ("ada") use ();
+         when "dev" =>  for Default_Switches ("ada") use ("-E");
+      end case;
+   end Binder;
+
+   package Builder is
+      case Build is
+         when "prod" =>
+            for Default_Switches ("ada") use ();
+         when "dev" =>
+            for Default_Switches ("c") use ("-g");
+            for Default_Switches ("ada") use ("-g");
+      end case;
+   end Builder;
+
+   package Compiler is
+      case Build is
+         when "prod" =>
+            for Default_Switches ("ada") use ("-O2", "-gnatpn") & Default_Switches;
+         when "dev" =>
+            for Default_Switches ("ada") use ("-gnata") & Dev_Switches & Default_Switches;
+            for Default_Switches ("c") use Dev_Switches;
+      end case;
+   end Compiler;
+
+end Posix_Shell;
+
