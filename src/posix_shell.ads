@@ -1,3 +1,5 @@
+with GNAT.OS_Lib;
+
 package Posix_Shell is
 
    type Annotation is
@@ -39,15 +41,24 @@ package Posix_Shell is
       T_AND,          -- '&'
       T_OR_IF,        -- '||'
       T_PIPE,         -- '|'
+      T_DLESSDASH,    -- '>>-'
+
+      --  Output redirection operators
+
       T_DGREAT,       -- '>>'
       T_CLOBBER,      -- '>|'
       T_GREATAND,     -- '>&'
-      T_DLESSDASH,    -- '>>-'
-      T_LESS,         -- '<'
       T_GREAT,        -- '>'
+
+      --  Input redirection operators
+
+      T_LESS,         -- '<'
       T_DLESS,        -- '<<'
       T_LESSAND,      -- '<&'
       T_LESSGREAT,    -- '<>'
+
+      T_IO_NUMBER,
+
       T_NEWLINE,      -- LF
       T_LPAR,         -- '('
       T_SEMI,         -- ';'
@@ -70,11 +81,23 @@ package Posix_Shell is
       T_UNTIL,        -- 'until'
       T_FOR,          -- 'for'
       T_LBRACE,       -- '}'
-      T_RBRACE,       -- '{'
-      T_IO_NUMBER);   -- number preceding a redirection operator
+      T_RBRACE       -- '{'
+      );   -- number preceding a redirection operator
+
+   subtype Input_Redirection_Ops is Token_Type range T_LESS .. T_LESSGREAT;
+   subtype Output_Redirection_Ops is Token_Type range T_DGREAT .. T_GREAT;
+   subtype Redirection_Ops is Token_Type range T_DGREAT .. T_LESSGREAT;
+   subtype Redirection_Tokens is Token_Type range T_DGREAT .. T_IO_NUMBER;
 
    Shell_Syntax_Error    : exception;
    Shell_Non_Implemented : exception;
    Buffer_Read_Error : exception;
 
+   Null_String_List : GNAT.OS_Lib.String_List (1 .. 0);
+
+   Null_String_List_Access : GNAT.OS_Lib.String_List_Access :=
+     new GNAT.OS_Lib.String_List'(Null_String_List);
+
+   subtype Node_Id is Natural;
+   Null_Node : constant Node_Id := 0;
 end Posix_Shell;

@@ -7,10 +7,6 @@ with GNAT.Dynamic_Tables;
 
 package Posix_Shell.Tree is
 
-   subtype Node_Id is Natural;
-
-   Null_Node : constant Node_Id := 0;
-
    type List_Kind is
      (OR_LIST,
       AND_LIST);

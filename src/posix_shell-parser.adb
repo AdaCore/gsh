@@ -4,6 +4,8 @@ with Posix_Shell.Output;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Annotated_String_Lists; use Annotated_String_Lists;
 with Posix_Shell.Lexer; use Posix_Shell.Lexer;
+with Posix_Shell.Tree; use Posix_Shell.Tree;
+
 
 package body Posix_Shell.Parser is
 
@@ -275,38 +277,14 @@ package body Posix_Shell.Parser is
    pragma Inline (Is_Input_Redirection_Op);
    --  return True if the Token type is an Input redirector and false otherwise
 
-   function Is_Output_Redirection_Op (T : Token_Type) return Boolean;
-   pragma Inline (Is_Output_Redirection_Op);
-   --  return True if the Token type is an output redirector and false
-   --  otherwise
-
    -----------------------------
    -- Is_Input_Redirection_Op --
    -----------------------------
 
    function Is_Input_Redirection_Op (T : Token_Type) return Boolean is
    begin
-      case T is
-         when T_LESS | T_LESSAND | T_LESSGREAT | T_DLESS =>
-            return True;
-         when others =>
-            return False;
-      end case;
+      return T in Input_Redirection_Ops'Range;
    end Is_Input_Redirection_Op;
-
-   ------------------------------
-   -- Is_Output_Redirection_Op --
-   ------------------------------
-
-   function Is_Output_Redirection_Op (T : Token_Type) return Boolean is
-   begin
-      case T is
-         when T_GREAT | T_GREATAND | T_DGREAT | T_CLOBBER =>
-            return True;
-         when others =>
-            return False;
-      end case;
-   end Is_Output_Redirection_Op;
 
    -----------------------
    -- Is_Redirection_Op --
@@ -317,9 +295,8 @@ package body Posix_Shell.Parser is
       Include_NIO : Boolean := False)
       return Boolean is
    begin
-      return (Is_Input_Redirection_Op (T) or else
-              Is_Output_Redirection_Op (T) or else
-              (Include_NIO and then T = T_IO_NUMBER));
+      return T in Redirection_Ops
+        or else (Include_NIO and then T = T_IO_NUMBER);
    end Is_Redirection_Op;
 
    -----------
@@ -717,7 +694,7 @@ package body Posix_Shell.Parser is
       IO_Mode   : constant Token_Type := Read_Token (B);
       Filename  : Annotated_String;
    begin
-      pragma Assert (Is_Redirection_Op (IO_Mode));
+      pragma Assert (IO_Mode in Redirection_Ops'Range);
 
       --  First if no file descriptor is specified as operator prefix, we
       --  calculate it which is the implicit one (stdin or stdout)
