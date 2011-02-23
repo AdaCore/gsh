@@ -748,6 +748,11 @@ package body Posix_Shell.Parser is
             Append (Tmp, '"', DOUBLE_QUOTE_END);
 
             Append (Value_List, Tmp);
+
+            case Lookahead (B) is
+               when T_SEMI | T_NEWLINE => Parse_Sequential_Sep (B, T, C);
+               when others => null;
+            end case;
          end;
       end if;
 
