@@ -282,7 +282,7 @@ package body Posix_Shell.Builtins_Expr is
                            if Right.I = 0 then
                               raise Expr_Error;
                            end if;
-                           Push_Result (Left.I mod Right.I);
+                           Push_Result (Left.I - (Left.I / Right.I) * Right.I);
                         when PIPE =>
                            if Left.I = 0 then
                               if Right.I = 0 then
