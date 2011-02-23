@@ -1,0 +1,1417 @@
+Out of 25 tests:
+   25 executed test(s) (non dead)
+    0 crash(es) detected
+    2 other potential regression(s)
+    0 expected regression(s)
+    0 unexpected passed test(s)
+    0 invalid test(s)
+    0 new dead test(s)
+    0 test(s) removed
+
+---------------- 2 new regression(s)
+break-1:DIFF:break - exit from for, while, or until loop (special) (output)
+expr-1:DIFF:expr utilities (builtin)                         (output)
+
+---------------- 0 already detected regression(s)
+
+---------------- differences in output
+================ Bug break-1 
+---------------- expected output
+PASSED
+Entering inner loop
+Entering inner loop
+Exiting inner loop
+Entering inner loop
+Exiting inner loop
+0
+0
+1
+---------------- actual output
+PASSED
+Entering inner loop
+Entering inner loop
+Exiting inner loop
+Entering inner loop
+Exiting inner loop
+0
+
+Execution terminated by unhandled exception
+Exception name: POSIX_SHELL.TREE.EVALS.BREAK_EXCEPTION
+Message: 9
+Call stack traceback locations:
+0x4b1a36 0x4a6d70 0x4a4b75 0x4b2f61 0x4a6b5c 0x4a4b75 0x4a4a60 0x4029c7 0x404266 0x4010b4 0x401146 0x750a3675 0x771b9d70 0x771b9d43
+================ Bug expr-1 
+---------------- expected output
+++++ Test string argument ++++
+test: expr toto               , output: 'toto'  , status:  0
+test: expr ''                 , output: ''      , status:  1
+test: expr 0ab                , output: '0ab'   , status:  0
+
+++++ Test integer argument ++++
+test: expr 4                  , output: '4'     , status:  0
+test: expr 0                  , output: '0'     , status:  1
+
+++++ Test = operator ++++
+test: expr 0 '=' 0            , output: '1'     , status:  0
+test: expr 0 '=' ''           , output: '0'     , status:  1
+test: expr 0 '=' abcd         , output: '0'     , status:  1
+test: expr 0 '=' bcde         , output: '0'     , status:  1
+test: expr 0 '=' 42           , output: '0'     , status:  1
+test: expr 0 '=' -42          , output: '0'     , status:  1
+test: expr 0 '=' 5            , output: '0'     , status:  1
+test: expr '' '=' 0           , output: '0'     , status:  1
+test: expr '' '=' ''          , output: '1'     , status:  0
+test: expr '' '=' abcd        , output: '0'     , status:  1
+test: expr '' '=' bcde        , output: '0'     , status:  1
+test: expr '' '=' 42          , output: '0'     , status:  1
+test: expr '' '=' -42         , output: '0'     , status:  1
+test: expr '' '=' 5           , output: '0'     , status:  1
+test: expr abcd '=' 0         , output: '0'     , status:  1
+test: expr abcd '=' ''        , output: '0'     , status:  1
+test: expr abcd '=' abcd      , output: '1'     , status:  0
+test: expr abcd '=' bcde      , output: '0'     , status:  1
+test: expr abcd '=' 42        , output: '0'     , status:  1
+test: expr abcd '=' -42       , output: '0'     , status:  1
+test: expr abcd '=' 5         , output: '0'     , status:  1
+test: expr bcde '=' 0         , output: '0'     , status:  1
+test: expr bcde '=' ''        , output: '0'     , status:  1
+test: expr bcde '=' abcd      , output: '0'     , status:  1
+test: expr bcde '=' bcde      , output: '1'     , status:  0
+test: expr bcde '=' 42        , output: '0'     , status:  1
+test: expr bcde '=' -42       , output: '0'     , status:  1
+test: expr bcde '=' 5         , output: '0'     , status:  1
+test: expr 42 '=' 0           , output: '0'     , status:  1
+test: expr 42 '=' ''          , output: '0'     , status:  1
+test: expr 42 '=' abcd        , output: '0'     , status:  1
+test: expr 42 '=' bcde        , output: '0'     , status:  1
+test: expr 42 '=' 42          , output: '1'     , status:  0
+test: expr 42 '=' -42         , output: '0'     , status:  1
+test: expr 42 '=' 5           , output: '0'     , status:  1
+test: expr -42 '=' 0          , output: '0'     , status:  1
+test: expr -42 '=' ''         , output: '0'     , status:  1
+test: expr -42 '=' abcd       , output: '0'     , status:  1
+test: expr -42 '=' bcde       , output: '0'     , status:  1
+test: expr -42 '=' 42         , output: '0'     , status:  1
+test: expr -42 '=' -42        , output: '1'     , status:  0
+test: expr -42 '=' 5          , output: '0'     , status:  1
+test: expr 5 '=' 0            , output: '0'     , status:  1
+test: expr 5 '=' ''           , output: '0'     , status:  1
+test: expr 5 '=' abcd         , output: '0'     , status:  1
+test: expr 5 '=' bcde         , output: '0'     , status:  1
+test: expr 5 '=' 42           , output: '0'     , status:  1
+test: expr 5 '=' -42          , output: '0'     , status:  1
+test: expr 5 '=' 5            , output: '1'     , status:  0
+
+++++ Test >= operator ++++
+test: expr 0 '>=' 0           , output: '1'     , status:  0
+test: expr 0 '>=' ''          , output: '1'     , status:  0
+test: expr 0 '>=' abcd        , output: '0'     , status:  1
+test: expr 0 '>=' bcde        , output: '0'     , status:  1
+test: expr 0 '>=' 42          , output: '0'     , status:  1
+test: expr 0 '>=' -42         , output: '1'     , status:  0
+test: expr 0 '>=' 5           , output: '0'     , status:  1
+test: expr '' '>=' 0          , output: '0'     , status:  1
+test: expr '' '>=' ''         , output: '1'     , status:  0
+test: expr '' '>=' abcd       , output: '0'     , status:  1
+test: expr '' '>=' bcde       , output: '0'     , status:  1
+test: expr '' '>=' 42         , output: '0'     , status:  1
+test: expr '' '>=' -42        , output: '0'     , status:  1
+test: expr '' '>=' 5          , output: '0'     , status:  1
+test: expr abcd '>=' 0        , output: '1'     , status:  0
+test: expr abcd '>=' ''       , output: '1'     , status:  0
+test: expr abcd '>=' abcd     , output: '1'     , status:  0
+test: expr abcd '>=' bcde     , output: '0'     , status:  1
+test: expr abcd '>=' 42       , output: '1'     , status:  0
+test: expr abcd '>=' -42      , output: '1'     , status:  0
+test: expr abcd '>=' 5        , output: '1'     , status:  0
+test: expr bcde '>=' 0        , output: '1'     , status:  0
+test: expr bcde '>=' ''       , output: '1'     , status:  0
+test: expr bcde '>=' abcd     , output: '1'     , status:  0
+test: expr bcde '>=' bcde     , output: '1'     , status:  0
+test: expr bcde '>=' 42       , output: '1'     , status:  0
+test: expr bcde '>=' -42      , output: '1'     , status:  0
+test: expr bcde '>=' 5        , output: '1'     , status:  0
+test: expr 42 '>=' 0          , output: '1'     , status:  0
+test: expr 42 '>=' ''         , output: '1'     , status:  0
+test: expr 42 '>=' abcd       , output: '0'     , status:  1
+test: expr 42 '>=' bcde       , output: '0'     , status:  1
+test: expr 42 '>=' 42         , output: '1'     , status:  0
+test: expr 42 '>=' -42        , output: '1'     , status:  0
+test: expr 42 '>=' 5          , output: '1'     , status:  0
+test: expr -42 '>=' 0         , output: '0'     , status:  1
+test: expr -42 '>=' ''        , output: '1'     , status:  0
+test: expr -42 '>=' abcd      , output: '0'     , status:  1
+test: expr -42 '>=' bcde      , output: '0'     , status:  1
+test: expr -42 '>=' 42        , output: '0'     , status:  1
+test: expr -42 '>=' -42       , output: '1'     , status:  0
+test: expr -42 '>=' 5         , output: '0'     , status:  1
+test: expr 5 '>=' 0           , output: '1'     , status:  0
+test: expr 5 '>=' ''          , output: '1'     , status:  0
+test: expr 5 '>=' abcd        , output: '0'     , status:  1
+test: expr 5 '>=' bcde        , output: '0'     , status:  1
+test: expr 5 '>=' 42          , output: '0'     , status:  1
+test: expr 5 '>=' -42         , output: '1'     , status:  0
+test: expr 5 '>=' 5           , output: '1'     , status:  0
+
+++++ Test > operator ++++
+test: expr 0 '>' 0            , output: '0'     , status:  1
+test: expr 0 '>' ''           , output: '1'     , status:  0
+test: expr 0 '>' abcd         , output: '0'     , status:  1
+test: expr 0 '>' bcde         , output: '0'     , status:  1
+test: expr 0 '>' 42           , output: '0'     , status:  1
+test: expr 0 '>' -42          , output: '1'     , status:  0
+test: expr 0 '>' 5            , output: '0'     , status:  1
+test: expr '' '>' 0           , output: '0'     , status:  1
+test: expr '' '>' ''          , output: '0'     , status:  1
+test: expr '' '>' abcd        , output: '0'     , status:  1
+test: expr '' '>' bcde        , output: '0'     , status:  1
+test: expr '' '>' 42          , output: '0'     , status:  1
+test: expr '' '>' -42         , output: '0'     , status:  1
+test: expr '' '>' 5           , output: '0'     , status:  1
+test: expr abcd '>' 0         , output: '1'     , status:  0
+test: expr abcd '>' ''        , output: '1'     , status:  0
+test: expr abcd '>' abcd      , output: '0'     , status:  1
+test: expr abcd '>' bcde      , output: '0'     , status:  1
+test: expr abcd '>' 42        , output: '1'     , status:  0
+test: expr abcd '>' -42       , output: '1'     , status:  0
+test: expr abcd '>' 5         , output: '1'     , status:  0
+test: expr bcde '>' 0         , output: '1'     , status:  0
+test: expr bcde '>' ''        , output: '1'     , status:  0
+test: expr bcde '>' abcd      , output: '1'     , status:  0
+test: expr bcde '>' bcde      , output: '0'     , status:  1
+test: expr bcde '>' 42        , output: '1'     , status:  0
+test: expr bcde '>' -42       , output: '1'     , status:  0
+test: expr bcde '>' 5         , output: '1'     , status:  0
+test: expr 42 '>' 0           , output: '1'     , status:  0
+test: expr 42 '>' ''          , output: '1'     , status:  0
+test: expr 42 '>' abcd        , output: '0'     , status:  1
+test: expr 42 '>' bcde        , output: '0'     , status:  1
+test: expr 42 '>' 42          , output: '0'     , status:  1
+test: expr 42 '>' -42         , output: '1'     , status:  0
+test: expr 42 '>' 5           , output: '1'     , status:  0
+test: expr -42 '>' 0          , output: '0'     , status:  1
+test: expr -42 '>' ''         , output: '1'     , status:  0
+test: expr -42 '>' abcd       , output: '0'     , status:  1
+test: expr -42 '>' bcde       , output: '0'     , status:  1
+test: expr -42 '>' 42         , output: '0'     , status:  1
+test: expr -42 '>' -42        , output: '0'     , status:  1
+test: expr -42 '>' 5          , output: '0'     , status:  1
+test: expr 5 '>' 0            , output: '1'     , status:  0
+test: expr 5 '>' ''           , output: '1'     , status:  0
+test: expr 5 '>' abcd         , output: '0'     , status:  1
+test: expr 5 '>' bcde         , output: '0'     , status:  1
+test: expr 5 '>' 42           , output: '0'     , status:  1
+test: expr 5 '>' -42          , output: '1'     , status:  0
+test: expr 5 '>' 5            , output: '0'     , status:  1
+
+++++ Test < operator ++++
+test: expr 0 '<' 0            , output: '0'     , status:  1
+test: expr 0 '<' ''           , output: '0'     , status:  1
+test: expr 0 '<' abcd         , output: '1'     , status:  0
+test: expr 0 '<' bcde         , output: '1'     , status:  0
+test: expr 0 '<' 42           , output: '1'     , status:  0
+test: expr 0 '<' -42          , output: '0'     , status:  1
+test: expr 0 '<' 5            , output: '1'     , status:  0
+test: expr '' '<' 0           , output: '1'     , status:  0
+test: expr '' '<' ''          , output: '0'     , status:  1
+test: expr '' '<' abcd        , output: '1'     , status:  0
+test: expr '' '<' bcde        , output: '1'     , status:  0
+test: expr '' '<' 42          , output: '1'     , status:  0
+test: expr '' '<' -42         , output: '1'     , status:  0
+test: expr '' '<' 5           , output: '1'     , status:  0
+test: expr abcd '<' 0         , output: '0'     , status:  1
+test: expr abcd '<' ''        , output: '0'     , status:  1
+test: expr abcd '<' abcd      , output: '0'     , status:  1
+test: expr abcd '<' bcde      , output: '1'     , status:  0
+test: expr abcd '<' 42        , output: '0'     , status:  1
+test: expr abcd '<' -42       , output: '0'     , status:  1
+test: expr abcd '<' 5         , output: '0'     , status:  1
+test: expr bcde '<' 0         , output: '0'     , status:  1
+test: expr bcde '<' ''        , output: '0'     , status:  1
+test: expr bcde '<' abcd      , output: '0'     , status:  1
+test: expr bcde '<' bcde      , output: '0'     , status:  1
+test: expr bcde '<' 42        , output: '0'     , status:  1
+test: expr bcde '<' -42       , output: '0'     , status:  1
+test: expr bcde '<' 5         , output: '0'     , status:  1
+test: expr 42 '<' 0           , output: '0'     , status:  1
+test: expr 42 '<' ''          , output: '0'     , status:  1
+test: expr 42 '<' abcd        , output: '1'     , status:  0
+test: expr 42 '<' bcde        , output: '1'     , status:  0
+test: expr 42 '<' 42          , output: '0'     , status:  1
+test: expr 42 '<' -42         , output: '0'     , status:  1
+test: expr 42 '<' 5           , output: '0'     , status:  1
+test: expr -42 '<' 0          , output: '1'     , status:  0
+test: expr -42 '<' ''         , output: '0'     , status:  1
+test: expr -42 '<' abcd       , output: '1'     , status:  0
+test: expr -42 '<' bcde       , output: '1'     , status:  0
+test: expr -42 '<' 42         , output: '1'     , status:  0
+test: expr -42 '<' -42        , output: '0'     , status:  1
+test: expr -42 '<' 5          , output: '1'     , status:  0
+test: expr 5 '<' 0            , output: '0'     , status:  1
+test: expr 5 '<' ''           , output: '0'     , status:  1
+test: expr 5 '<' abcd         , output: '1'     , status:  0
+test: expr 5 '<' bcde         , output: '1'     , status:  0
+test: expr 5 '<' 42           , output: '1'     , status:  0
+test: expr 5 '<' -42          , output: '0'     , status:  1
+test: expr 5 '<' 5            , output: '0'     , status:  1
+
+++++ Test <= operator ++++
+test: expr 0 '<=' 0           , output: '1'     , status:  0
+test: expr 0 '<=' ''          , output: '0'     , status:  1
+test: expr 0 '<=' abcd        , output: '1'     , status:  0
+test: expr 0 '<=' bcde        , output: '1'     , status:  0
+test: expr 0 '<=' 42          , output: '1'     , status:  0
+test: expr 0 '<=' -42         , output: '0'     , status:  1
+test: expr 0 '<=' 5           , output: '1'     , status:  0
+test: expr '' '<=' 0          , output: '1'     , status:  0
+test: expr '' '<=' ''         , output: '1'     , status:  0
+test: expr '' '<=' abcd       , output: '1'     , status:  0
+test: expr '' '<=' bcde       , output: '1'     , status:  0
+test: expr '' '<=' 42         , output: '1'     , status:  0
+test: expr '' '<=' -42        , output: '1'     , status:  0
+test: expr '' '<=' 5          , output: '1'     , status:  0
+test: expr abcd '<=' 0        , output: '0'     , status:  1
+test: expr abcd '<=' ''       , output: '0'     , status:  1
+test: expr abcd '<=' abcd     , output: '1'     , status:  0
+test: expr abcd '<=' bcde     , output: '1'     , status:  0
+test: expr abcd '<=' 42       , output: '0'     , status:  1
+test: expr abcd '<=' -42      , output: '0'     , status:  1
+test: expr abcd '<=' 5        , output: '0'     , status:  1
+test: expr bcde '<=' 0        , output: '0'     , status:  1
+test: expr bcde '<=' ''       , output: '0'     , status:  1
+test: expr bcde '<=' abcd     , output: '0'     , status:  1
+test: expr bcde '<=' bcde     , output: '1'     , status:  0
+test: expr bcde '<=' 42       , output: '0'     , status:  1
+test: expr bcde '<=' -42      , output: '0'     , status:  1
+test: expr bcde '<=' 5        , output: '0'     , status:  1
+test: expr 42 '<=' 0          , output: '0'     , status:  1
+test: expr 42 '<=' ''         , output: '0'     , status:  1
+test: expr 42 '<=' abcd       , output: '1'     , status:  0
+test: expr 42 '<=' bcde       , output: '1'     , status:  0
+test: expr 42 '<=' 42         , output: '1'     , status:  0
+test: expr 42 '<=' -42        , output: '0'     , status:  1
+test: expr 42 '<=' 5          , output: '0'     , status:  1
+test: expr -42 '<=' 0         , output: '1'     , status:  0
+test: expr -42 '<=' ''        , output: '0'     , status:  1
+test: expr -42 '<=' abcd      , output: '1'     , status:  0
+test: expr -42 '<=' bcde      , output: '1'     , status:  0
+test: expr -42 '<=' 42        , output: '1'     , status:  0
+test: expr -42 '<=' -42       , output: '1'     , status:  0
+test: expr -42 '<=' 5         , output: '1'     , status:  0
+test: expr 5 '<=' 0           , output: '0'     , status:  1
+test: expr 5 '<=' ''          , output: '0'     , status:  1
+test: expr 5 '<=' abcd        , output: '1'     , status:  0
+test: expr 5 '<=' bcde        , output: '1'     , status:  0
+test: expr 5 '<=' 42          , output: '1'     , status:  0
+test: expr 5 '<=' -42         , output: '0'     , status:  1
+test: expr 5 '<=' 5           , output: '1'     , status:  0
+
+++++ Test != operator ++++
+test: expr 0 '!=' 0           , output: '0'     , status:  1
+test: expr 0 '!=' ''          , output: '1'     , status:  0
+test: expr 0 '!=' abcd        , output: '1'     , status:  0
+test: expr 0 '!=' bcde        , output: '1'     , status:  0
+test: expr 0 '!=' 42          , output: '1'     , status:  0
+test: expr 0 '!=' -42         , output: '1'     , status:  0
+test: expr 0 '!=' 5           , output: '1'     , status:  0
+test: expr '' '!=' 0          , output: '1'     , status:  0
+test: expr '' '!=' ''         , output: '0'     , status:  1
+test: expr '' '!=' abcd       , output: '1'     , status:  0
+test: expr '' '!=' bcde       , output: '1'     , status:  0
+test: expr '' '!=' 42         , output: '1'     , status:  0
+test: expr '' '!=' -42        , output: '1'     , status:  0
+test: expr '' '!=' 5          , output: '1'     , status:  0
+test: expr abcd '!=' 0        , output: '1'     , status:  0
+test: expr abcd '!=' ''       , output: '1'     , status:  0
+test: expr abcd '!=' abcd     , output: '0'     , status:  1
+test: expr abcd '!=' bcde     , output: '1'     , status:  0
+test: expr abcd '!=' 42       , output: '1'     , status:  0
+test: expr abcd '!=' -42      , output: '1'     , status:  0
+test: expr abcd '!=' 5        , output: '1'     , status:  0
+test: expr bcde '!=' 0        , output: '1'     , status:  0
+test: expr bcde '!=' ''       , output: '1'     , status:  0
+test: expr bcde '!=' abcd     , output: '1'     , status:  0
+test: expr bcde '!=' bcde     , output: '0'     , status:  1
+test: expr bcde '!=' 42       , output: '1'     , status:  0
+test: expr bcde '!=' -42      , output: '1'     , status:  0
+test: expr bcde '!=' 5        , output: '1'     , status:  0
+test: expr 42 '!=' 0          , output: '1'     , status:  0
+test: expr 42 '!=' ''         , output: '1'     , status:  0
+test: expr 42 '!=' abcd       , output: '1'     , status:  0
+test: expr 42 '!=' bcde       , output: '1'     , status:  0
+test: expr 42 '!=' 42         , output: '0'     , status:  1
+test: expr 42 '!=' -42        , output: '1'     , status:  0
+test: expr 42 '!=' 5          , output: '1'     , status:  0
+test: expr -42 '!=' 0         , output: '1'     , status:  0
+test: expr -42 '!=' ''        , output: '1'     , status:  0
+test: expr -42 '!=' abcd      , output: '1'     , status:  0
+test: expr -42 '!=' bcde      , output: '1'     , status:  0
+test: expr -42 '!=' 42        , output: '1'     , status:  0
+test: expr -42 '!=' -42       , output: '0'     , status:  1
+test: expr -42 '!=' 5         , output: '1'     , status:  0
+test: expr 5 '!=' 0           , output: '1'     , status:  0
+test: expr 5 '!=' ''          , output: '1'     , status:  0
+test: expr 5 '!=' abcd        , output: '1'     , status:  0
+test: expr 5 '!=' bcde        , output: '1'     , status:  0
+test: expr 5 '!=' 42          , output: '1'     , status:  0
+test: expr 5 '!=' -42         , output: '1'     , status:  0
+test: expr 5 '!=' 5           , output: '0'     , status:  1
+
+++++ Test + operator ++++
+test: expr 0 '+' 0            , output: '0'     , status:  1
+test: expr 0 '+' ''           , output: ''      , status:  2
+test: expr 0 '+' abcd         , output: ''      , status:  2
+test: expr 0 '+' bcde         , output: ''      , status:  2
+test: expr 0 '+' 42           , output: '42'    , status:  0
+test: expr 0 '+' -42          , output: '-42'   , status:  0
+test: expr 0 '+' 5            , output: '5'     , status:  0
+test: expr '' '+' 0           , output: ''      , status:  2
+test: expr '' '+' ''          , output: ''      , status:  2
+test: expr '' '+' abcd        , output: ''      , status:  2
+test: expr '' '+' bcde        , output: ''      , status:  2
+test: expr '' '+' 42          , output: ''      , status:  2
+test: expr '' '+' -42         , output: ''      , status:  2
+test: expr '' '+' 5           , output: ''      , status:  2
+test: expr abcd '+' 0         , output: ''      , status:  2
+test: expr abcd '+' ''        , output: ''      , status:  2
+test: expr abcd '+' abcd      , output: ''      , status:  2
+test: expr abcd '+' bcde      , output: ''      , status:  2
+test: expr abcd '+' 42        , output: ''      , status:  2
+test: expr abcd '+' -42       , output: ''      , status:  2
+test: expr abcd '+' 5         , output: ''      , status:  2
+test: expr bcde '+' 0         , output: ''      , status:  2
+test: expr bcde '+' ''        , output: ''      , status:  2
+test: expr bcde '+' abcd      , output: ''      , status:  2
+test: expr bcde '+' bcde      , output: ''      , status:  2
+test: expr bcde '+' 42        , output: ''      , status:  2
+test: expr bcde '+' -42       , output: ''      , status:  2
+test: expr bcde '+' 5         , output: ''      , status:  2
+test: expr 42 '+' 0           , output: '42'    , status:  0
+test: expr 42 '+' ''          , output: ''      , status:  2
+test: expr 42 '+' abcd        , output: ''      , status:  2
+test: expr 42 '+' bcde        , output: ''      , status:  2
+test: expr 42 '+' 42          , output: '84'    , status:  0
+test: expr 42 '+' -42         , output: '0'     , status:  1
+test: expr 42 '+' 5           , output: '47'    , status:  0
+test: expr -42 '+' 0          , output: '-42'   , status:  0
+test: expr -42 '+' ''         , output: ''      , status:  2
+test: expr -42 '+' abcd       , output: ''      , status:  2
+test: expr -42 '+' bcde       , output: ''      , status:  2
+test: expr -42 '+' 42         , output: '0'     , status:  1
+test: expr -42 '+' -42        , output: '-84'   , status:  0
+test: expr -42 '+' 5          , output: '-37'   , status:  0
+test: expr 5 '+' 0            , output: '5'     , status:  0
+test: expr 5 '+' ''           , output: ''      , status:  2
+test: expr 5 '+' abcd         , output: ''      , status:  2
+test: expr 5 '+' bcde         , output: ''      , status:  2
+test: expr 5 '+' 42           , output: '47'    , status:  0
+test: expr 5 '+' -42          , output: '-37'   , status:  0
+test: expr 5 '+' 5            , output: '10'    , status:  0
+
+++++ Test - operator ++++
+test: expr 0 '-' 0            , output: '0'     , status:  1
+test: expr 0 '-' ''           , output: ''      , status:  2
+test: expr 0 '-' abcd         , output: ''      , status:  2
+test: expr 0 '-' bcde         , output: ''      , status:  2
+test: expr 0 '-' 42           , output: '-42'   , status:  0
+test: expr 0 '-' -42          , output: '42'    , status:  0
+test: expr 0 '-' 5            , output: '-5'    , status:  0
+test: expr '' '-' 0           , output: ''      , status:  2
+test: expr '' '-' ''          , output: ''      , status:  2
+test: expr '' '-' abcd        , output: ''      , status:  2
+test: expr '' '-' bcde        , output: ''      , status:  2
+test: expr '' '-' 42          , output: ''      , status:  2
+test: expr '' '-' -42         , output: ''      , status:  2
+test: expr '' '-' 5           , output: ''      , status:  2
+test: expr abcd '-' 0         , output: ''      , status:  2
+test: expr abcd '-' ''        , output: ''      , status:  2
+test: expr abcd '-' abcd      , output: ''      , status:  2
+test: expr abcd '-' bcde      , output: ''      , status:  2
+test: expr abcd '-' 42        , output: ''      , status:  2
+test: expr abcd '-' -42       , output: ''      , status:  2
+test: expr abcd '-' 5         , output: ''      , status:  2
+test: expr bcde '-' 0         , output: ''      , status:  2
+test: expr bcde '-' ''        , output: ''      , status:  2
+test: expr bcde '-' abcd      , output: ''      , status:  2
+test: expr bcde '-' bcde      , output: ''      , status:  2
+test: expr bcde '-' 42        , output: ''      , status:  2
+test: expr bcde '-' -42       , output: ''      , status:  2
+test: expr bcde '-' 5         , output: ''      , status:  2
+test: expr 42 '-' 0           , output: '42'    , status:  0
+test: expr 42 '-' ''          , output: ''      , status:  2
+test: expr 42 '-' abcd        , output: ''      , status:  2
+test: expr 42 '-' bcde        , output: ''      , status:  2
+test: expr 42 '-' 42          , output: '0'     , status:  1
+test: expr 42 '-' -42         , output: '84'    , status:  0
+test: expr 42 '-' 5           , output: '37'    , status:  0
+test: expr -42 '-' 0          , output: '-42'   , status:  0
+test: expr -42 '-' ''         , output: ''      , status:  2
+test: expr -42 '-' abcd       , output: ''      , status:  2
+test: expr -42 '-' bcde       , output: ''      , status:  2
+test: expr -42 '-' 42         , output: '-84'   , status:  0
+test: expr -42 '-' -42        , output: '0'     , status:  1
+test: expr -42 '-' 5          , output: '-47'   , status:  0
+test: expr 5 '-' 0            , output: '5'     , status:  0
+test: expr 5 '-' ''           , output: ''      , status:  2
+test: expr 5 '-' abcd         , output: ''      , status:  2
+test: expr 5 '-' bcde         , output: ''      , status:  2
+test: expr 5 '-' 42           , output: '-37'   , status:  0
+test: expr 5 '-' -42          , output: '47'    , status:  0
+test: expr 5 '-' 5            , output: '0'     , status:  1
+
+++++ Test * operator ++++
+test: expr 0 '*' 0            , output: '0'     , status:  1
+test: expr 0 '*' ''           , output: ''      , status:  2
+test: expr 0 '*' abcd         , output: ''      , status:  2
+test: expr 0 '*' bcde         , output: ''      , status:  2
+test: expr 0 '*' 42           , output: '0'     , status:  1
+test: expr 0 '*' -42          , output: '0'     , status:  1
+test: expr 0 '*' 5            , output: '0'     , status:  1
+test: expr '' '*' 0           , output: ''      , status:  2
+test: expr '' '*' ''          , output: ''      , status:  2
+test: expr '' '*' abcd        , output: ''      , status:  2
+test: expr '' '*' bcde        , output: ''      , status:  2
+test: expr '' '*' 42          , output: ''      , status:  2
+test: expr '' '*' -42         , output: ''      , status:  2
+test: expr '' '*' 5           , output: ''      , status:  2
+test: expr abcd '*' 0         , output: ''      , status:  2
+test: expr abcd '*' ''        , output: ''      , status:  2
+test: expr abcd '*' abcd      , output: ''      , status:  2
+test: expr abcd '*' bcde      , output: ''      , status:  2
+test: expr abcd '*' 42        , output: ''      , status:  2
+test: expr abcd '*' -42       , output: ''      , status:  2
+test: expr abcd '*' 5         , output: ''      , status:  2
+test: expr bcde '*' 0         , output: ''      , status:  2
+test: expr bcde '*' ''        , output: ''      , status:  2
+test: expr bcde '*' abcd      , output: ''      , status:  2
+test: expr bcde '*' bcde      , output: ''      , status:  2
+test: expr bcde '*' 42        , output: ''      , status:  2
+test: expr bcde '*' -42       , output: ''      , status:  2
+test: expr bcde '*' 5         , output: ''      , status:  2
+test: expr 42 '*' 0           , output: '0'     , status:  1
+test: expr 42 '*' ''          , output: ''      , status:  2
+test: expr 42 '*' abcd        , output: ''      , status:  2
+test: expr 42 '*' bcde        , output: ''      , status:  2
+test: expr 42 '*' 42          , output: '1764'  , status:  0
+test: expr 42 '*' -42         , output: '-1764' , status:  0
+test: expr 42 '*' 5           , output: '210'   , status:  0
+test: expr -42 '*' 0          , output: '0'     , status:  1
+test: expr -42 '*' ''         , output: ''      , status:  2
+test: expr -42 '*' abcd       , output: ''      , status:  2
+test: expr -42 '*' bcde       , output: ''      , status:  2
+test: expr -42 '*' 42         , output: '-1764' , status:  0
+test: expr -42 '*' -42        , output: '1764'  , status:  0
+test: expr -42 '*' 5          , output: '-210'  , status:  0
+test: expr 5 '*' 0            , output: '0'     , status:  1
+test: expr 5 '*' ''           , output: ''      , status:  2
+test: expr 5 '*' abcd         , output: ''      , status:  2
+test: expr 5 '*' bcde         , output: ''      , status:  2
+test: expr 5 '*' 42           , output: '210'   , status:  0
+test: expr 5 '*' -42          , output: '-210'  , status:  0
+test: expr 5 '*' 5            , output: '25'    , status:  0
+
+++++ Test / operator ++++
+test: expr 0 '/' 0            , output: ''      , status:  2
+test: expr 0 '/' ''           , output: ''      , status:  2
+test: expr 0 '/' abcd         , output: ''      , status:  2
+test: expr 0 '/' bcde         , output: ''      , status:  2
+test: expr 0 '/' 42           , output: '0'     , status:  1
+test: expr 0 '/' -42          , output: '0'     , status:  1
+test: expr 0 '/' 5            , output: '0'     , status:  1
+test: expr '' '/' 0           , output: ''      , status:  2
+test: expr '' '/' ''          , output: ''      , status:  2
+test: expr '' '/' abcd        , output: ''      , status:  2
+test: expr '' '/' bcde        , output: ''      , status:  2
+test: expr '' '/' 42          , output: ''      , status:  2
+test: expr '' '/' -42         , output: ''      , status:  2
+test: expr '' '/' 5           , output: ''      , status:  2
+test: expr abcd '/' 0         , output: ''      , status:  2
+test: expr abcd '/' ''        , output: ''      , status:  2
+test: expr abcd '/' abcd      , output: ''      , status:  2
+test: expr abcd '/' bcde      , output: ''      , status:  2
+test: expr abcd '/' 42        , output: ''      , status:  2
+test: expr abcd '/' -42       , output: ''      , status:  2
+test: expr abcd '/' 5         , output: ''      , status:  2
+test: expr bcde '/' 0         , output: ''      , status:  2
+test: expr bcde '/' ''        , output: ''      , status:  2
+test: expr bcde '/' abcd      , output: ''      , status:  2
+test: expr bcde '/' bcde      , output: ''      , status:  2
+test: expr bcde '/' 42        , output: ''      , status:  2
+test: expr bcde '/' -42       , output: ''      , status:  2
+test: expr bcde '/' 5         , output: ''      , status:  2
+test: expr 42 '/' 0           , output: ''      , status:  2
+test: expr 42 '/' ''          , output: ''      , status:  2
+test: expr 42 '/' abcd        , output: ''      , status:  2
+test: expr 42 '/' bcde        , output: ''      , status:  2
+test: expr 42 '/' 42          , output: '1'     , status:  0
+test: expr 42 '/' -42         , output: '-1'    , status:  0
+test: expr 42 '/' 5           , output: '8'     , status:  0
+test: expr -42 '/' 0          , output: ''      , status:  2
+test: expr -42 '/' ''         , output: ''      , status:  2
+test: expr -42 '/' abcd       , output: ''      , status:  2
+test: expr -42 '/' bcde       , output: ''      , status:  2
+test: expr -42 '/' 42         , output: '-1'    , status:  0
+test: expr -42 '/' -42        , output: '1'     , status:  0
+test: expr -42 '/' 5          , output: '-8'    , status:  0
+test: expr 5 '/' 0            , output: ''      , status:  2
+test: expr 5 '/' ''           , output: ''      , status:  2
+test: expr 5 '/' abcd         , output: ''      , status:  2
+test: expr 5 '/' bcde         , output: ''      , status:  2
+test: expr 5 '/' 42           , output: '0'     , status:  1
+test: expr 5 '/' -42          , output: '0'     , status:  1
+test: expr 5 '/' 5            , output: '1'     , status:  0
+
+++++ Test % operator ++++
+test: expr 0 '%' 0            , output: ''      , status:  2
+test: expr 0 '%' ''           , output: ''      , status:  2
+test: expr 0 '%' abcd         , output: ''      , status:  2
+test: expr 0 '%' bcde         , output: ''      , status:  2
+test: expr 0 '%' 42           , output: '0'     , status:  1
+test: expr 0 '%' -42          , output: '0'     , status:  1
+test: expr 0 '%' 5            , output: '0'     , status:  1
+test: expr '' '%' 0           , output: ''      , status:  2
+test: expr '' '%' ''          , output: ''      , status:  2
+test: expr '' '%' abcd        , output: ''      , status:  2
+test: expr '' '%' bcde        , output: ''      , status:  2
+test: expr '' '%' 42          , output: ''      , status:  2
+test: expr '' '%' -42         , output: ''      , status:  2
+test: expr '' '%' 5           , output: ''      , status:  2
+test: expr abcd '%' 0         , output: ''      , status:  2
+test: expr abcd '%' ''        , output: ''      , status:  2
+test: expr abcd '%' abcd      , output: ''      , status:  2
+test: expr abcd '%' bcde      , output: ''      , status:  2
+test: expr abcd '%' 42        , output: ''      , status:  2
+test: expr abcd '%' -42       , output: ''      , status:  2
+test: expr abcd '%' 5         , output: ''      , status:  2
+test: expr bcde '%' 0         , output: ''      , status:  2
+test: expr bcde '%' ''        , output: ''      , status:  2
+test: expr bcde '%' abcd      , output: ''      , status:  2
+test: expr bcde '%' bcde      , output: ''      , status:  2
+test: expr bcde '%' 42        , output: ''      , status:  2
+test: expr bcde '%' -42       , output: ''      , status:  2
+test: expr bcde '%' 5         , output: ''      , status:  2
+test: expr 42 '%' 0           , output: ''      , status:  2
+test: expr 42 '%' ''          , output: ''      , status:  2
+test: expr 42 '%' abcd        , output: ''      , status:  2
+test: expr 42 '%' bcde        , output: ''      , status:  2
+test: expr 42 '%' 42          , output: '0'     , status:  1
+test: expr 42 '%' -42         , output: '0'     , status:  1
+test: expr 42 '%' 5           , output: '2'     , status:  0
+test: expr -42 '%' 0          , output: ''      , status:  2
+test: expr -42 '%' ''         , output: ''      , status:  2
+test: expr -42 '%' abcd       , output: ''      , status:  2
+test: expr -42 '%' bcde       , output: ''      , status:  2
+test: expr -42 '%' 42         , output: '0'     , status:  1
+test: expr -42 '%' -42        , output: '0'     , status:  1
+test: expr -42 '%' 5          , output: '-2'    , status:  0
+test: expr 5 '%' 0            , output: ''      , status:  2
+test: expr 5 '%' ''           , output: ''      , status:  2
+test: expr 5 '%' abcd         , output: ''      , status:  2
+test: expr 5 '%' bcde         , output: ''      , status:  2
+test: expr 5 '%' 42           , output: '5'     , status:  0
+test: expr 5 '%' -42          , output: '5'     , status:  0
+test: expr 5 '%' 5            , output: '0'     , status:  1
+
+++++ Test & operator ++++
+test: expr 0 '&' 0            , output: '0'     , status:  1
+test: expr 0 '&' ''           , output: '0'     , status:  1
+test: expr 0 '&' abcd         , output: '0'     , status:  1
+test: expr 0 '&' bcde         , output: '0'     , status:  1
+test: expr 0 '&' 42           , output: '0'     , status:  1
+test: expr 0 '&' -42          , output: '0'     , status:  1
+test: expr 0 '&' 5            , output: '0'     , status:  1
+test: expr '' '&' 0           , output: '0'     , status:  1
+test: expr '' '&' ''          , output: '0'     , status:  1
+test: expr '' '&' abcd        , output: '0'     , status:  1
+test: expr '' '&' bcde        , output: '0'     , status:  1
+test: expr '' '&' 42          , output: '0'     , status:  1
+test: expr '' '&' -42         , output: '0'     , status:  1
+test: expr '' '&' 5           , output: '0'     , status:  1
+test: expr abcd '&' 0         , output: '0'     , status:  1
+test: expr abcd '&' ''        , output: '0'     , status:  1
+test: expr abcd '&' abcd      , output: 'abcd'  , status:  0
+test: expr abcd '&' bcde      , output: 'abcd'  , status:  0
+test: expr abcd '&' 42        , output: 'abcd'  , status:  0
+test: expr abcd '&' -42       , output: 'abcd'  , status:  0
+test: expr abcd '&' 5         , output: 'abcd'  , status:  0
+test: expr bcde '&' 0         , output: '0'     , status:  1
+test: expr bcde '&' ''        , output: '0'     , status:  1
+test: expr bcde '&' abcd      , output: 'bcde'  , status:  0
+test: expr bcde '&' bcde      , output: 'bcde'  , status:  0
+test: expr bcde '&' 42        , output: 'bcde'  , status:  0
+test: expr bcde '&' -42       , output: 'bcde'  , status:  0
+test: expr bcde '&' 5         , output: 'bcde'  , status:  0
+test: expr 42 '&' 0           , output: '0'     , status:  1
+test: expr 42 '&' ''          , output: '0'     , status:  1
+test: expr 42 '&' abcd        , output: '42'    , status:  0
+test: expr 42 '&' bcde        , output: '42'    , status:  0
+test: expr 42 '&' 42          , output: '42'    , status:  0
+test: expr 42 '&' -42         , output: '42'    , status:  0
+test: expr 42 '&' 5           , output: '42'    , status:  0
+test: expr -42 '&' 0          , output: '0'     , status:  1
+test: expr -42 '&' ''         , output: '0'     , status:  1
+test: expr -42 '&' abcd       , output: '-42'   , status:  0
+test: expr -42 '&' bcde       , output: '-42'   , status:  0
+test: expr -42 '&' 42         , output: '-42'   , status:  0
+test: expr -42 '&' -42        , output: '-42'   , status:  0
+test: expr -42 '&' 5          , output: '-42'   , status:  0
+test: expr 5 '&' 0            , output: '0'     , status:  1
+test: expr 5 '&' ''           , output: '0'     , status:  1
+test: expr 5 '&' abcd         , output: '5'     , status:  0
+test: expr 5 '&' bcde         , output: '5'     , status:  0
+test: expr 5 '&' 42           , output: '5'     , status:  0
+test: expr 5 '&' -42          , output: '5'     , status:  0
+test: expr 5 '&' 5            , output: '5'     , status:  0
+
+++++ Test | operator ++++
+test: expr 0 '|' 0            , output: '0'     , status:  1
+test: expr 0 '|' ''           , output: '0'     , status:  1
+test: expr 0 '|' abcd         , output: 'abcd'  , status:  0
+test: expr 0 '|' bcde         , output: 'bcde'  , status:  0
+test: expr 0 '|' 42           , output: '42'    , status:  0
+test: expr 0 '|' -42          , output: '-42'   , status:  0
+test: expr 0 '|' 5            , output: '5'     , status:  0
+test: expr '' '|' 0           , output: '0'     , status:  1
+test: expr '' '|' ''          , output: '0'     , status:  1
+test: expr '' '|' abcd        , output: 'abcd'  , status:  0
+test: expr '' '|' bcde        , output: 'bcde'  , status:  0
+test: expr '' '|' 42          , output: '42'    , status:  0
+test: expr '' '|' -42         , output: '-42'   , status:  0
+test: expr '' '|' 5           , output: '5'     , status:  0
+test: expr abcd '|' 0         , output: 'abcd'  , status:  0
+test: expr abcd '|' ''        , output: 'abcd'  , status:  0
+test: expr abcd '|' abcd      , output: 'abcd'  , status:  0
+test: expr abcd '|' bcde      , output: 'abcd'  , status:  0
+test: expr abcd '|' 42        , output: 'abcd'  , status:  0
+test: expr abcd '|' -42       , output: 'abcd'  , status:  0
+test: expr abcd '|' 5         , output: 'abcd'  , status:  0
+test: expr bcde '|' 0         , output: 'bcde'  , status:  0
+test: expr bcde '|' ''        , output: 'bcde'  , status:  0
+test: expr bcde '|' abcd      , output: 'bcde'  , status:  0
+test: expr bcde '|' bcde      , output: 'bcde'  , status:  0
+test: expr bcde '|' 42        , output: 'bcde'  , status:  0
+test: expr bcde '|' -42       , output: 'bcde'  , status:  0
+test: expr bcde '|' 5         , output: 'bcde'  , status:  0
+test: expr 42 '|' 0           , output: '42'    , status:  0
+test: expr 42 '|' ''          , output: '42'    , status:  0
+test: expr 42 '|' abcd        , output: '42'    , status:  0
+test: expr 42 '|' bcde        , output: '42'    , status:  0
+test: expr 42 '|' 42          , output: '42'    , status:  0
+test: expr 42 '|' -42         , output: '42'    , status:  0
+test: expr 42 '|' 5           , output: '42'    , status:  0
+test: expr -42 '|' 0          , output: '-42'   , status:  0
+test: expr -42 '|' ''         , output: '-42'   , status:  0
+test: expr -42 '|' abcd       , output: '-42'   , status:  0
+test: expr -42 '|' bcde       , output: '-42'   , status:  0
+test: expr -42 '|' 42         , output: '-42'   , status:  0
+test: expr -42 '|' -42        , output: '-42'   , status:  0
+test: expr -42 '|' 5          , output: '-42'   , status:  0
+test: expr 5 '|' 0            , output: '5'     , status:  0
+test: expr 5 '|' ''           , output: '5'     , status:  0
+test: expr 5 '|' abcd         , output: '5'     , status:  0
+test: expr 5 '|' bcde         , output: '5'     , status:  0
+test: expr 5 '|' 42           , output: '5'     , status:  0
+test: expr 5 '|' -42          , output: '5'     , status:  0
+test: expr 5 '|' 5            , output: '5'     , status:  0
+
+32
+1
+0
+0
+1
+1
+0
+1
+4
+1
+1
+0
+1
+0
+---------------- actual output
+++++ Test string argument ++++
+test: expr toto               , output: 'toto'  , status:  0
+test: expr ''                 , output: ''      , status:  1
+test: expr 0ab                , output: '0ab'   , status:  0
+
+++++ Test integer argument ++++
+test: expr 4                  , output: '4'     , status:  0
+test: expr 0                  , output: '0'     , status:  1
+
+++++ Test = operator ++++
+test: expr 0 '=' 0            , output: '1'     , status:  0
+test: expr 0 '=' ''           , output: '0'     , status:  1
+test: expr 0 '=' abcd         , output: '0'     , status:  1
+test: expr 0 '=' bcde         , output: '0'     , status:  1
+test: expr 0 '=' 42           , output: '0'     , status:  1
+test: expr 0 '=' -42          , output: '0'     , status:  1
+test: expr 0 '=' 5            , output: '0'     , status:  1
+test: expr '' '=' 0           , output: '0'     , status:  1
+test: expr '' '=' ''          , output: '1'     , status:  0
+test: expr '' '=' abcd        , output: '0'     , status:  1
+test: expr '' '=' bcde        , output: '0'     , status:  1
+test: expr '' '=' 42          , output: '0'     , status:  1
+test: expr '' '=' -42         , output: '0'     , status:  1
+test: expr '' '=' 5           , output: '0'     , status:  1
+test: expr abcd '=' 0         , output: '0'     , status:  1
+test: expr abcd '=' ''        , output: '0'     , status:  1
+test: expr abcd '=' abcd      , output: '1'     , status:  0
+test: expr abcd '=' bcde      , output: '0'     , status:  1
+test: expr abcd '=' 42        , output: '0'     , status:  1
+test: expr abcd '=' -42       , output: '0'     , status:  1
+test: expr abcd '=' 5         , output: '0'     , status:  1
+test: expr bcde '=' 0         , output: '0'     , status:  1
+test: expr bcde '=' ''        , output: '0'     , status:  1
+test: expr bcde '=' abcd      , output: '0'     , status:  1
+test: expr bcde '=' bcde      , output: '1'     , status:  0
+test: expr bcde '=' 42        , output: '0'     , status:  1
+test: expr bcde '=' -42       , output: '0'     , status:  1
+test: expr bcde '=' 5         , output: '0'     , status:  1
+test: expr 42 '=' 0           , output: '0'     , status:  1
+test: expr 42 '=' ''          , output: '0'     , status:  1
+test: expr 42 '=' abcd        , output: '0'     , status:  1
+test: expr 42 '=' bcde        , output: '0'     , status:  1
+test: expr 42 '=' 42          , output: '1'     , status:  0
+test: expr 42 '=' -42         , output: '0'     , status:  1
+test: expr 42 '=' 5           , output: '0'     , status:  1
+test: expr -42 '=' 0          , output: '0'     , status:  1
+test: expr -42 '=' ''         , output: '0'     , status:  1
+test: expr -42 '=' abcd       , output: '0'     , status:  1
+test: expr -42 '=' bcde       , output: '0'     , status:  1
+test: expr -42 '=' 42         , output: '0'     , status:  1
+test: expr -42 '=' -42        , output: '1'     , status:  0
+test: expr -42 '=' 5          , output: '0'     , status:  1
+test: expr 5 '=' 0            , output: '0'     , status:  1
+test: expr 5 '=' ''           , output: '0'     , status:  1
+test: expr 5 '=' abcd         , output: '0'     , status:  1
+test: expr 5 '=' bcde         , output: '0'     , status:  1
+test: expr 5 '=' 42           , output: '0'     , status:  1
+test: expr 5 '=' -42          , output: '0'     , status:  1
+test: expr 5 '=' 5            , output: '1'     , status:  0
+
+++++ Test >= operator ++++
+test: expr 0 '>=' 0           , output: '1'     , status:  0
+test: expr 0 '>=' ''          , output: '1'     , status:  0
+test: expr 0 '>=' abcd        , output: '0'     , status:  1
+test: expr 0 '>=' bcde        , output: '0'     , status:  1
+test: expr 0 '>=' 42          , output: '0'     , status:  1
+test: expr 0 '>=' -42         , output: '1'     , status:  0
+test: expr 0 '>=' 5           , output: '0'     , status:  1
+test: expr '' '>=' 0          , output: '0'     , status:  1
+test: expr '' '>=' ''         , output: '1'     , status:  0
+test: expr '' '>=' abcd       , output: '0'     , status:  1
+test: expr '' '>=' bcde       , output: '0'     , status:  1
+test: expr '' '>=' 42         , output: '0'     , status:  1
+test: expr '' '>=' -42        , output: '0'     , status:  1
+test: expr '' '>=' 5          , output: '0'     , status:  1
+test: expr abcd '>=' 0        , output: '1'     , status:  0
+test: expr abcd '>=' ''       , output: '1'     , status:  0
+test: expr abcd '>=' abcd     , output: '1'     , status:  0
+test: expr abcd '>=' bcde     , output: '0'     , status:  1
+test: expr abcd '>=' 42       , output: '1'     , status:  0
+test: expr abcd '>=' -42      , output: '1'     , status:  0
+test: expr abcd '>=' 5        , output: '1'     , status:  0
+test: expr bcde '>=' 0        , output: '1'     , status:  0
+test: expr bcde '>=' ''       , output: '1'     , status:  0
+test: expr bcde '>=' abcd     , output: '1'     , status:  0
+test: expr bcde '>=' bcde     , output: '1'     , status:  0
+test: expr bcde '>=' 42       , output: '1'     , status:  0
+test: expr bcde '>=' -42      , output: '1'     , status:  0
+test: expr bcde '>=' 5        , output: '1'     , status:  0
+test: expr 42 '>=' 0          , output: '1'     , status:  0
+test: expr 42 '>=' ''         , output: '1'     , status:  0
+test: expr 42 '>=' abcd       , output: '0'     , status:  1
+test: expr 42 '>=' bcde       , output: '0'     , status:  1
+test: expr 42 '>=' 42         , output: '1'     , status:  0
+test: expr 42 '>=' -42        , output: '1'     , status:  0
+test: expr 42 '>=' 5          , output: '1'     , status:  0
+test: expr -42 '>=' 0         , output: '0'     , status:  1
+test: expr -42 '>=' ''        , output: '1'     , status:  0
+test: expr -42 '>=' abcd      , output: '0'     , status:  1
+test: expr -42 '>=' bcde      , output: '0'     , status:  1
+test: expr -42 '>=' 42        , output: '0'     , status:  1
+test: expr -42 '>=' -42       , output: '1'     , status:  0
+test: expr -42 '>=' 5         , output: '0'     , status:  1
+test: expr 5 '>=' 0           , output: '1'     , status:  0
+test: expr 5 '>=' ''          , output: '1'     , status:  0
+test: expr 5 '>=' abcd        , output: '0'     , status:  1
+test: expr 5 '>=' bcde        , output: '0'     , status:  1
+test: expr 5 '>=' 42          , output: '0'     , status:  1
+test: expr 5 '>=' -42         , output: '1'     , status:  0
+test: expr 5 '>=' 5           , output: '1'     , status:  0
+
+++++ Test > operator ++++
+test: expr 0 '>' 0            , output: '0'     , status:  1
+test: expr 0 '>' ''           , output: '1'     , status:  0
+test: expr 0 '>' abcd         , output: '0'     , status:  1
+test: expr 0 '>' bcde         , output: '0'     , status:  1
+test: expr 0 '>' 42           , output: '0'     , status:  1
+test: expr 0 '>' -42          , output: '1'     , status:  0
+test: expr 0 '>' 5            , output: '0'     , status:  1
+test: expr '' '>' 0           , output: '0'     , status:  1
+test: expr '' '>' ''          , output: '0'     , status:  1
+test: expr '' '>' abcd        , output: '0'     , status:  1
+test: expr '' '>' bcde        , output: '0'     , status:  1
+test: expr '' '>' 42          , output: '0'     , status:  1
+test: expr '' '>' -42         , output: '0'     , status:  1
+test: expr '' '>' 5           , output: '0'     , status:  1
+test: expr abcd '>' 0         , output: '1'     , status:  0
+test: expr abcd '>' ''        , output: '1'     , status:  0
+test: expr abcd '>' abcd      , output: '0'     , status:  1
+test: expr abcd '>' bcde      , output: '0'     , status:  1
+test: expr abcd '>' 42        , output: '1'     , status:  0
+test: expr abcd '>' -42       , output: '1'     , status:  0
+test: expr abcd '>' 5         , output: '1'     , status:  0
+test: expr bcde '>' 0         , output: '1'     , status:  0
+test: expr bcde '>' ''        , output: '1'     , status:  0
+test: expr bcde '>' abcd      , output: '1'     , status:  0
+test: expr bcde '>' bcde      , output: '0'     , status:  1
+test: expr bcde '>' 42        , output: '1'     , status:  0
+test: expr bcde '>' -42       , output: '1'     , status:  0
+test: expr bcde '>' 5         , output: '1'     , status:  0
+test: expr 42 '>' 0           , output: '1'     , status:  0
+test: expr 42 '>' ''          , output: '1'     , status:  0
+test: expr 42 '>' abcd        , output: '0'     , status:  1
+test: expr 42 '>' bcde        , output: '0'     , status:  1
+test: expr 42 '>' 42          , output: '0'     , status:  1
+test: expr 42 '>' -42         , output: '1'     , status:  0
+test: expr 42 '>' 5           , output: '1'     , status:  0
+test: expr -42 '>' 0          , output: '0'     , status:  1
+test: expr -42 '>' ''         , output: '1'     , status:  0
+test: expr -42 '>' abcd       , output: '0'     , status:  1
+test: expr -42 '>' bcde       , output: '0'     , status:  1
+test: expr -42 '>' 42         , output: '0'     , status:  1
+test: expr -42 '>' -42        , output: '0'     , status:  1
+test: expr -42 '>' 5          , output: '0'     , status:  1
+test: expr 5 '>' 0            , output: '1'     , status:  0
+test: expr 5 '>' ''           , output: '1'     , status:  0
+test: expr 5 '>' abcd         , output: '0'     , status:  1
+test: expr 5 '>' bcde         , output: '0'     , status:  1
+test: expr 5 '>' 42           , output: '0'     , status:  1
+test: expr 5 '>' -42          , output: '1'     , status:  0
+test: expr 5 '>' 5            , output: '0'     , status:  1
+
+++++ Test < operator ++++
+test: expr 0 '<' 0            , output: '0'     , status:  1
+test: expr 0 '<' ''           , output: '0'     , status:  1
+test: expr 0 '<' abcd         , output: '1'     , status:  0
+test: expr 0 '<' bcde         , output: '1'     , status:  0
+test: expr 0 '<' 42           , output: '1'     , status:  0
+test: expr 0 '<' -42          , output: '0'     , status:  1
+test: expr 0 '<' 5            , output: '1'     , status:  0
+test: expr '' '<' 0           , output: '1'     , status:  0
+test: expr '' '<' ''          , output: '0'     , status:  1
+test: expr '' '<' abcd        , output: '1'     , status:  0
+test: expr '' '<' bcde        , output: '1'     , status:  0
+test: expr '' '<' 42          , output: '1'     , status:  0
+test: expr '' '<' -42         , output: '1'     , status:  0
+test: expr '' '<' 5           , output: '1'     , status:  0
+test: expr abcd '<' 0         , output: '0'     , status:  1
+test: expr abcd '<' ''        , output: '0'     , status:  1
+test: expr abcd '<' abcd      , output: '0'     , status:  1
+test: expr abcd '<' bcde      , output: '1'     , status:  0
+test: expr abcd '<' 42        , output: '0'     , status:  1
+test: expr abcd '<' -42       , output: '0'     , status:  1
+test: expr abcd '<' 5         , output: '0'     , status:  1
+test: expr bcde '<' 0         , output: '0'     , status:  1
+test: expr bcde '<' ''        , output: '0'     , status:  1
+test: expr bcde '<' abcd      , output: '0'     , status:  1
+test: expr bcde '<' bcde      , output: '0'     , status:  1
+test: expr bcde '<' 42        , output: '0'     , status:  1
+test: expr bcde '<' -42       , output: '0'     , status:  1
+test: expr bcde '<' 5         , output: '0'     , status:  1
+test: expr 42 '<' 0           , output: '0'     , status:  1
+test: expr 42 '<' ''          , output: '0'     , status:  1
+test: expr 42 '<' abcd        , output: '1'     , status:  0
+test: expr 42 '<' bcde        , output: '1'     , status:  0
+test: expr 42 '<' 42          , output: '0'     , status:  1
+test: expr 42 '<' -42         , output: '0'     , status:  1
+test: expr 42 '<' 5           , output: '0'     , status:  1
+test: expr -42 '<' 0          , output: '1'     , status:  0
+test: expr -42 '<' ''         , output: '0'     , status:  1
+test: expr -42 '<' abcd       , output: '1'     , status:  0
+test: expr -42 '<' bcde       , output: '1'     , status:  0
+test: expr -42 '<' 42         , output: '1'     , status:  0
+test: expr -42 '<' -42        , output: '0'     , status:  1
+test: expr -42 '<' 5          , output: '1'     , status:  0
+test: expr 5 '<' 0            , output: '0'     , status:  1
+test: expr 5 '<' ''           , output: '0'     , status:  1
+test: expr 5 '<' abcd         , output: '1'     , status:  0
+test: expr 5 '<' bcde         , output: '1'     , status:  0
+test: expr 5 '<' 42           , output: '1'     , status:  0
+test: expr 5 '<' -42          , output: '0'     , status:  1
+test: expr 5 '<' 5            , output: '0'     , status:  1
+
+++++ Test <= operator ++++
+test: expr 0 '<=' 0           , output: '1'     , status:  0
+test: expr 0 '<=' ''          , output: '0'     , status:  1
+test: expr 0 '<=' abcd        , output: '1'     , status:  0
+test: expr 0 '<=' bcde        , output: '1'     , status:  0
+test: expr 0 '<=' 42          , output: '1'     , status:  0
+test: expr 0 '<=' -42         , output: '0'     , status:  1
+test: expr 0 '<=' 5           , output: '1'     , status:  0
+test: expr '' '<=' 0          , output: '1'     , status:  0
+test: expr '' '<=' ''         , output: '1'     , status:  0
+test: expr '' '<=' abcd       , output: '1'     , status:  0
+test: expr '' '<=' bcde       , output: '1'     , status:  0
+test: expr '' '<=' 42         , output: '1'     , status:  0
+test: expr '' '<=' -42        , output: '1'     , status:  0
+test: expr '' '<=' 5          , output: '1'     , status:  0
+test: expr abcd '<=' 0        , output: '0'     , status:  1
+test: expr abcd '<=' ''       , output: '0'     , status:  1
+test: expr abcd '<=' abcd     , output: '1'     , status:  0
+test: expr abcd '<=' bcde     , output: '1'     , status:  0
+test: expr abcd '<=' 42       , output: '0'     , status:  1
+test: expr abcd '<=' -42      , output: '0'     , status:  1
+test: expr abcd '<=' 5        , output: '0'     , status:  1
+test: expr bcde '<=' 0        , output: '0'     , status:  1
+test: expr bcde '<=' ''       , output: '0'     , status:  1
+test: expr bcde '<=' abcd     , output: '0'     , status:  1
+test: expr bcde '<=' bcde     , output: '1'     , status:  0
+test: expr bcde '<=' 42       , output: '0'     , status:  1
+test: expr bcde '<=' -42      , output: '0'     , status:  1
+test: expr bcde '<=' 5        , output: '0'     , status:  1
+test: expr 42 '<=' 0          , output: '0'     , status:  1
+test: expr 42 '<=' ''         , output: '0'     , status:  1
+test: expr 42 '<=' abcd       , output: '1'     , status:  0
+test: expr 42 '<=' bcde       , output: '1'     , status:  0
+test: expr 42 '<=' 42         , output: '1'     , status:  0
+test: expr 42 '<=' -42        , output: '0'     , status:  1
+test: expr 42 '<=' 5          , output: '0'     , status:  1
+test: expr -42 '<=' 0         , output: '1'     , status:  0
+test: expr -42 '<=' ''        , output: '0'     , status:  1
+test: expr -42 '<=' abcd      , output: '1'     , status:  0
+test: expr -42 '<=' bcde      , output: '1'     , status:  0
+test: expr -42 '<=' 42        , output: '1'     , status:  0
+test: expr -42 '<=' -42       , output: '1'     , status:  0
+test: expr -42 '<=' 5         , output: '1'     , status:  0
+test: expr 5 '<=' 0           , output: '0'     , status:  1
+test: expr 5 '<=' ''          , output: '0'     , status:  1
+test: expr 5 '<=' abcd        , output: '1'     , status:  0
+test: expr 5 '<=' bcde        , output: '1'     , status:  0
+test: expr 5 '<=' 42          , output: '1'     , status:  0
+test: expr 5 '<=' -42         , output: '0'     , status:  1
+test: expr 5 '<=' 5           , output: '1'     , status:  0
+
+++++ Test != operator ++++
+test: expr 0 '!=' 0           , output: '0'     , status:  1
+test: expr 0 '!=' ''          , output: '1'     , status:  0
+test: expr 0 '!=' abcd        , output: '1'     , status:  0
+test: expr 0 '!=' bcde        , output: '1'     , status:  0
+test: expr 0 '!=' 42          , output: '1'     , status:  0
+test: expr 0 '!=' -42         , output: '1'     , status:  0
+test: expr 0 '!=' 5           , output: '1'     , status:  0
+test: expr '' '!=' 0          , output: '1'     , status:  0
+test: expr '' '!=' ''         , output: '0'     , status:  1
+test: expr '' '!=' abcd       , output: '1'     , status:  0
+test: expr '' '!=' bcde       , output: '1'     , status:  0
+test: expr '' '!=' 42         , output: '1'     , status:  0
+test: expr '' '!=' -42        , output: '1'     , status:  0
+test: expr '' '!=' 5          , output: '1'     , status:  0
+test: expr abcd '!=' 0        , output: '1'     , status:  0
+test: expr abcd '!=' ''       , output: '1'     , status:  0
+test: expr abcd '!=' abcd     , output: '0'     , status:  1
+test: expr abcd '!=' bcde     , output: '1'     , status:  0
+test: expr abcd '!=' 42       , output: '1'     , status:  0
+test: expr abcd '!=' -42      , output: '1'     , status:  0
+test: expr abcd '!=' 5        , output: '1'     , status:  0
+test: expr bcde '!=' 0        , output: '1'     , status:  0
+test: expr bcde '!=' ''       , output: '1'     , status:  0
+test: expr bcde '!=' abcd     , output: '1'     , status:  0
+test: expr bcde '!=' bcde     , output: '0'     , status:  1
+test: expr bcde '!=' 42       , output: '1'     , status:  0
+test: expr bcde '!=' -42      , output: '1'     , status:  0
+test: expr bcde '!=' 5        , output: '1'     , status:  0
+test: expr 42 '!=' 0          , output: '1'     , status:  0
+test: expr 42 '!=' ''         , output: '1'     , status:  0
+test: expr 42 '!=' abcd       , output: '1'     , status:  0
+test: expr 42 '!=' bcde       , output: '1'     , status:  0
+test: expr 42 '!=' 42         , output: '0'     , status:  1
+test: expr 42 '!=' -42        , output: '1'     , status:  0
+test: expr 42 '!=' 5          , output: '1'     , status:  0
+test: expr -42 '!=' 0         , output: '1'     , status:  0
+test: expr -42 '!=' ''        , output: '1'     , status:  0
+test: expr -42 '!=' abcd      , output: '1'     , status:  0
+test: expr -42 '!=' bcde      , output: '1'     , status:  0
+test: expr -42 '!=' 42        , output: '1'     , status:  0
+test: expr -42 '!=' -42       , output: '0'     , status:  1
+test: expr -42 '!=' 5         , output: '1'     , status:  0
+test: expr 5 '!=' 0           , output: '1'     , status:  0
+test: expr 5 '!=' ''          , output: '1'     , status:  0
+test: expr 5 '!=' abcd        , output: '1'     , status:  0
+test: expr 5 '!=' bcde        , output: '1'     , status:  0
+test: expr 5 '!=' 42          , output: '1'     , status:  0
+test: expr 5 '!=' -42         , output: '1'     , status:  0
+test: expr 5 '!=' 5           , output: '0'     , status:  1
+
+++++ Test + operator ++++
+test: expr 0 '+' 0            , output: '0'     , status:  1
+test: expr 0 '+' ''           , output: ''      , status:  2
+test: expr 0 '+' abcd         , output: ''      , status:  2
+test: expr 0 '+' bcde         , output: ''      , status:  2
+test: expr 0 '+' 42           , output: '42'    , status:  0
+test: expr 0 '+' -42          , output: '-42'   , status:  0
+test: expr 0 '+' 5            , output: '5'     , status:  0
+test: expr '' '+' 0           , output: ''      , status:  2
+test: expr '' '+' ''          , output: ''      , status:  2
+test: expr '' '+' abcd        , output: ''      , status:  2
+test: expr '' '+' bcde        , output: ''      , status:  2
+test: expr '' '+' 42          , output: ''      , status:  2
+test: expr '' '+' -42         , output: ''      , status:  2
+test: expr '' '+' 5           , output: ''      , status:  2
+test: expr abcd '+' 0         , output: ''      , status:  2
+test: expr abcd '+' ''        , output: ''      , status:  2
+test: expr abcd '+' abcd      , output: ''      , status:  2
+test: expr abcd '+' bcde      , output: ''      , status:  2
+test: expr abcd '+' 42        , output: ''      , status:  2
+test: expr abcd '+' -42       , output: ''      , status:  2
+test: expr abcd '+' 5         , output: ''      , status:  2
+test: expr bcde '+' 0         , output: ''      , status:  2
+test: expr bcde '+' ''        , output: ''      , status:  2
+test: expr bcde '+' abcd      , output: ''      , status:  2
+test: expr bcde '+' bcde      , output: ''      , status:  2
+test: expr bcde '+' 42        , output: ''      , status:  2
+test: expr bcde '+' -42       , output: ''      , status:  2
+test: expr bcde '+' 5         , output: ''      , status:  2
+test: expr 42 '+' 0           , output: '42'    , status:  0
+test: expr 42 '+' ''          , output: ''      , status:  2
+test: expr 42 '+' abcd        , output: ''      , status:  2
+test: expr 42 '+' bcde        , output: ''      , status:  2
+test: expr 42 '+' 42          , output: '84'    , status:  0
+test: expr 42 '+' -42         , output: '0'     , status:  1
+test: expr 42 '+' 5           , output: '47'    , status:  0
+test: expr -42 '+' 0          , output: '-42'   , status:  0
+test: expr -42 '+' ''         , output: ''      , status:  2
+test: expr -42 '+' abcd       , output: ''      , status:  2
+test: expr -42 '+' bcde       , output: ''      , status:  2
+test: expr -42 '+' 42         , output: '0'     , status:  1
+test: expr -42 '+' -42        , output: '-84'   , status:  0
+test: expr -42 '+' 5          , output: '-37'   , status:  0
+test: expr 5 '+' 0            , output: '5'     , status:  0
+test: expr 5 '+' ''           , output: ''      , status:  2
+test: expr 5 '+' abcd         , output: ''      , status:  2
+test: expr 5 '+' bcde         , output: ''      , status:  2
+test: expr 5 '+' 42           , output: '47'    , status:  0
+test: expr 5 '+' -42          , output: '-37'   , status:  0
+test: expr 5 '+' 5            , output: '10'    , status:  0
+
+++++ Test - operator ++++
+test: expr 0 '-' 0            , output: '0'     , status:  1
+test: expr 0 '-' ''           , output: ''      , status:  2
+test: expr 0 '-' abcd         , output: ''      , status:  2
+test: expr 0 '-' bcde         , output: ''      , status:  2
+test: expr 0 '-' 42           , output: '-42'   , status:  0
+test: expr 0 '-' -42          , output: '42'    , status:  0
+test: expr 0 '-' 5            , output: '-5'    , status:  0
+test: expr '' '-' 0           , output: ''      , status:  2
+test: expr '' '-' ''          , output: ''      , status:  2
+test: expr '' '-' abcd        , output: ''      , status:  2
+test: expr '' '-' bcde        , output: ''      , status:  2
+test: expr '' '-' 42          , output: ''      , status:  2
+test: expr '' '-' -42         , output: ''      , status:  2
+test: expr '' '-' 5           , output: ''      , status:  2
+test: expr abcd '-' 0         , output: ''      , status:  2
+test: expr abcd '-' ''        , output: ''      , status:  2
+test: expr abcd '-' abcd      , output: ''      , status:  2
+test: expr abcd '-' bcde      , output: ''      , status:  2
+test: expr abcd '-' 42        , output: ''      , status:  2
+test: expr abcd '-' -42       , output: ''      , status:  2
+test: expr abcd '-' 5         , output: ''      , status:  2
+test: expr bcde '-' 0         , output: ''      , status:  2
+test: expr bcde '-' ''        , output: ''      , status:  2
+test: expr bcde '-' abcd      , output: ''      , status:  2
+test: expr bcde '-' bcde      , output: ''      , status:  2
+test: expr bcde '-' 42        , output: ''      , status:  2
+test: expr bcde '-' -42       , output: ''      , status:  2
+test: expr bcde '-' 5         , output: ''      , status:  2
+test: expr 42 '-' 0           , output: '42'    , status:  0
+test: expr 42 '-' ''          , output: ''      , status:  2
+test: expr 42 '-' abcd        , output: ''      , status:  2
+test: expr 42 '-' bcde        , output: ''      , status:  2
+test: expr 42 '-' 42          , output: '0'     , status:  1
+test: expr 42 '-' -42         , output: '84'    , status:  0
+test: expr 42 '-' 5           , output: '37'    , status:  0
+test: expr -42 '-' 0          , output: '-42'   , status:  0
+test: expr -42 '-' ''         , output: ''      , status:  2
+test: expr -42 '-' abcd       , output: ''      , status:  2
+test: expr -42 '-' bcde       , output: ''      , status:  2
+test: expr -42 '-' 42         , output: '-84'   , status:  0
+test: expr -42 '-' -42        , output: '0'     , status:  1
+test: expr -42 '-' 5          , output: '-47'   , status:  0
+test: expr 5 '-' 0            , output: '5'     , status:  0
+test: expr 5 '-' ''           , output: ''      , status:  2
+test: expr 5 '-' abcd         , output: ''      , status:  2
+test: expr 5 '-' bcde         , output: ''      , status:  2
+test: expr 5 '-' 42           , output: '-37'   , status:  0
+test: expr 5 '-' -42          , output: '47'    , status:  0
+test: expr 5 '-' 5            , output: '0'     , status:  1
+
+++++ Test * operator ++++
+test: expr 0 '*' 0            , output: '0'     , status:  1
+test: expr 0 '*' ''           , output: ''      , status:  2
+test: expr 0 '*' abcd         , output: ''      , status:  2
+test: expr 0 '*' bcde         , output: ''      , status:  2
+test: expr 0 '*' 42           , output: '0'     , status:  1
+test: expr 0 '*' -42          , output: '0'     , status:  1
+test: expr 0 '*' 5            , output: '0'     , status:  1
+test: expr '' '*' 0           , output: ''      , status:  2
+test: expr '' '*' ''          , output: ''      , status:  2
+test: expr '' '*' abcd        , output: ''      , status:  2
+test: expr '' '*' bcde        , output: ''      , status:  2
+test: expr '' '*' 42          , output: ''      , status:  2
+test: expr '' '*' -42         , output: ''      , status:  2
+test: expr '' '*' 5           , output: ''      , status:  2
+test: expr abcd '*' 0         , output: ''      , status:  2
+test: expr abcd '*' ''        , output: ''      , status:  2
+test: expr abcd '*' abcd      , output: ''      , status:  2
+test: expr abcd '*' bcde      , output: ''      , status:  2
+test: expr abcd '*' 42        , output: ''      , status:  2
+test: expr abcd '*' -42       , output: ''      , status:  2
+test: expr abcd '*' 5         , output: ''      , status:  2
+test: expr bcde '*' 0         , output: ''      , status:  2
+test: expr bcde '*' ''        , output: ''      , status:  2
+test: expr bcde '*' abcd      , output: ''      , status:  2
+test: expr bcde '*' bcde      , output: ''      , status:  2
+test: expr bcde '*' 42        , output: ''      , status:  2
+test: expr bcde '*' -42       , output: ''      , status:  2
+test: expr bcde '*' 5         , output: ''      , status:  2
+test: expr 42 '*' 0           , output: '0'     , status:  1
+test: expr 42 '*' ''          , output: ''      , status:  2
+test: expr 42 '*' abcd        , output: ''      , status:  2
+test: expr 42 '*' bcde        , output: ''      , status:  2
+test: expr 42 '*' 42          , output: '1764'  , status:  0
+test: expr 42 '*' -42         , output: '-1764' , status:  0
+test: expr 42 '*' 5           , output: '210'   , status:  0
+test: expr -42 '*' 0          , output: '0'     , status:  1
+test: expr -42 '*' ''         , output: ''      , status:  2
+test: expr -42 '*' abcd       , output: ''      , status:  2
+test: expr -42 '*' bcde       , output: ''      , status:  2
+test: expr -42 '*' 42         , output: '-1764' , status:  0
+test: expr -42 '*' -42        , output: '1764'  , status:  0
+test: expr -42 '*' 5          , output: '-210'  , status:  0
+test: expr 5 '*' 0            , output: '0'     , status:  1
+test: expr 5 '*' ''           , output: ''      , status:  2
+test: expr 5 '*' abcd         , output: ''      , status:  2
+test: expr 5 '*' bcde         , output: ''      , status:  2
+test: expr 5 '*' 42           , output: '210'   , status:  0
+test: expr 5 '*' -42          , output: '-210'  , status:  0
+test: expr 5 '*' 5            , output: '25'    , status:  0
+
+++++ Test / operator ++++
+test: expr 0 '/' 0            , output: ''      , status:  2
+test: expr 0 '/' ''           , output: ''      , status:  2
+test: expr 0 '/' abcd         , output: ''      , status:  2
+test: expr 0 '/' bcde         , output: ''      , status:  2
+test: expr 0 '/' 42           , output: '0'     , status:  1
+test: expr 0 '/' -42          , output: '0'     , status:  1
+test: expr 0 '/' 5            , output: '0'     , status:  1
+test: expr '' '/' 0           , output: ''      , status:  2
+test: expr '' '/' ''          , output: ''      , status:  2
+test: expr '' '/' abcd        , output: ''      , status:  2
+test: expr '' '/' bcde        , output: ''      , status:  2
+test: expr '' '/' 42          , output: ''      , status:  2
+test: expr '' '/' -42         , output: ''      , status:  2
+test: expr '' '/' 5           , output: ''      , status:  2
+test: expr abcd '/' 0         , output: ''      , status:  2
+test: expr abcd '/' ''        , output: ''      , status:  2
+test: expr abcd '/' abcd      , output: ''      , status:  2
+test: expr abcd '/' bcde      , output: ''      , status:  2
+test: expr abcd '/' 42        , output: ''      , status:  2
+test: expr abcd '/' -42       , output: ''      , status:  2
+test: expr abcd '/' 5         , output: ''      , status:  2
+test: expr bcde '/' 0         , output: ''      , status:  2
+test: expr bcde '/' ''        , output: ''      , status:  2
+test: expr bcde '/' abcd      , output: ''      , status:  2
+test: expr bcde '/' bcde      , output: ''      , status:  2
+test: expr bcde '/' 42        , output: ''      , status:  2
+test: expr bcde '/' -42       , output: ''      , status:  2
+test: expr bcde '/' 5         , output: ''      , status:  2
+test: expr 42 '/' 0           , output: ''      , status:  2
+test: expr 42 '/' ''          , output: ''      , status:  2
+test: expr 42 '/' abcd        , output: ''      , status:  2
+test: expr 42 '/' bcde        , output: ''      , status:  2
+test: expr 42 '/' 42          , output: '1'     , status:  0
+test: expr 42 '/' -42         , output: '-1'    , status:  0
+test: expr 42 '/' 5           , output: '8'     , status:  0
+test: expr -42 '/' 0          , output: ''      , status:  2
+test: expr -42 '/' ''         , output: ''      , status:  2
+test: expr -42 '/' abcd       , output: ''      , status:  2
+test: expr -42 '/' bcde       , output: ''      , status:  2
+test: expr -42 '/' 42         , output: '-1'    , status:  0
+test: expr -42 '/' -42        , output: '1'     , status:  0
+test: expr -42 '/' 5          , output: '-8'    , status:  0
+test: expr 5 '/' 0            , output: ''      , status:  2
+test: expr 5 '/' ''           , output: ''      , status:  2
+test: expr 5 '/' abcd         , output: ''      , status:  2
+test: expr 5 '/' bcde         , output: ''      , status:  2
+test: expr 5 '/' 42           , output: '0'     , status:  1
+test: expr 5 '/' -42          , output: '0'     , status:  1
+test: expr 5 '/' 5            , output: '1'     , status:  0
+
+++++ Test % operator ++++
+test: expr 0 '%' 0            , output: ''      , status:  2
+test: expr 0 '%' ''           , output: ''      , status:  2
+test: expr 0 '%' abcd         , output: ''      , status:  2
+test: expr 0 '%' bcde         , output: ''      , status:  2
+test: expr 0 '%' 42           , output: '0'     , status:  1
+test: expr 0 '%' -42          , output: '0'     , status:  1
+test: expr 0 '%' 5            , output: '0'     , status:  1
+test: expr '' '%' 0           , output: ''      , status:  2
+test: expr '' '%' ''          , output: ''      , status:  2
+test: expr '' '%' abcd        , output: ''      , status:  2
+test: expr '' '%' bcde        , output: ''      , status:  2
+test: expr '' '%' 42          , output: ''      , status:  2
+test: expr '' '%' -42         , output: ''      , status:  2
+test: expr '' '%' 5           , output: ''      , status:  2
+test: expr abcd '%' 0         , output: ''      , status:  2
+test: expr abcd '%' ''        , output: ''      , status:  2
+test: expr abcd '%' abcd      , output: ''      , status:  2
+test: expr abcd '%' bcde      , output: ''      , status:  2
+test: expr abcd '%' 42        , output: ''      , status:  2
+test: expr abcd '%' -42       , output: ''      , status:  2
+test: expr abcd '%' 5         , output: ''      , status:  2
+test: expr bcde '%' 0         , output: ''      , status:  2
+test: expr bcde '%' ''        , output: ''      , status:  2
+test: expr bcde '%' abcd      , output: ''      , status:  2
+test: expr bcde '%' bcde      , output: ''      , status:  2
+test: expr bcde '%' 42        , output: ''      , status:  2
+test: expr bcde '%' -42       , output: ''      , status:  2
+test: expr bcde '%' 5         , output: ''      , status:  2
+test: expr 42 '%' 0           , output: ''      , status:  2
+test: expr 42 '%' ''          , output: ''      , status:  2
+test: expr 42 '%' abcd        , output: ''      , status:  2
+test: expr 42 '%' bcde        , output: ''      , status:  2
+test: expr 42 '%' 42          , output: '0'     , status:  1
+test: expr 42 '%' -42         , output: '0'     , status:  1
+test: expr 42 '%' 5           , output: '2'     , status:  0
+test: expr -42 '%' 0          , output: ''      , status:  2
+test: expr -42 '%' ''         , output: ''      , status:  2
+test: expr -42 '%' abcd       , output: ''      , status:  2
+test: expr -42 '%' bcde       , output: ''      , status:  2
+test: expr -42 '%' 42         , output: '0'     , status:  1
+test: expr -42 '%' -42        , output: '0'     , status:  1
+test: expr -42 '%' 5          , output: '3'     , status:  0
+test: expr 5 '%' 0            , output: ''      , status:  2
+test: expr 5 '%' ''           , output: ''      , status:  2
+test: expr 5 '%' abcd         , output: ''      , status:  2
+test: expr 5 '%' bcde         , output: ''      , status:  2
+test: expr 5 '%' 42           , output: '5'     , status:  0
+test: expr 5 '%' -42          , output: '-37'   , status:  0
+test: expr 5 '%' 5            , output: '0'     , status:  1
+
+++++ Test & operator ++++
+test: expr 0 '&' 0            , output: '0'     , status:  1
+test: expr 0 '&' ''           , output: '0'     , status:  1
+test: expr 0 '&' abcd         , output: '0'     , status:  1
+test: expr 0 '&' bcde         , output: '0'     , status:  1
+test: expr 0 '&' 42           , output: '0'     , status:  1
+test: expr 0 '&' -42          , output: '0'     , status:  1
+test: expr 0 '&' 5            , output: '0'     , status:  1
+test: expr '' '&' 0           , output: '0'     , status:  1
+test: expr '' '&' ''          , output: '0'     , status:  1
+test: expr '' '&' abcd        , output: '0'     , status:  1
+test: expr '' '&' bcde        , output: '0'     , status:  1
+test: expr '' '&' 42          , output: '0'     , status:  1
+test: expr '' '&' -42         , output: '0'     , status:  1
+test: expr '' '&' 5           , output: '0'     , status:  1
+test: expr abcd '&' 0         , output: '0'     , status:  1
+test: expr abcd '&' ''        , output: '0'     , status:  1
+test: expr abcd '&' abcd      , output: 'abcd'  , status:  0
+test: expr abcd '&' bcde      , output: 'abcd'  , status:  0
+test: expr abcd '&' 42        , output: 'abcd'  , status:  0
+test: expr abcd '&' -42       , output: 'abcd'  , status:  0
+test: expr abcd '&' 5         , output: 'abcd'  , status:  0
+test: expr bcde '&' 0         , output: '0'     , status:  1
+test: expr bcde '&' ''        , output: '0'     , status:  1
+test: expr bcde '&' abcd      , output: 'bcde'  , status:  0
+test: expr bcde '&' bcde      , output: 'bcde'  , status:  0
+test: expr bcde '&' 42        , output: 'bcde'  , status:  0
+test: expr bcde '&' -42       , output: 'bcde'  , status:  0
+test: expr bcde '&' 5         , output: 'bcde'  , status:  0
+test: expr 42 '&' 0           , output: '0'     , status:  1
+test: expr 42 '&' ''          , output: '0'     , status:  1
+test: expr 42 '&' abcd        , output: '42'    , status:  0
+test: expr 42 '&' bcde        , output: '42'    , status:  0
+test: expr 42 '&' 42          , output: '42'    , status:  0
+test: expr 42 '&' -42         , output: '42'    , status:  0
+test: expr 42 '&' 5           , output: '42'    , status:  0
+test: expr -42 '&' 0          , output: '0'     , status:  1
+test: expr -42 '&' ''         , output: '0'     , status:  1
+test: expr -42 '&' abcd       , output: '-42'   , status:  0
+test: expr -42 '&' bcde       , output: '-42'   , status:  0
+test: expr -42 '&' 42         , output: '-42'   , status:  0
+test: expr -42 '&' -42        , output: '-42'   , status:  0
+test: expr -42 '&' 5          , output: '-42'   , status:  0
+test: expr 5 '&' 0            , output: '0'     , status:  1
+test: expr 5 '&' ''           , output: '0'     , status:  1
+test: expr 5 '&' abcd         , output: '5'     , status:  0
+test: expr 5 '&' bcde         , output: '5'     , status:  0
+test: expr 5 '&' 42           , output: '5'     , status:  0
+test: expr 5 '&' -42          , output: '5'     , status:  0
+test: expr 5 '&' 5            , output: '5'     , status:  0
+
+++++ Test | operator ++++
+test: expr 0 '|' 0            , output: '0'     , status:  1
+test: expr 0 '|' ''           , output: '0'     , status:  1
+test: expr 0 '|' abcd         , output: 'abcd'  , status:  0
+test: expr 0 '|' bcde         , output: 'bcde'  , status:  0
+test: expr 0 '|' 42           , output: '42'    , status:  0
+test: expr 0 '|' -42          , output: '-42'   , status:  0
+test: expr 0 '|' 5            , output: '5'     , status:  0
+test: expr '' '|' 0           , output: '0'     , status:  1
+test: expr '' '|' ''          , output: '0'     , status:  1
+test: expr '' '|' abcd        , output: 'abcd'  , status:  0
+test: expr '' '|' bcde        , output: 'bcde'  , status:  0
+test: expr '' '|' 42          , output: '42'    , status:  0
+test: expr '' '|' -42         , output: '-42'   , status:  0
+test: expr '' '|' 5           , output: '5'     , status:  0
+test: expr abcd '|' 0         , output: 'abcd'  , status:  0
+test: expr abcd '|' ''        , output: 'abcd'  , status:  0
+test: expr abcd '|' abcd      , output: 'abcd'  , status:  0
+test: expr abcd '|' bcde      , output: 'abcd'  , status:  0
+test: expr abcd '|' 42        , output: 'abcd'  , status:  0
+test: expr abcd '|' -42       , output: 'abcd'  , status:  0
+test: expr abcd '|' 5         , output: 'abcd'  , status:  0
+test: expr bcde '|' 0         , output: 'bcde'  , status:  0
+test: expr bcde '|' ''        , output: 'bcde'  , status:  0
+test: expr bcde '|' abcd      , output: 'bcde'  , status:  0
+test: expr bcde '|' bcde      , output: 'bcde'  , status:  0
+test: expr bcde '|' 42        , output: 'bcde'  , status:  0
+test: expr bcde '|' -42       , output: 'bcde'  , status:  0
+test: expr bcde '|' 5         , output: 'bcde'  , status:  0
+test: expr 42 '|' 0           , output: '42'    , status:  0
+test: expr 42 '|' ''          , output: '42'    , status:  0
+test: expr 42 '|' abcd        , output: '42'    , status:  0
+test: expr 42 '|' bcde        , output: '42'    , status:  0
+test: expr 42 '|' 42          , output: '42'    , status:  0
+test: expr 42 '|' -42         , output: '42'    , status:  0
+test: expr 42 '|' 5           , output: '42'    , status:  0
+test: expr -42 '|' 0          , output: '-42'   , status:  0
+test: expr -42 '|' ''         , output: '-42'   , status:  0
+test: expr -42 '|' abcd       , output: '-42'   , status:  0
+test: expr -42 '|' bcde       , output: '-42'   , status:  0
+test: expr -42 '|' 42         , output: '-42'   , status:  0
+test: expr -42 '|' -42        , output: '-42'   , status:  0
+test: expr -42 '|' 5          , output: '-42'   , status:  0
+test: expr 5 '|' 0            , output: '5'     , status:  0
+test: expr 5 '|' ''           , output: '5'     , status:  0
+test: expr 5 '|' abcd         , output: '5'     , status:  0
+test: expr 5 '|' bcde         , output: '5'     , status:  0
+test: expr 5 '|' 42           , output: '5'     , status:  0
+test: expr 5 '|' -42          , output: '5'     , status:  0
+test: expr 5 '|' 5            , output: '5'     , status:  0
+
+32
+1
+0
+0
+1
+1
+0
+1
+1
+1
+1
+0
+1
+0

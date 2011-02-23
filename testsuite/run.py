@@ -4,6 +4,9 @@ import os.path
 import os
 from gnatpython.fileutils import echo_to_file, diff, cp
 from gnatpython.ex import Run, STDOUT
+from gnatpython.testdriver import *
+
+class MyRunner(TestRunner):
 
 if __name__ == "__main__":
    test_name = os.path.basename(sys.argv[1])
@@ -21,6 +24,7 @@ if __name__ == "__main__":
    os.environ['PATH'] = shell_path + ';' + os.environ['PATH']
    
    if mode == "regular":
+       
        p = Run ([shell, test_dir + '/test.sh'], output=output_file, error=STDOUT)
        d = diff (expected_file, output_file)
 
