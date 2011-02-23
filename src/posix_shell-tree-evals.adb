@@ -277,6 +277,13 @@ package body Posix_Shell.Tree.Evals is
          exit when Pattern_Found;
          Current_Case := Get_Node (T, Current_Case.Next_Patterns);
       end loop;
+
+      --  In case no pattern has been matched and so no command executed we
+      --  need to ensure that the exit status of the case construct is 0.
+      if not Pattern_Found then
+         Save_Last_Exit_Status (S.all, 0);
+      end if;
+
       Restore_Redirections (S.all, Current_Redirs);
    exception
       when E :  Break_Exception | Continue_Exception =>
@@ -391,8 +398,7 @@ package body Posix_Shell.Tree.Evals is
 
    procedure Eval_For (S : Shell_State_Access; T : Shell_Tree; N : Node) is
       Loop_Var  : constant String := Str (N.Loop_Var);
-      Loop_Var_Values : constant String_List :=
-        Eval_String_List (S, N.Loop_Var_Values);
+      Loop_Var_Values : String_List := Eval_String_List (S, N.Loop_Var_Values);
       Is_Valid : Boolean;
       Break_Number : Integer;
       Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
@@ -414,6 +420,11 @@ package body Posix_Shell.Tree.Evals is
                end if;
          end;
       end loop;
+
+      for Index in Loop_Var_Values'Range loop
+         Free (Loop_Var_Values (Index));
+      end loop;
+
       Restore_Redirections (S.all, Current_Redirs);
    end Eval_For;
 

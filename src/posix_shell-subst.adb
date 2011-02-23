@@ -188,7 +188,6 @@ package body Posix_Shell.Subst is
             when WORD_FIELD =>
                Append (Result_List,
                        Filename_Expansion (SS, To_String (Buffer)));
-
          end case;
 
          if Current_State /= EMPTY_FIELD then

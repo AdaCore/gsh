@@ -49,6 +49,8 @@ package body Posix_Shell.Opts is
 
             elsif Arg = "-x" then
                Debug_Mode := True;
+            elsif Arg = "-e" then
+               null;
             elsif Arg = "-c" then
 
                Run_Command := True;
