@@ -36,6 +36,8 @@ package Posix_Shell.Lexer is
    type Buffer_Access is access Token_Buffer;
    --  Access to the buffer
 
+   procedure Deallocate (B : in out Buffer_Access);
+
    function New_Buffer_From_File (Filename : String) return Token_Buffer;
    function New_Buffer (Str : String) return Token_Buffer;
 

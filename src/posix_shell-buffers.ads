@@ -4,6 +4,7 @@ with GNAT.OS_Lib; use GNAT.OS_Lib;
 package Posix_Shell.Buffers is
 
    type Buffer is private;
+   Null_Buffer : constant Buffer;
 
    type Text_Position is private;
    Null_Text_Position : constant Text_Position;
@@ -55,5 +56,11 @@ private
    procedure Initialize (Object : in out Buffer);
    procedure Adjust     (Object : in out Buffer);
    procedure Finalize   (Object : in out Buffer);
+
+   Null_Buffer : constant Buffer :=
+     (Controlled with
+      S => null,
+      Pos => Null_Text_Position,
+      Lines => null);
 
 end Posix_Shell.Buffers;

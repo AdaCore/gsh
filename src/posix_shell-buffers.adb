@@ -1,5 +1,4 @@
 with Ada.Unchecked_Deallocation;
-with Posix_Shell.Output; use Posix_Shell.Output;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 
 package body Posix_Shell.Buffers is
@@ -206,7 +205,7 @@ package body Posix_Shell.Buffers is
    begin
       if F = Invalid_FD then
          --  The Open_Read failed.
-         Error (Filename & ": Unable to open for reading");
+         --  Error (Filename & ": Unable to open for reading");
          raise Buffer_Read_Error;
       end if;
 
@@ -219,9 +218,9 @@ package body Posix_Shell.Buffers is
          Close (F);
 
          if Bytes_Read /= Expected_Bytes_Read then
-            Error (Filename & ": Read " & To_String (Bytes_Read)
-                   & " bytes (expected " & To_String (Expected_Bytes_Read)
-                   & " bytes).");
+            --  Error (Filename & ": Read " & To_String (Bytes_Read)
+            --       & " bytes (expected " & To_String (Expected_Bytes_Read)
+            --       & " bytes).");
             raise Buffer_Read_Error;
          end if;
 

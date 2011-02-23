@@ -1,4 +1,5 @@
 with GNAT.Strings; use GNAT.Strings;
+with Posix_Shell.Variables; use Posix_Shell.Variables;
 
 package Posix_Shell.Utils is
 
@@ -20,7 +21,7 @@ package Posix_Shell.Utils is
    --  Performs the shell equivalent of a not: If Value is zero, then
    --  return 1. Else, return 0.
 
-   function Current_Working_Directory return String;
+   function Current_Working_Directory (S : Shell_State) return String;
    --  Similar to GNAT.Directory_Operations.Get_Current_Dir except that
    --  the path returned always follows the UNIX convention of using
    --  forward slashes. Also, the directory name does not have a directory

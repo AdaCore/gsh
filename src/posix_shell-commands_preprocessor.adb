@@ -1,11 +1,11 @@
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Opts; use Posix_Shell.Opts;
-with Posix_Shell.Output; use Posix_Shell.Output;
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Functions; use Posix_Shell.Functions;
-with Posix_Shell.Variables; use Posix_Shell.Variables;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Ada.Text_IO;
+with GNAT.Task_Lock;
 
 package body Posix_Shell.Commands_Preprocessor is
 
@@ -112,7 +112,8 @@ package body Posix_Shell.Commands_Preprocessor is
 
    end Get_Launcher;
 
-   function Run (Cmd : String;
+   function Run (S : Shell_State_Access;
+                 Cmd : String;
                  Args : String_List;
                  Env : String_List)
                  return Integer
@@ -132,29 +133,36 @@ package body Posix_Shell.Commands_Preprocessor is
 
       --  Handle builtins first.
       if Is_Builtin (Cmd) then
-         Exit_Status := Execute_Builtin (Cmd, Args);
-         Save_Last_Exit_Status (Exit_Status);
+         Exit_Status := Execute_Builtin (S, Cmd, Args);
+         Save_Last_Exit_Status (S.all, Exit_Status);
          return Exit_Status;
       end if;
 
       --  Next, is this a function?
       if Is_Function (Cmd) then
-         Exit_Status := Execute_Function (Cmd, Args);
-         Save_Last_Exit_Status (Exit_Status);
-         return Exit_Status;
+         Execute_Function (S, Cmd, Args);
+         return Get_Last_Exit_Status (S.all);
       end if;
 
       --  This command can only be an executable. See if we can
       --  locate an executable using the various possible filename
       --  extensions.
       for I in Executables_Extensions'Range loop
-         Exec_Path := Locate_Exec_On_Path
-           (Cmd & Executables_Extensions (I).all);
+         GNAT.Task_Lock.Lock;
+         declare
+            Real_Current_Dir : constant String := Get_Current_Dir;
+         begin
+            Change_Dir (Get_Current_Dir (S.all));
+            Exec_Path := Locate_Exec_On_Path
+              (Cmd & Executables_Extensions (I).all);
+            Change_Dir (Real_Current_Dir);
+         end;
+         GNAT.Task_Lock.Unlock;
          exit when Exec_Path /= null;
       end loop;
 
       if Exec_Path = null then
-         Put (2, Cmd & ": command not found"); New_Line (2);
+         Put (S.all, 2, Cmd & ": command not found"); New_Line (S.all, 2);
          return 127;
       end if;
 
@@ -163,10 +171,18 @@ package body Posix_Shell.Commands_Preprocessor is
          Cmd_Line : constant String_List := Launcher & Args;
       begin
          if Cmd_Line (Cmd_Line'First) = null then
-            Put (2, Cmd & ": can't launch program"); New_Line (2);
+            Put (S.all, 2, Cmd & ": can't launch program");
+            New_Line (S.all, 2);
             Exit_Status := 127;
          else
-            Exit_Status := Blocking_Spawn (Cmd_Line, "", Env);
+
+            Exit_Status := Blocking_Spawn
+              (Cmd_Line,
+               Get_Current_Dir (S.all),
+               Env,
+               Get_Fd (S.all, 0),
+               Get_Fd (S.all, 1),
+               Get_Fd (S.all, 2));
          end if;
          for J in Launcher'Range loop
             Free (Launcher (J));

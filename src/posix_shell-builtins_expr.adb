@@ -1,5 +1,5 @@
 with Posix_Shell.Utils; use Posix_Shell.Utils;
-with Posix_Shell.Output; use Posix_Shell.Output;
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with GNAT.Regpat; use GNAT.Regpat;
 
 package body Posix_Shell.Builtins_Expr is
@@ -47,7 +47,10 @@ package body Posix_Shell.Builtins_Expr is
    --  Builtin_Expr --
    -------------------
 
-   function Builtin_Expr (Args : String_List) return Integer is
+   function Builtin_Expr
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+
       Index : Integer := Args'First;
       --  index of the current token
 
@@ -213,11 +216,11 @@ package body Posix_Shell.Builtins_Expr is
 
       procedure Push_Result (T : Expr_Token) is
       begin
-         if T /= Arg_Stack (Arg_Stack_Top) then
+         if T.S /= Arg_Stack (Arg_Stack_Top).S then
             Free (Arg_Stack (Arg_Stack_Top).S);
          end if;
 
-         if T /= Arg_Stack (Arg_Stack_Top) then
+         if T.S /= Arg_Stack (Arg_Stack_Top - 1).S then
             Free (Arg_Stack (Arg_Stack_Top - 1).S);
          end if;
 
@@ -270,21 +273,31 @@ package body Posix_Shell.Builtins_Expr is
                            Push_Result (Left.I * Right.I);
                         when DIV   =>
                            Check_Type (Left, Right, NUM);
+                           if Right.I = 0 then
+                              raise Expr_Error;
+                           end if;
                            Push_Result (Left.I / Right.I);
                         when PERCENT =>
                            Check_Type (Left, Right, NUM);
+                           if Right.I = 0 then
+                              raise Expr_Error;
+                           end if;
                            Push_Result (Left.I mod Right.I);
                         when PIPE =>
                            if Left.I = 0 then
-                              Push_Result (Right);
+                              if Right.I = 0 then
+                                 Push_Result (0);
+                              else
+                                 Push_Result (Right);
+                              end if;
                            else
                               Push_Result (Left);
                            end if;
                         when CAND =>
-                           if Left.I /= 0 then
+                           if Left.I /= 0 and Right.I /= 0 then
                               Push_Result (Left);
                            else
-                              Push_Result (Right);
+                              Push_Result (0);
                            end if;
                         when EQUAL =>
                            if Left.T = NUM and Right.T = NUM then
@@ -489,13 +502,16 @@ package body Posix_Shell.Builtins_Expr is
 
       end loop;
 
-      Put (1, Arg_Stack (1).S.all & ASCII.LF);
+      Put (S.all, 1, Arg_Stack (1).S.all & ASCII.LF);
       if Arg_Stack (1).S.all = "0" or else Arg_Stack (1).S.all = "" then
          return 1;
       else
          return 0;
       end if;
-
+   exception
+      when Expr_Error =>
+         Put (S.all, 2, "invalid expression" & ASCII.LF);
+         return 2;
    end Builtin_Expr;
 
 end Posix_Shell.Builtins_Expr;

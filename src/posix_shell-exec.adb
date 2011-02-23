@@ -1,6 +1,5 @@
-with Posix_Shell.Output; use Posix_Shell.Output;
-with Posix_Shell.Variables; use Posix_Shell.Variables;
 with System;
+with GNAT.Task_Lock;
 
 package body Posix_Shell.Exec is
 
@@ -47,27 +46,6 @@ package body Posix_Shell.Exec is
       return Result;
    end Blocking_Spawn;
 
-   --------------------
-   -- Blocking_Spawn --
-   --------------------
-
-   function Blocking_Spawn
-     (Args      : Argument_List;
-      Cwd       : String;
-      Env       : Argument_List)
-      return Integer
-   is
-      Redirections : constant Redirection_States := Get_Current_Redirections;
-   begin
-      return Blocking_Spawn
-        (Args,
-         Cwd,
-         Env,
-         Redirections (0).Fd,
-         Redirections (1).Fd,
-         Redirections (2).Fd);
-   end Blocking_Spawn;
-
    ------------------------
    -- Non_Blocking_Spawn --
    ------------------------
@@ -88,7 +66,10 @@ package body Posix_Shell.Exec is
       C_Cwd_Addr : System.Address := System.Null_Address;
       C_Env      : aliased array (1 .. Env'Length + 1) of System.Address;
       C_Env_Addr : System.Address := System.Null_Address;
+      Success : Boolean;
+      pragma Warnings (Off, Success);
    begin
+      GNAT.Task_Lock.Lock;
       Normalize_Arguments (Args, Arg_List);
       --  Prepare an array of arguments to pass to C
 
@@ -136,7 +117,9 @@ package body Posix_Shell.Exec is
 
          if Stdout_Fd /= 1 then
             Output := Dup (Standout);
+            --  Ada.Text_IO.Put_Line (Stdout_Fd'Img & ", " & Output'Img);
             Dup2 (Stdout_Fd, GNAT.OS_Lib.Standout);
+
          end if;
 
          if Stderr_Fd /= 2 then
@@ -150,12 +133,18 @@ package body Posix_Shell.Exec is
             Dup2 (Stderr_Fd, GNAT.OS_Lib.Standerr);
          end if;
 
+         Set_Close_On_Exec (GNAT.OS_Lib.Standin, False, Success);
+         Set_Close_On_Exec (GNAT.OS_Lib.Standout, False, Success);
+         Set_Close_On_Exec (GNAT.OS_Lib.Standerr, False, Success);
          Result := Portable_Execvp
            (C_Arg_List'Address, C_Cwd_Addr, C_Env_Addr);
          for K in Arg_List'Range loop
             Free (Arg_List (K));
          end loop;
 
+         Set_Close_On_Exec (GNAT.OS_Lib.Standin, True, Success);
+         Set_Close_On_Exec (GNAT.OS_Lib.Standout, True, Success);
+         Set_Close_On_Exec (GNAT.OS_Lib.Standerr, True, Success);
          --  Restore the old descriptors
 
          if Stdin_Fd /= 0 then
@@ -173,7 +162,7 @@ package body Posix_Shell.Exec is
             Close (Error);
          end if;
       end;
-
+      GNAT.Task_Lock.Unlock;
       return Result;
    end Non_Blocking_Spawn;
 
@@ -273,9 +262,9 @@ package body Posix_Shell.Exec is
    -- Shell_Exit --
    ----------------
 
-   procedure Shell_Exit (Code : Integer) is
+   procedure Shell_Exit (S : in out Shell_State; Code : Integer) is
    begin
-      Save_Last_Exit_Status (Code);
+      Save_Last_Exit_Status (S, Code);
       raise Shell_Exit_Exception;
    end Shell_Exit;
 

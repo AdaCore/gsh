@@ -1,4 +1,4 @@
-with Posix_Shell.Output; use Posix_Shell.Output;
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 
 package body Posix_Shell.Builtins.Test is
@@ -33,7 +33,8 @@ package body Posix_Shell.Builtins.Test is
 
    type Binop_Access is access function (Left, Right : Integer) return Boolean;
 
-   function Eval_Binop (Left, Right : String_Access;
+   function Eval_Binop (S : Shell_State_Access;
+                        Left, Right : String_Access;
                         Binop : Binop_Access) return Integer;
    --  A function that converts Left and Right to integers, and evaluates
    --  the Binop function using these values. Return 0 if Binop returned
@@ -79,7 +80,8 @@ package body Posix_Shell.Builtins.Test is
    -- Eval_Binop --
    ----------------
 
-   function Eval_Binop (Left, Right : String_Access;
+   function Eval_Binop (S : Shell_State_Access;
+                        Left, Right : String_Access;
                         Binop : Binop_Access) return Integer
    is
       Left_V, Right_V : Integer;
@@ -87,13 +89,13 @@ package body Posix_Shell.Builtins.Test is
    begin
       To_Integer (Left.all, Left_V, Success);
       if not Success then
-         Error ("test: " & Left.all & ": integer expression expected");
+         Error (S.all, "test: " & Left.all & ": integer expression expected");
          return 2;
       end if;
 
       To_Integer (Right.all, Right_V, Success);
       if not Success then
-         Error ("test: " & Right.all & ": integer expression expected");
+         Error (S.all, "test: " & Right.all & ": integer expression expected");
          return 2;
       end if;
 
@@ -153,16 +155,18 @@ package body Posix_Shell.Builtins.Test is
    -- Test_Builtin --
    ------------------
 
-   function Test_Builtin (Args : String_List) return Integer is
+   function Test_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
       Current_Pos : Integer := Args'First;
       --  Position of the string currently parsed in Args.
 
-      function Get_Bin_Op (S : String) return Binary_Op;
+      function Get_Bin_Op (Str : String) return Binary_Op;
       --  Given a string return the corresponding binary operator. If the
       --  string does not correspond to any binrary operator return the
       --  NULL_BIN_OP.
 
-      function Get_Unary_Op (S : String) return Unary_Op;
+      function Get_Unary_Op (Str : String) return Unary_Op;
       pragma Inline (Get_Unary_Op);
       --  Idem with Unary operators.
 
@@ -202,17 +206,17 @@ package body Posix_Shell.Builtins.Test is
             when NOT_EQUAL_OP =>
                return To_Integer (Left.all /= Right.all);
             when GREATER_THAN_OP =>
-               return Eval_Binop (Left, Right, Greater_Than'Access);
+               return Eval_Binop (S, Left, Right, Greater_Than'Access);
             when GREATER_EQUAL_THAN_OP =>
-               return Eval_Binop (Left, Right, Greater_Equal'Access);
+               return Eval_Binop (S, Left, Right, Greater_Equal'Access);
             when LESS_THAN_OP =>
-               return Eval_Binop (Left, Right, Less_Than'Access);
+               return Eval_Binop (S, Left, Right, Less_Than'Access);
             when LESS_EQUAL_THAN_OP =>
-               return Eval_Binop (Left, Right, Less_Equal'Access);
+               return Eval_Binop (S, Left, Right, Less_Equal'Access);
             when IEQUAL_OP =>
-               return Eval_Binop (Left, Right, Equal'Access);
+               return Eval_Binop (S, Left, Right, Equal'Access);
             when INOT_EQUAL_OP =>
-               return Eval_Binop (Left, Right, Not_Equal'Access);
+               return Eval_Binop (S, Left, Right, Not_Equal'Access);
             when UNSUPPORTED_BINARY_OP =>
                --  This binary operator is unsupported, so just return
                --  an arbitrary non-zero value.
@@ -240,6 +244,7 @@ package body Posix_Shell.Builtins.Test is
          -------------
 
          function Is_File (Filename : String) return String is
+            Res_Path : constant String := Resolve_Path (S.all, Filename);
          begin
 
             if Path_Separator = ';' and then Filename = "/dev/null" then
@@ -248,16 +253,16 @@ package body Posix_Shell.Builtins.Test is
                return "NUL";
             end if;
 
-            if Is_Regular_File (Filename) or Is_Directory (Filename) then
-               return Filename;
+            if Is_Regular_File (Res_Path) or Is_Directory (Res_Path) then
+               return Res_Path;
             end if;
 
             if Path_Separator = ';' then
 
                --  we are on windows.
                --  First check if the .exe exist
-               if Is_Regular_File (Filename & ".exe") then
-                  return Filename & ".exe";
+               if Is_Regular_File (Res_Path & ".exe") then
+                  return Res_Path & ".exe";
                end if;
 
             end if;
@@ -267,7 +272,15 @@ package body Posix_Shell.Builtins.Test is
       begin
          case Op is
             when IS_DIR_OP  =>
-               return To_Integer (Is_Directory (Param.all));
+               declare
+                  Real_File : constant String := Is_File (Param.all);
+               begin
+                  if Real_File /= "" then
+                     return To_Integer (Is_Directory (Param.all));
+                  else
+                     return To_Integer (False);
+                  end if;
+               end;
             when IS_FILE_OR_DIR_OP =>
                declare
                   Real_File : constant String := Is_File (Param.all);
@@ -348,28 +361,29 @@ package body Posix_Shell.Builtins.Test is
       -- Get_Bin_Op --
       ----------------
 
-      function Get_Bin_Op (S : String) return Binary_Op is
+      function Get_Bin_Op (Str : String) return Binary_Op is
       begin
-         if S = "=" then
+         if Str = "=" then
             return EQUAL_OP;
-         elsif S = "!=" then
+         elsif Str = "!=" then
             return NOT_EQUAL_OP;
-         elsif S = "-gt" then
+         elsif Str = "-gt" then
             return GREATER_THAN_OP;
-         elsif S = "-ge" then
+         elsif Str = "-ge" then
             return GREATER_EQUAL_THAN_OP;
-         elsif S = "-lt" then
+         elsif Str = "-lt" then
             return LESS_THAN_OP;
-         elsif S = "-le" then
+         elsif Str = "-le" then
             return LESS_EQUAL_THAN_OP;
-         elsif S = "-eq" then
+         elsif Str = "-eq" then
             return IEQUAL_OP;
-         elsif S = "-ne" then
+         elsif Str = "-ne" then
             return INOT_EQUAL_OP;
          end if;
 
-         if S = "-nt" or else S = "-ot" then
-            Warning ("test: " & S & ": binary operator not supported yet");
+         if Str = "-nt" or else Str = "-ot" then
+            Warning
+              (S.all, "test: " & Str & ": binary operator not supported yet");
             return UNSUPPORTED_BINARY_OP;
          end if;
 
@@ -380,44 +394,45 @@ package body Posix_Shell.Builtins.Test is
       -- Get_Unary_Op --
       ------------------
 
-      function Get_Unary_Op (S : String) return Unary_Op is
+      function Get_Unary_Op (Str : String) return Unary_Op is
       begin
-         if S = "-d" then
+         if Str = "-d" then
             return IS_DIR_OP;
-         elsif S = "-f" then
+         elsif Str = "-f" then
             return IS_FILE_OP;
-         elsif S = "-x" then
+         elsif Str = "-x" then
             return IS_RFILE_OP;
-         elsif S = "-r" then
+         elsif Str = "-r" then
             return IS_RFILE_OP;
-         elsif S = "-w" then
+         elsif Str = "-w" then
             return IS_WFILE_OP;
-         elsif S = "-n" then
+         elsif Str = "-n" then
             return NONZERO_STRING_OP;
-         elsif S = "-s" then
+         elsif Str = "-s" then
             return IS_NON_EMPTY_FILE;
-         elsif S = "-z" then
+         elsif Str = "-z" then
             return ZERO_STRING_OP;
-         elsif S = "-e" then
+         elsif Str = "-e" then
             return IS_FILE_OR_DIR_OP;
          end if;
 
-         if S = "-b" or else
-            S = "-c" or else
-            S = "-e" or else
-            S = "-g" or else
-            S = "-G" or else
-            S = "-h" or else
-            S = "-k" or else
-            S = "-L" or else
-            S = "-O" or else
-            S = "-p" or else
-            S = "-S" or else
-            S = "-t" or else
-            S = "-u" or else
-            S = "-x"
+         if Str = "-b" or else
+            Str = "-c" or else
+            Str = "-e" or else
+            Str = "-g" or else
+            Str = "-G" or else
+            Str = "-h" or else
+            Str = "-k" or else
+            Str = "-L" or else
+            Str = "-O" or else
+            Str = "-p" or else
+            Str = "-S" or else
+            Str = "-t" or else
+            Str = "-u" or else
+            Str = "-x"
          then
-            Warning ("test: " & S & ": unary operator not supported yet");
+            Warning (S.all,
+                     "test: " & Str & ": unary operator not supported yet");
             return UNSUPPORTED_UNARY_OP;
          end if;
 
@@ -442,7 +457,8 @@ package body Posix_Shell.Builtins.Test is
             Current_Pos := Current_Pos + 1;
 
             if Current_Pos > Args'Last then
-               Error ("test: argument expected after -a binary operator");
+               Error (S.all,
+                      "test: argument expected after -a binary operator");
                --  This error message is different from what bash is
                --  printing. But doing the same thing as bash is not trivial
                --  and I think our message is slightly better anyway
@@ -496,7 +512,8 @@ package body Posix_Shell.Builtins.Test is
             Current_Pos := Current_Pos + 1;
 
             if Current_Pos > Args'Last then
-               Error ("test: argument expected after -o binary operator");
+               Error (S.all,
+                      "test: argument expected after -o binary operator");
                --  This error message is different from what bash is
                --  printing. But doing the same thing as bash is not trivial
                --  and I think our message is slightly better anyway

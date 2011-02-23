@@ -2,12 +2,11 @@ with Posix_Shell.Builtins_Printf; use Posix_Shell.Builtins_Printf;
 with Posix_Shell.Builtins_Expr; use Posix_Shell.Builtins_Expr;
 with Posix_Shell.Builtins.Test; use Posix_Shell.Builtins.Test;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
-with Posix_Shell.Output; use Posix_Shell.Output;
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Parser; use Posix_Shell.Parser;
 with Posix_Shell.Tree; use Posix_Shell.Tree;
 with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
-with Posix_Shell.Variables; use Posix_Shell.Variables;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
@@ -20,7 +19,8 @@ with GNAT.Directory_Operations;
 package body Posix_Shell.Builtins is
 
    type Builtin_Function
-     is access function (Args : String_List) return Integer;
+     is access function
+       (S : Shell_State_Access; Args : String_List) return Integer;
    --  The signature of a function implementing a given builtin.
 
    package Builtin_Maps is
@@ -34,7 +34,10 @@ package body Posix_Shell.Builtins is
    Builtin_Map : Map;
    --  A map of all builtins.
 
-   function Change_Dir (Dir_Name : String; Verbose : Boolean := False)
+   function Change_Dir
+     (S : Shell_State_Access;
+      Dir_Name : String;
+      Verbose : Boolean := False)
      return Integer;
    --  Change the directory to Dir_Name and return 0 if successful.
    --  This function also maintains the PWD and OLDPWD variables.
@@ -44,13 +47,17 @@ package body Posix_Shell.Builtins is
    --  This function does nothing and returns zero if Dir_Name is
    --  the empty string.
 
-   function Return_Builtin (Args : String_List) return Integer;
+   function Return_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
    --  Implement the "return" builtin.
 
-   function Shift_Builtin (Args : String_List) return Integer;
+   function Shift_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
    --  Implement the "shift" builtin.
 
-   function Exec_Builtin (Args : String_List) return Integer;
+   function Exec_Builtin
+     (S : Shell_State_Access; Args : String_List)
+      return Integer;
    --  The exec utility shall open, close, and/or copy file descriptors as
    --  specified by any redirections as part of the command.
    --  If exec is specified with command, it shall replace the shell with
@@ -63,56 +70,81 @@ package body Posix_Shell.Builtins is
    --  specified to exec a process will be spawned as there is no notion of
    --  fork/exec on Windows systems.
 
-   function Change_Dir_Builtin (Args : String_List) return Integer;
+   function Change_Dir_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Echo_Builtin (Args : String_List) return Integer;
+   function Echo_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Eval_Builtin (Args : String_List) return Integer;
+   function Eval_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function REcho_Builtin (Args : String_List) return Integer;
-   pragma Unreferenced (REcho_Builtin);
+   function REcho_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Source_Builtin (Args : String_List) return Integer;
+   function Source_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function True_Builtin (Args : String_List) return Integer;
+   function True_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function False_Builtin (Args : String_List) return Integer;
+   function False_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Export_Builtin (Args : String_List) return Integer;
+   function Export_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Is_Directory_Builtin (Args : String_List) return Integer;
+   function Is_Directory_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Is_File_Builtin (Args : String_List) return Integer;
+   function Is_File_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Set_Builtin (Args : String_List) return Integer;
+   function Set_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Unsetenv_Builtin (Args : String_List) return Integer;
+   function Unsetenv_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Limit_Builtin (Args : String_List) return Integer;
+   function Limit_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Exit_Builtin (Args : String_List) return Integer;
+   function Exit_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Wc_Builtin (Args : String_List) return Integer;
+   function Wc_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Continue_Builtin (Args : String_List) return Integer;
+   function Continue_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Break_Builtin (Args : String_List) return Integer;
+   function Break_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Read_Builtin (Args : String_List) return Integer;
+   function Read_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Cat_Builtin (Args : String_List) return Integer;
+   function Cat_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Pwd_Builtin (Args : String_List) return Integer;
+   function Pwd_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Unset_Builtin (Args : String_List) return Integer;
+   function Unset_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Rm_Builtin (Args : String_List) return Integer;
+   function Rm_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
 
    -------------------
    -- Break_Builtin --
    -------------------
 
-   function Break_Builtin (Args : String_List) return Integer is
+   function Break_Builtin
+     (S : Shell_State_Access; Args : String_List)
+      return Integer
+   is
+      pragma Unreferenced (S);
       Break_Number : Integer;
       Is_Valid : Boolean;
    begin
@@ -135,7 +167,11 @@ package body Posix_Shell.Builtins is
    -- Cat_Builtin --
    -----------------
 
-   function Cat_Builtin (Args : String_List) return Integer is
+   function Cat_Builtin
+     (S : Shell_State_Access;
+      Args : String_List)
+      return Integer
+   is
       Fd : File_Descriptor;
       Buffer : aliased String (1 .. 1024 * 1024);
       R : Integer;
@@ -144,7 +180,7 @@ package body Posix_Shell.Builtins is
       --  If no argument is given to cat then we assume that stdin should be
       --  dump.
       if Args'Length = 0 then
-         Put (1, Read (0));
+         Put (S.all, 1, Read (S.all, 0));
          return 0;
       end if;
 
@@ -152,17 +188,17 @@ package body Posix_Shell.Builtins is
          --  '-' means that we need to dump stdin otherwise the argument is
          --  interpreted as a filename.
          if Args (J).all = "-" then
-            Put (1, Read (0));
+            Put (S.all, 1, Read (S.all, 0));
          else
-            Fd := Open_Read (Args (J).all, Binary);
+            Fd := Open_Read (Resolve_Path (S.all, Args (J).all), Binary);
             if Fd < 0 then
-               Put (2, "cat: " & Args (J).all &
+               Put (S.all, 2, "cat: " & Args (J).all &
                     ": No such file or directory" & ASCII.LF);
             else
                loop
                   R := Read (Fd, Buffer'Address, Buffer'Last);
                   if R > 0 then
-                     Put (1, Strip_CR (Buffer (1 .. R)));
+                     Put (S.all, 1, Strip_CR (Buffer (1 .. R)));
                   end if;
                   exit when R /= Buffer'Last;
                end loop;
@@ -178,49 +214,62 @@ package body Posix_Shell.Builtins is
    -- Change_Dir --
    ----------------
 
-   function Change_Dir (Dir_Name : String; Verbose : Boolean := False)
-     return Integer is
+   function Change_Dir
+     (S        : Shell_State_Access;
+      Dir_Name : String;
+      Verbose  : Boolean := False)
+      return Integer
+   is
+      function Get_Absolute_Path (D : String) return String;
+
+      function Get_Absolute_Path (D : String) return String is
+      begin
+         if Is_Absolute_Path (D) then
+            return D;
+         else
+            return Get_Current_Dir (S.all) & "/" & D;
+         end if;
+      end Get_Absolute_Path;
+
+      Abs_Dir : constant String := Get_Absolute_Path (Dir_Name);
+
    begin
       if Dir_Name = "" then
          return 0;
       end if;
 
-      if not Is_Directory (Dir_Name) then
-         Put (2, "cd: " & Dir_Name & ": No such file or directory");
-         New_Line (2);
+
+      if not Is_Directory (Abs_Dir) then
+         Put (S.all, 2, "cd: " & Dir_Name & ": No such file or directory");
+         New_Line (S.all, 2);
          return 1;
       end if;
 
       declare
          use GNAT.Directory_Operations;
          Full_Path : constant String := Format_Pathname
-           (GNAT.OS_Lib.Normalize_Pathname (Dir_Name),
+           (GNAT.OS_Lib.Normalize_Pathname (Abs_Dir),
             GNAT.Directory_Operations.UNIX);
       begin
-         GNAT.Directory_Operations.Change_Dir (Dir_Name);
-         Set_Var_Value ("OLDPWD", Get_Var_Value ("PWD"));
-         if Full_Path'Length >= 2 and then
-           Full_Path (Full_Path'First + 1) = ':'
-         then
-            --  Ignore drive letter
-            Set_Var_Value ("PWD", Full_Path
-              (Full_Path'First + 2 .. Full_Path'Last));
-         else
-            Set_Var_Value ("PWD", Full_Path);
-         end if;
+         Set_Current_Dir (S.all, Full_Path);
+         Set_Var_Value (S.all, "OLDPWD", Get_Var_Value (S.all, "PWD"));
+
+         --  Update PWd variable. Use a Unix format (without drive letter)
+         Set_Var_Value (S.all, "PWD", Get_Current_Dir (S.all, True));
       end;
 
       if Verbose then
-         Put (1, Dir_Name);
-         New_Line (1);
+         Put (S.all, 1, Dir_Name);
+         New_Line (S.all, 1);
       end if;
 
       return 0;
 
    exception
       when GNAT.Directory_Operations.Directory_Error =>
-         Put (2, "cd: " & Dir_Name & ": Cannot change to this directory");
-         New_Line (2);
+         Put (S.all, 2,
+              "cd: " & Dir_Name & ": Cannot change to this directory");
+         New_Line (S.all, 2);
          return 1;
    end Change_Dir;
 
@@ -228,29 +277,37 @@ package body Posix_Shell.Builtins is
    -- Change_Dir_Builtin --
    ------------------------
 
-   function Change_Dir_Builtin (Args : String_List) return Integer is
+   function Change_Dir_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
    begin
       --  If there was no argument provided, then cd to the HOME directory.
       --  If HOME directory is not provided, then the behavior is
       --  implementation-defined, and we simply do nothing.
       if Args'Length =  0 then
-         return Change_Dir (Get_Var_Value ("HOME"));
+         return Change_Dir (S, Get_Var_Value (S.all, "HOME"));
       end if;
 
       --  "-" is a special case: It should be equivalent to
       --  ``cd "$OLDPWD" && pwd''
       if Args (Args'First).all = "-" then
-         return Change_Dir (Get_Var_Value ("OLDPWD"), Verbose => True);
+         return Change_Dir
+           (S, Get_Var_Value (S.all, "OLDPWD"), Verbose => True);
       end if;
 
-      return Change_Dir (Args (Args'First).all);
+      return Change_Dir (S, Args (Args'First).all);
    end Change_Dir_Builtin;
 
    ----------------------
    -- Continue_Builtin --
    ----------------------
 
-   function Continue_Builtin (Args : String_List) return Integer is
+   function Continue_Builtin
+     (S : Shell_State_Access;
+      Args : String_List)
+      return Integer
+   is
+      pragma Unreferenced (S);
    begin
       raise Continue_Exception;
       return 0;
@@ -260,7 +317,11 @@ package body Posix_Shell.Builtins is
    -- Echo_Builtin --
    ------------------
 
-   function Echo_Builtin (Args : String_List) return Integer is
+   function Echo_Builtin
+     (S : Shell_State_Access;
+      Args : String_List)
+      return Integer
+   is
       Enable_Newline : Boolean := True;
       In_Options : Boolean := True;
    begin
@@ -273,23 +334,23 @@ package body Posix_Shell.Builtins is
                   Enable_Newline := False;
                else
                   In_Options := False;
-                  Put (1, Args (I).all);
+                  Put (S.all, 1, Args (I).all);
                   if I < Args'Last then
-                     Put (1, " ");
+                     Put (S.all, 1, " ");
                   end if;
                end if;
             when others =>
                In_Options := False;
-               Put (1, Args (I).all);
+               Put (S.all, 1, Args (I).all);
                if I < Args'Last then
-                  Put (1, " ");
+                  Put (S.all, 1, " ");
                end if;
             end case;
          end if;
       end loop;
 
       if Enable_Newline then
-         New_Line (1);
+         New_Line (S.all, 1);
       end if;
       return 0;
    end Echo_Builtin;
@@ -298,21 +359,22 @@ package body Posix_Shell.Builtins is
    -- Eval_Builtin --
    ------------------
 
-   function Eval_Builtin (Args : String_List) return Integer is
-      S : Ada.Strings.Unbounded.Unbounded_String;
-      N : Node_Id;
+   function Eval_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+      Str : Ada.Strings.Unbounded.Unbounded_String;
+      T : Shell_Tree_Access := New_Tree;
       use Ada.Strings.Unbounded;
    begin
-      S := To_Unbounded_String (Args (Args'First).all);
+      Str := To_Unbounded_String (Args (Args'First).all);
       for I in Args'First + 1 .. Args'Last loop
-         S := S & " " & Args (I).all;
+         Str := Str & " " & Args (I).all;
       end loop;
 
-      N := Parse_String (To_String (S));
-      if N /= Null_Node then
-         return Eval (N);
-      end if;
-      return 0;
+      T := Parse_String (To_String (Str));
+      Eval (S, T.all);
+      Free_Node (T);
+      return Get_Last_Exit_Status (S.all);
    exception
       when Shell_Syntax_Error =>
          return 1;
@@ -322,7 +384,9 @@ package body Posix_Shell.Builtins is
    -- Exec_Builtin --
    ------------------
 
-   function Exec_Builtin (Args : String_List) return Integer is
+   function Exec_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
       Result : Integer;
    begin
       if Args'Length = 0 then
@@ -333,8 +397,8 @@ package body Posix_Shell.Builtins is
             Arguments : constant String_List :=
               Args (Args'First + 1 .. Args'Last);
          begin
-            Result := Run (Command, Arguments, Get_Environment);
-            Shell_Exit (Result);
+            Result := Run (S, Command, Arguments, Get_Environment (S.all));
+            Shell_Exit (S.all, Result);
          end;
       end if;
       return 0;
@@ -345,33 +409,38 @@ package body Posix_Shell.Builtins is
    ---------------------
 
    function Execute_Builtin
-     (Cmd : String;
+     (S    : Shell_State_Access;
+      Cmd  : String;
       Args : String_List)
       return Integer
    is
       Builtin : constant Builtin_Function := Element (Builtin_Map, Cmd);
    begin
-      return Builtin (Args);
+      return Builtin (S, Args);
    end Execute_Builtin;
 
    ------------------
    -- Exit_Builtin --
    ------------------
 
-   function Exit_Builtin (Args : String_List) return Integer is
+   function Exit_Builtin
+     (S    : Shell_State_Access;
+      Args : String_List)
+      return Integer
+   is
       Exit_Code : Integer;
       Success : Boolean;
    begin
       --  Calling "exit" without argument is equivalent to calling
       --  it with "$?" as its argument.
       if Args'Length = 0 then
-         Shell_Exit (Get_Last_Exit_Status);
+         Shell_Exit (S.all, Get_Last_Exit_Status (S.all));
       end if;
 
       --  If more than one argument was provided, print an error
       --  message and return 1.
       if Args'Length > 1 then
-         Error ("exit: too many arguments");
+         Error (S.all, "exit: too many arguments");
          return 1;
       end if;
 
@@ -379,23 +448,27 @@ package body Posix_Shell.Builtins is
       if not Success then
          --  The exit code value is not entirely numeric.
          --  Report the error and exit with value 255.
-         Error ("exit: " & Args (Args'First).all
+         Error (S.all, "exit: " & Args (Args'First).all
                 & ": numeric argument required");
          Exit_Code := 255;
       end if;
 
       --  Exit with the code specified.
-      Shell_Exit (Exit_Code);
+      Shell_Exit (S.all, Exit_Code);
    end Exit_Builtin;
 
    ------------
    -- Export --
    ------------
 
-   function Export_Builtin (Args : String_List) return Integer is
+   function Export_Builtin
+     (S : Shell_State_Access;
+      Args : String_List)
+      return Integer
+   is
    begin
       for I in Args'Range loop
-         Export_Var (Args (I).all);
+         Export_Var (S.all, Args (I).all);
       end loop;
       return 0;
    end Export_Builtin;
@@ -404,8 +477,13 @@ package body Posix_Shell.Builtins is
    -- False_Builtin --
    -------------------
 
-   function False_Builtin (Args : String_List) return Integer is
+   function False_Builtin
+     (S : Shell_State_Access;
+      Args : String_List)
+      return Integer
+   is
       pragma Unreferenced (Args);
+      pragma Unreferenced (S);
    begin
       return 1;
    end False_Builtin;
@@ -423,7 +501,12 @@ package body Posix_Shell.Builtins is
    -- Is_Directory_Builtin --
    --------------------------
 
-   function Is_Directory_Builtin (Args : String_List) return Integer is
+   function Is_Directory_Builtin
+     (S : Shell_State_Access;
+      Args : String_List)
+      return Integer
+   is
+      pragma Unreferenced (S);
    begin
       if Is_Directory (Args (Args'First).all) then
          return 0;
@@ -436,7 +519,12 @@ package body Posix_Shell.Builtins is
    -- Is_File_Builtin --
    ---------------------
 
-   function Is_File_Builtin (Args : String_List) return Integer is
+   function Is_File_Builtin
+     (S : Shell_State_Access;
+      Args : String_List)
+      return Integer
+   is
+      pragma Unreferenced (S);
    begin
       if Is_Regular_File (Args (Args'First).all) then
          return 0;
@@ -449,8 +537,11 @@ package body Posix_Shell.Builtins is
    -- Limit_Builtin --
    -------------------
 
-   function Limit_Builtin (Args : String_List) return Integer is
+   function Limit_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
       pragma Unreferenced (Args);
+      pragma Unreferenced (S);
    begin
       return 0;
    end Limit_Builtin;
@@ -459,10 +550,12 @@ package body Posix_Shell.Builtins is
    -- Pwd_Builtin --
    -----------------
 
-   function Pwd_Builtin (Args : String_List) return Integer is
+   function Pwd_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
       pragma Unreferenced (Args);
    begin
-      Put (1, Get_Var_Value ("PWD") & ASCII.LF);
+      Put (S.all, 1, Get_Current_Dir (S.all, True) & ASCII.LF);
       return 0;
    end Pwd_Builtin;
 
@@ -470,8 +563,10 @@ package body Posix_Shell.Builtins is
    -- Read_Builtin --
    ------------------
 
-   function Read_Builtin (Args : String_List) return Integer is
-      CC : Character := Read (0);
+   function Read_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+      CC : Character := Read (S.all, 0);
       Line : Annotated_String := Null_Annotated_String;
    begin
       --  First read the complete line
@@ -479,21 +574,22 @@ package body Posix_Shell.Builtins is
          if CC /= ASCII.CR then
             Append (Line, CC, NO_ANNOTATION);
          end if;
-         CC := Read (0);
+         CC := Read (S.all, 0);
       end loop;
 
       if Args'Length > 0 then
          declare
-            List : constant String_List := Eval_String (Line, Args'Length - 1);
+            List : constant String_List := Eval_String
+              (S, Line, Args'Length - 1);
             Index : Integer := List'First;
          begin
 
             for J in Args'Range loop
                if Index <= List'Last then
-                  Set_Var_Value (Args (J).all, List (Index).all);
+                  Set_Var_Value (S.all, Args (J).all, List (Index).all);
                   Index := Index + 1;
                else
-                  Set_Var_Value (Args (J).all, "");
+                  Set_Var_Value (S.all, Args (J).all, "");
                end if;
             end loop;
          end;
@@ -511,7 +607,9 @@ package body Posix_Shell.Builtins is
    -- REcho_Builtin --
    -------------------
 
-   function REcho_Builtin (Args : String_List) return Integer is
+   function REcho_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
       function Replace_LF (S : String) return String;
 
       function Replace_LF (S : String) return String is
@@ -532,13 +630,13 @@ package body Posix_Shell.Builtins is
       end Replace_LF;
    begin
       for I in Args'Range loop
-         Put (1, "argv[" & To_String (I - Args'First + 1) & "] = <" &
+         Put (S.all, 1, "argv[" & To_String (I - Args'First + 1) & "] = <" &
               Replace_LF (Args (I).all) & ">");
          if I < Args'Last then
-            New_Line (1);
+            New_Line (S.all, 1);
          end if;
       end loop;
-      New_Line (1);
+      New_Line (S.all, 1);
       return 0;
    end REcho_Builtin;
 
@@ -546,7 +644,8 @@ package body Posix_Shell.Builtins is
    -- Return_Builtin --
    --------------------
 
-   function Return_Builtin (Args : String_List) return Integer
+   function Return_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
    is
       Return_Value : Integer;
       Success : Boolean;
@@ -554,8 +653,8 @@ package body Posix_Shell.Builtins is
       --  If more than one argument was provided: Report an error and
       --  execute the return with a fixed return value of 1.
       if Args'Length > 1 then
-         Error ("return: too many arguments");
-         Save_Last_Exit_Status (1);
+         Error (S.all, "return: too many arguments");
+         Save_Last_Exit_Status (S.all, 1);
 
       --  If one argument was provided: Return with this value.
       elsif Args'Length = 1 then
@@ -563,11 +662,11 @@ package body Posix_Shell.Builtins is
          if not Success then
             --  The provided value is not a valid number, so report
             --  this problem, and force the return value to 255.
-            Error ("return: " & Args (Args'First).all
+            Error (S.all, "return: " & Args (Args'First).all
                    & ": numeric argument required");
             Return_Value := 255;
          end if;
-         Save_Last_Exit_Status (Return_Value);
+         Save_Last_Exit_Status (S.all, Return_Value);
       end if;
 
       --  Note: If no argument is provided, then return using the exit
@@ -588,7 +687,8 @@ package body Posix_Shell.Builtins is
    -- Rm_Builtin --
    ----------------
 
-   function Rm_Builtin (Args : String_List) return Integer
+   function Rm_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
    is
       Rm_Binary_Path : String_Access := null;
       Rm_Args : String_List (1 .. Args'Length) := (others => null);
@@ -613,7 +713,10 @@ package body Posix_Shell.Builtins is
 
       if Have_File then
          return Run
-           (Rm_Binary_Path.all, Rm_Args (1 .. Rm_Last), Get_Environment);
+           (S,
+            Rm_Binary_Path.all,
+            Rm_Args (1 .. Rm_Last),
+            Get_Environment (S.all));
       else
          return 0;
       end if;
@@ -623,7 +726,9 @@ package body Posix_Shell.Builtins is
    -- Set_Builtin --
    -----------------
 
-   function Set_Builtin (Args : String_List) return Integer is
+   function Set_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
       Saved_Index : Integer := -1;
    begin
       if Args'Length = 0 then
@@ -647,7 +752,7 @@ package body Posix_Shell.Builtins is
       end loop;
 
       if Saved_Index >= Args'First and then Saved_Index <= Args'Last then
-         Set_Positional_Parameters (Args (Saved_Index .. Args'Last));
+         Set_Positional_Parameters (S.all, Args (Saved_Index .. Args'Last));
       end if;
       return 0;
    end Set_Builtin;
@@ -656,7 +761,9 @@ package body Posix_Shell.Builtins is
    -- Shift_Builtin --
    -------------------
 
-   function Shift_Builtin (Args : String_List) return Integer is
+   function Shift_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
       Shift : Integer := 1;
       Success : Boolean;
    begin
@@ -664,7 +771,7 @@ package body Posix_Shell.Builtins is
       --  and abort with error code 1.
 
       if Args'Length > 1 then
-         Error ("shift: too many arguments");
+         Error (S.all, "shift: too many arguments");
          return 1;
       end if;
 
@@ -675,19 +782,20 @@ package body Posix_Shell.Builtins is
          To_Integer (Args (Args'First).all, Shift, Success);
 
          if not Success then
-            Error ("shift: " & Args (Args'First).all
+            Error (S.all, "shift: " & Args (Args'First).all
                    & ": numeric argument required");
             return 1;
          end if;
 
          if Shift < 0 then
-            Error ("shift: " & Args (Args'First).all
+            Error (S.all, "shift: " & Args (Args'First).all
                    & ": shift count out of range");
             return 1;
          end if;
       end if;
 
-      if Shift_Positional_Parameters (Shift) then
+      Shift_Positional_Parameters (S.all, Shift, Success);
+      if Success then
          return 0;
       else
          return 1;
@@ -698,18 +806,20 @@ package body Posix_Shell.Builtins is
    -- Source_Builtin --
    --------------------
 
-   function Source_Builtin (Args : String_List) return Integer is
-      N : Node_Id;
+   function Source_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+      T : Shell_Tree_Access;
       Return_Code : Integer;
       Saved_Pos_Params : Pos_Params_State;
    begin
       if Args'Length = 0 then
-         Error (".: filename argument required");
+         Error (S.all, ".: filename argument required");
          return 2;
       end if;
 
       begin
-         N := Parse_File (Args (Args'First).all);
+         T := Parse_File (Args (Args'First).all);
       exception
          when Buffer_Read_Error =>
             return 1;
@@ -724,21 +834,23 @@ package body Posix_Shell.Builtins is
       --  up, because the script should be in this case able to access
       --  the positional arguments of the parent script.
       if Args'Length > 1 then
-         Saved_Pos_Params := Set_Positional_Parameters
-           (Args (Args'First + 1 .. Args'Last));
+         Saved_Pos_Params := Get_Positional_Parameters (S.all);
+         Set_Positional_Parameters
+           (S.all, Args (Args'First + 1 .. Args'Last), False);
       end if;
 
       begin
-         Return_Code := Eval (N);
-         Free_Node (N);
+         Eval (S, T.all);
+         Return_Code := Get_Last_Exit_Status (S.all);
+         Free_Node (T);
       exception
          when Shell_Return_Exception =>
-            Return_Code := Get_Last_Exit_Status;
+            Return_Code := Get_Last_Exit_Status (S.all);
       end;
 
       --  Restore the positional parameters if necessary.
       if Args'Length > 1 then
-         Restore_Positional_Parameters (Saved_Pos_Params);
+         Restore_Positional_Parameters (S.all, Saved_Pos_Params);
       end if;
 
       return Return_Code;
@@ -748,8 +860,11 @@ package body Posix_Shell.Builtins is
    -- True_Builtin --
    ------------------
 
-   function True_Builtin (Args : String_List) return Integer is
+   function True_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
       pragma Unreferenced (Args);
+      pragma Unreferenced (S);
    begin
       return 0;
    end True_Builtin;
@@ -758,10 +873,12 @@ package body Posix_Shell.Builtins is
    -- Unset_Builtin --
    -------------------
 
-   function Unset_Builtin (Args : String_List) return Integer is
+   function Unset_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
    begin
       for Index in Args'Range loop
-         Unset_Var (Args (Index).all);
+         Unset_Var (S.all, Args (Index).all);
       end loop;
       return 0;
    end Unset_Builtin;
@@ -770,18 +887,22 @@ package body Posix_Shell.Builtins is
    -- Unsetenv_Builtin --
    ----------------------
 
-   function Unsetenv_Builtin (Args : String_List) return Integer is
+   function Unsetenv_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
    begin
-      Export_Var (Args (Args'First).all, "");
+      Export_Var (S.all, Args (Args'First).all, "");
       return 0;
    end Unsetenv_Builtin;
 
-   function Wc_Builtin (Args : String_List) return Integer is
+   function Wc_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
       pragma Unreferenced (Args);
-      Result : constant String := Read (0);
+      Result : constant String := Read (S.all, 0);
    begin
-      Put (1, To_String (Result'Length));
-      Put (1, ASCII.LF & "");
+      Put (S.all, 1, To_String (Result'Length));
+      Put (S.all, 1, ASCII.LF & "");
       return 0;
    end Wc_Builtin;
 
@@ -799,7 +920,7 @@ begin
    Include (Builtin_Map, "export",        Export_Builtin'Access);
    Include (Builtin_Map, "false",         False_Builtin'Access);
    Include (Builtin_Map, "limit",         Limit_Builtin'Access);
-   --  Include (Builtin_Map, "recho",         REcho_Builtin'Access);
+   Include (Builtin_Map, "recho",         REcho_Builtin'Access);
    Include (Builtin_Map, "return",        Return_Builtin'Access);
    Include (Builtin_Map, "set",           Set_Builtin'Access);
    Include (Builtin_Map, "setenv",        Export_Builtin'Access);

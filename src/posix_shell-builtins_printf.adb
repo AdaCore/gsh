@@ -1,9 +1,11 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with Posix_Shell.Output; use Posix_Shell.Output;
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 
 package body Posix_Shell.Builtins_Printf is
 
-   function Builtin_Printf (Args : String_List) return Integer is
+   function Builtin_Printf
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
       Format_String : constant String := Args (Args'First).all;
       Output : Unbounded_String := To_Unbounded_String ("");
       Index  : Integer := Format_String'First;
@@ -89,7 +91,7 @@ package body Posix_Shell.Builtins_Printf is
          CC := Format_String (Index);
       end loop;
 
-      Put (1, To_String (Output));
+      Put (S.all, 1, To_String (Output));
       return 0;
    end Builtin_Printf;
 

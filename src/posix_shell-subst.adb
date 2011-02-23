@@ -1,9 +1,8 @@
 with Posix_Shell.Exec;       use Posix_Shell.Exec;
-with Posix_Shell.Output;     use Posix_Shell.Output;
+with Posix_Shell.Variables.Output;     use Posix_Shell.Variables.Output;
 with Posix_Shell.Parser;     use Posix_Shell.Parser;
 with Posix_Shell.Tree;       use Posix_Shell.Tree;
 with Posix_Shell.Utils;      use Posix_Shell.Utils;
-with Posix_Shell.Variables;  use Posix_Shell.Variables;
 with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
 
 with Ada.Strings.Unbounded;
@@ -14,13 +13,15 @@ with Dyn_String_Lists;
 package body Posix_Shell.Subst is
 
    function Eval_String_Aux
-     (S            : Annotated_String;
+     (SS           : Shell_State_Access;
+      S            : Annotated_String;
       Case_Pattern : Boolean := False;
       Quote_Removal_Only : Boolean := False;
       Context : Annotation := NO_ANNOTATION)
       return Annotated_String;
 
-   function Expanded_Parameter (Param_Name : String;
+   function Expanded_Parameter (SS : Shell_State_Access;
+                                Param_Name : String;
                                 Word : Annotated_String;
                                 Modifier : Character;
                                 Treat_Null_As_Unset : Boolean;
@@ -31,7 +32,8 @@ package body Posix_Shell.Subst is
    --  as a set parameter.  However, if Treat_Null_As_Unset is true, then
    --  a null parameter will be treated as if it was unset.
 
-   function Eval_Param_Expression (Expr : Annotated_String;
+   function Eval_Param_Expression (State : Shell_State_Access;
+                                   Expr : Annotated_String;
                                    Do_Expansion : Boolean;
                                    Note : Annotation)
      return Annotated_String;
@@ -40,7 +42,8 @@ package body Posix_Shell.Subst is
    --  (such as "-", or ":=", ":+", "?", etc) will be taken into account.
 
    function Simple_Filename_Expansion
-     (Dir       : String;
+     (SS        : Shell_State_Access;
+      Dir       : String;
       Pattern   : String;
       Only_Dirs : Boolean := False)
       return String_List;
@@ -52,7 +55,8 @@ package body Posix_Shell.Subst is
    Empty_Set : constant String_List := (1 => new String'(""));
 
    function Filename_Expansion
-     (D   : String;
+     (SS  : Shell_State_Access;
+      D   : String;
       Set : String_List := Empty_Set)
       return String_List;
 
@@ -63,7 +67,8 @@ package body Posix_Shell.Subst is
    -- Eval_Param_Expression --
    ---------------------------
 
-   function Eval_Param_Expression (Expr : Annotated_String;
+   function Eval_Param_Expression (State : Shell_State_Access;
+                                   Expr : Annotated_String;
                                    Do_Expansion : Boolean;
                                    Note : Annotation)
      return Annotated_String
@@ -77,7 +82,7 @@ package body Posix_Shell.Subst is
       --  If no expansion is needed, then the expression is actually
       --  a variable name. Return its value.
       if not Do_Expansion then
-         return Get_Var_Value (E, Note);
+         return Get_Var_Value (State.all, E, Note);
       end if;
 
       --  If the variable name starts with a '#', then parameter
@@ -85,7 +90,7 @@ package body Posix_Shell.Subst is
       if E (E'First) = '#' and then E'Length > 1 then
          declare
             Param : String renames E (E'First + 1 .. E'Last);
-            Value : constant String := Get_Var_Value (Param);
+            Value : constant String := Get_Var_Value (State.all, Param);
          begin
             if Is_Valid_Variable_Name (Param) then
                return To_Annotated_String (To_String (Value'Length), Note);
@@ -110,7 +115,7 @@ package body Posix_Shell.Subst is
 
       --  No modifier, no expansion.
       if Modifier = ASCII.NUL then
-         return Get_Var_Value (E, Note);
+         return Get_Var_Value (State.all, E, Note);
       end if;
 
       --  If the modifier is preceded by a colon, then it means we should
@@ -124,7 +129,8 @@ package body Posix_Shell.Subst is
       declare
          Word : constant Annotated_String := Slice (Expr, Word_First, E'Last);
          Result : constant Annotated_String :=
-           Expanded_Parameter (Param_Name => E (E'First .. Parameter_Last),
+           Expanded_Parameter (State,
+                               Param_Name => E (E'First .. Parameter_Last),
                                Word => Word,
                                Modifier => Modifier,
                                Treat_Null_As_Unset => Treat_Null_As_Unset,
@@ -139,14 +145,15 @@ package body Posix_Shell.Subst is
    -----------------
 
    function Eval_String
-     (S : Annotated_String;
+     (SS : Shell_State_Access;
+      S : Annotated_String;
       Max_Split : Integer := -1)
       return String_List
    is
       use Ada.Strings.Unbounded;
       use Dyn_String_Lists;
 
-      Result : constant Annotated_String := Eval_String_Aux (S);
+      Result : constant Annotated_String := Eval_String_Aux (SS, S);
       Result_List : Dyn_String_List;
 
       type State is
@@ -179,7 +186,8 @@ package body Posix_Shell.Subst is
             when QUOTED_WORD_FIELD =>
                Append (Result_List, new String'(To_String (Buffer)));
             when WORD_FIELD =>
-               Append (Result_List, Filename_Expansion (To_String (Buffer)));
+               Append (Result_List,
+                       Filename_Expansion (SS, To_String (Buffer)));
 
          end case;
 
@@ -193,9 +201,9 @@ package body Posix_Shell.Subst is
 
       --  Null_Result : constant String_List (1 .. 0) := (others => null);
 
-      IFS_Value : constant String := Get_Var_Value ("IFS");
+      IFS_Value : constant String := Get_Var_Value (SS.all, "IFS");
       --  Get current value of IFS
-      IFS_Is_Set : constant Boolean := Is_Var_Set ("IFS");
+      IFS_Is_Set : constant Boolean := Is_Var_Set (SS.all, "IFS");
       --  Field splitting behaves differently if IFS="" or IFS is unset
 
       function In_IFS (C : Character) return Boolean;
@@ -281,7 +289,8 @@ package body Posix_Shell.Subst is
    ---------------------
 
    function Eval_String_Aux
-     (S : Annotated_String;
+     (SS : Shell_State_Access;
+      S : Annotated_String;
       Case_Pattern : Boolean := False;
       Quote_Removal_Only : Boolean := False;
       Context : Annotation := NO_ANNOTATION)
@@ -325,11 +334,11 @@ package body Posix_Shell.Subst is
 
          if Index > Saved_Index then
             declare
-               N : Node_Id;
+               T : Shell_Tree_Access;
             begin
-               N := Parse_String (Str (S) (Saved_Index .. Index - 1));
-               Append (Buffer, Strip (Eval (N)), A);
-               Free_Node (N);
+               T := Parse_String (Str (S) (Saved_Index .. Index - 1));
+               Append (Buffer, Strip (Eval (SS, T.all)), A);
+               Free_Node (T);
             end;
          end if;
       end Eval_Command_Subst;
@@ -420,12 +429,13 @@ package body Posix_Shell.Subst is
                Expr : constant Annotated_String :=
                  Slice (S, Param_First, Param_Last);
             begin
-               Append (Buffer, Eval_Param_Expression (Expr, Do_Expansion, A));
+               Append
+                 (Buffer, Eval_Param_Expression (SS, Expr, Do_Expansion, A));
             end;
          end if;
       exception
          when Variable_Name_Error =>
-            Error (Str (S) & ": bad substitution");
+            Error (SS.all, Str (S) & ": bad substitution");
             raise;
       end Eval_Param_Subst;
 
@@ -499,11 +509,13 @@ package body Posix_Shell.Subst is
    -- Eval_String_List --
    ----------------------
 
-   function Eval_String_List (S : Annotated_String_List) return String_List is
+   function Eval_String_List
+     (SS : Shell_State_Access; S : Annotated_String_List) return String_List
+   is
 
    begin
       if Length (S) = 1 then
-         return Eval_String (Element (S, 1));
+         return Eval_String (SS, Element (S, 1));
       end if;
 
       declare
@@ -518,7 +530,7 @@ package body Posix_Shell.Subst is
          for I in 1 .. Length (S) loop
             declare
                Elem_Eval : constant String_List :=
-                 Eval_String (Element (S, I));
+                 Eval_String (SS, Element (S, I));
             begin
 
                for J in Elem_Eval'Range loop
@@ -536,13 +548,14 @@ package body Posix_Shell.Subst is
    -------------------------
 
    function Eval_String_Unsplit
-     (S : Annotated_String;
+     (SS : Shell_State_Access;
+      S : Annotated_String;
       Case_Pattern : Boolean := False;
       Quote_Removal_Only : Boolean := False)
       return String
    is
       Result : constant Annotated_String := Eval_String_Aux
-        (S, Case_Pattern, Quote_Removal_Only);
+        (SS, S, Case_Pattern, Quote_Removal_Only);
       Result_String : String (1 .. Length (Result));
       Result_Index  : Integer := 1;
    begin
@@ -568,18 +581,19 @@ package body Posix_Shell.Subst is
    -- Expanded_Parameter --
    ------------------------
 
-   function Expanded_Parameter (Param_Name : String;
+   function Expanded_Parameter (SS : Shell_State_Access;
+                                Param_Name : String;
                                 Word : Annotated_String;
                                 Modifier : Character;
                                 Treat_Null_As_Unset : Boolean;
                                 Note : Annotation)
      return Annotated_String
    is
-      Is_Set : Boolean := Is_Var_Set (Param_Name);
+      Is_Set : Boolean := Is_Var_Set (SS.all, Param_Name);
       Parameter_Value : Annotated_String;
    begin
       if Is_Set then
-         Parameter_Value := Get_Var_Value (Param_Name, Note, False);
+         Parameter_Value := Get_Var_Value (SS.all, Param_Name, Note, False);
       end if;
 
       if Treat_Null_As_Unset and then
@@ -592,7 +606,7 @@ package body Posix_Shell.Subst is
       case Modifier is
          when '-' =>
             if not Is_Set then
-               return Eval_String_Aux (Word, Context => Note);
+               return Eval_String_Aux (SS, Word, Context => Note);
             else
                return Parameter_Value;
             end if;
@@ -601,9 +615,10 @@ package body Posix_Shell.Subst is
             if not Is_Set then
                declare
                   Word_Value : constant Annotated_String :=
-                    Eval_String_Aux (Word, Context => Note);
+                    Eval_String_Aux (SS, Word, Context => Note);
                begin
-                  Set_Var_Value (Name => Param_Name,
+                  Set_Var_Value (SS.all,
+                                 Name => Param_Name,
                                  Value => Str (Word_Value));
                   return Word_Value;
                end;
@@ -614,22 +629,24 @@ package body Posix_Shell.Subst is
          when '?' =>
             if not Is_Set then
                declare
-                  Word_Value : constant String := Eval_String_Unsplit (Word);
+                  Word_Value : constant String :=
+                    Eval_String_Unsplit (SS, Word);
                begin
                   if Word_Value /= "" then
-                     Error (Param_Name & ": " & Word_Value);
+                     Error (SS.all, Param_Name & ": " & Word_Value);
                   else
-                     Error (Param_Name & ": parameter null or not set");
+                     Error (SS.all,
+                            Param_Name & ": parameter null or not set");
                   end if;
                end;
-               Shell_Exit (1);
+               Shell_Exit (SS.all, 1);
             else
                return Parameter_Value;
             end if;
 
          when '+' =>
             if Is_Set then
-               return Eval_String_Aux (Word, Context => Note);
+               return Eval_String_Aux (SS, Word, Context => Note);
             else
                return To_Annotated_String ("", Note);
             end if;
@@ -646,7 +663,8 @@ package body Posix_Shell.Subst is
    ------------------------
 
    function Filename_Expansion
-     (D   : String;
+     (SS  : Shell_State_Access;
+      D   : String;
       Set : String_List := Empty_Set)
       return String_List
    is
@@ -706,11 +724,16 @@ package body Posix_Shell.Subst is
             begin
                --  otherwise check entries existence
                for I in Set'Range loop
-                  if GNAT.OS_Lib.Is_Regular_File (Set (I).all & D) or else
-                    GNAT.OS_Lib.Is_Directory (Set (I).all & D) then
-                     Buffer_Last := Buffer_Last + 1;
-                     Buffer (Buffer_Last) := new String'(Set (I).all & D);
-                  end if;
+                  declare
+                     Tmp : constant String := Resolve_Path
+                       (SS.all, Set (I).all & D);
+                  begin
+                     if GNAT.OS_Lib.Is_Regular_File (Tmp) or else
+                       GNAT.OS_Lib.Is_Directory (Tmp) then
+                        Buffer_Last := Buffer_Last + 1;
+                        Buffer (Buffer_Last) := new String'(Set (I).all & D);
+                     end if;
+                  end;
                end loop;
                return Buffer (1 .. Buffer_Last);
             end;
@@ -732,11 +755,12 @@ package body Posix_Shell.Subst is
       --  Find the entries
       for I in Set'Range loop
          if CWD.all = "" or else
-           GNAT.OS_Lib.Is_Directory (Set (I).all & CWD.all)
+              GNAT.OS_Lib.Is_Directory
+                (Resolve_Path (SS.all, Set (I).all & CWD.all))
          then
             declare
                L : constant String_List := Simple_Filename_Expansion
-                 (Set (I).all & CWD.all,
+                 (SS, Set (I).all & CWD.all,
                   D (Pattern_Begin .. Pattern_End),
                   Only_Dirs);
             begin
@@ -763,7 +787,7 @@ package body Posix_Shell.Subst is
          if Pattern_End < D'Last - 1 then
             declare
                Tmp : constant String_List := Filename_Expansion
-                 (D (Pattern_End + 2 .. D'Last),
+                 (SS, D (Pattern_End + 2 .. D'Last),
                   Content (Entry_Buffer));
             begin
                if Set = Empty_Set and Tmp = Null_String_List then
@@ -784,7 +808,8 @@ package body Posix_Shell.Subst is
    -------------------------------
 
    function Simple_Filename_Expansion
-     (Dir       : String;
+     (SS        : Shell_State_Access;
+      Dir       : String;
       Pattern   : String;
       Only_Dirs : Boolean := False)
       return String_List
@@ -805,10 +830,10 @@ package body Posix_Shell.Subst is
       begin
          if Dir = "" then
             Prefix := new String'("");
-            Start_Search (S, ".", Pattern);
+            Start_Search (S, Resolve_Path (SS.all, "."), Pattern);
          else
             Prefix := new String'(Format_Pathname (Dir, UNIX));
-            Start_Search (S, Dir, Pattern);
+            Start_Search (S, Resolve_Path (SS.all, Dir), Pattern);
          end if;
       exception
          when Name_Error =>

@@ -1,10 +1,6 @@
-with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
+with Posix_Shell.Variables; use Posix_Shell.Variables;
 
-with GNAT.OS_Lib; use GNAT.OS_Lib;
-
-pragma Elaborate_All (Posix_Shell.Annotated_Strings);
-
-package Posix_Shell.Output is
+package Posix_Shell.Variables.Output is
 
    type Redir_Cmd is (NULL_REDIR,
                       OPEN_READ,
@@ -33,58 +29,55 @@ package Posix_Shell.Output is
    Empty_Redirection_Op_Stack : Redirection_Op_Stack :=
      (0, (others => (0, NULL_REDIR, 0, Null_Annotated_String)));
 
-   type Redirection_State is record
-      Fd       : File_Descriptor;
-      Filename : String_Access;
-      Delete_On_Close : Boolean;
-   end record;
-   --  State of Stdin, Stdout or Stderr (file descriptor and filename
-   --  if relevant).
+   procedure Set_Redirections
+     (S : Shell_State_Access;
+      R : Redirection_Op_Stack;
+      Free_Previous : Boolean := False);
 
-   type Redirection_States is array (-2 .. 13) of Redirection_State;
-   --  State of Stdin, Stdout and Stderr.
-   --  ??? brobecker/2007-04-23:
-   --  ???    I think that 0 .. 2 are stdin, stdout and stderr,
-   --  ???    and 3 .. 4 are pipe-in and pipe-out.
-
-   procedure Push_Redirections (R : Redirection_Op_Stack);
-   --  Set a new redirection context.
-
-   procedure Set_Redirections (R : Redirection_Op_Stack);
-
-   function Get_Current_Redirections return Redirection_States;
+   function Get_Redirections
+     (S : Shell_State)
+      return Redirection_States;
    --  Return the current redirection set.
 
-   procedure Pop_Redirections;
+   procedure Restore_Redirections
+     (S : in out Shell_State;
+      R : Redirection_States);
    --  Restore the previous redirections context.
 
-   procedure Set_Pipe_Out;
+   procedure Set_Pipe_Out (S : in out Shell_State);
    --  Set env to fill the pipe
 
-   procedure Set_Pipe_In;
+   procedure Set_Pipe_In (S : in out Shell_State; Input_Fd : File_Descriptor);
    --  Set env to read the pipe
 
-   procedure Close_Pipe;
+   procedure Close_Pipe (S : in out Shell_State);
    --  Close the pipe in the current context
 
-   function Read_Pipe_And_Close return String;
+   function Read_Pipe_And_Close
+     (S : Shell_State_Access;
+      Input_Fd : File_Descriptor) return String;
    --  Read the pipe content, then close it, and return the content read.
 
-   procedure Put (IO : Integer; S : String);
+   function Get_Fd
+     (S : Shell_State; N : Integer) return File_Descriptor;
+
+   procedure Close (S : Shell_State; N : Integer);
+
+   procedure Put (S : Shell_State; IO : Integer; Str : String);
    --  Print S in the given IO descriptor (no new line added).
    --  For IO Usually, 0 is stdin, 1 is stdout, and 2 is stderr.
 
-   function Read (IO : Integer) return String;
+   function Read (S : Shell_State; IO : Integer) return String;
 
-   function Read (IO : Integer) return Character;
+   function Read (S : Shell_State; IO : Integer) return Character;
 
-   procedure New_Line (IO : Integer);
+   procedure New_Line (S : Shell_State; IO : Integer);
    --  Print a new-line in the given IO descriptor.
 
-   procedure Error (Msg : String);
+   procedure Error (S : Shell_State; Msg : String);
    --  Print an error message on standard error.
 
-   procedure Warning (Msg : String);
+   procedure Warning (S : Shell_State; Msg : String);
    --  Print a warning message on standard error.
 
-end Posix_Shell.Output;
+end Posix_Shell.Variables.Output;

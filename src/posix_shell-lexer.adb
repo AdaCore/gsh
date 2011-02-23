@@ -2,6 +2,7 @@ with Ada.Exceptions; use Ada.Exceptions;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell.Variables; use Posix_Shell.Variables;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
+with Ada.Unchecked_Deallocation;
 
 package body Posix_Shell.Lexer is
 
@@ -26,6 +27,16 @@ package body Posix_Shell.Lexer is
 
    procedure Lexer_Error (B : Buffer_Access; Msg : String);
    --  Report an error.
+
+   procedure Deallocate (B : in out Buffer_Access) is
+      procedure Internal_Free is
+        new Ada.Unchecked_Deallocation
+          (Token_Buffer,
+           Buffer_Access);
+   begin
+      B.B := Null_Buffer;
+      Internal_Free (B);
+   end Deallocate;
 
    ------------------
    -- Expect_Token --
@@ -314,7 +325,7 @@ package body Posix_Shell.Lexer is
       end Return_IOHere;
 
       Marker_String : constant String := Eval_String_Unsplit
-        (Marker, Quote_Removal_Only => True);
+        (null, Marker, Quote_Removal_Only => True);
 
    begin
 

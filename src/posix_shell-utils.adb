@@ -2,7 +2,7 @@ with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with System; use System;
 with GNAT.OS_Lib;
 with Ada.Unchecked_Conversion;
-with Posix_Shell.Variables; use Posix_Shell.Variables;
+
 
 package body Posix_Shell.Utils is
 
@@ -51,10 +51,10 @@ package body Posix_Shell.Utils is
    -- Current_Working_Directory --
    -------------------------------
 
-   function Current_Working_Directory return String is
+   function Current_Working_Directory (S : Shell_State) return String is
       Dir  : constant String := Format_Pathname (Get_Current_Dir, UNIX);
       Last : Integer := Dir'Last;
-      CWD  : constant String := Get_Var_Value ("PWD");
+      CWD  : constant String := Get_Var_Value (S, "PWD");
       CWD_Norm : constant String := Format_Pathname
         (GNAT.OS_Lib.Normalize_Pathname (CWD), UNIX);
    begin

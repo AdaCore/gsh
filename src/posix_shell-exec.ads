@@ -1,4 +1,5 @@
 with GNAT.OS_Lib; use GNAT.OS_Lib;
+with Posix_Shell.Variables; use Posix_Shell.Variables;
 
 package Posix_Shell.Exec is
 
@@ -24,14 +25,7 @@ package Posix_Shell.Exec is
       return Integer;
    --  Launch a process and wait until it finishes
 
-   function Blocking_Spawn
-     (Args      : Argument_List;
-      Cwd       : String;
-      Env       : Argument_List)
-      return Integer;
-   --  Same as above, but reusing the current file descriptors.
-
-   procedure Shell_Exit (Code : Integer);
+   procedure Shell_Exit (S : in out Shell_State; Code : Integer);
    pragma No_Return (Shell_Exit);
    --  Causes the shell to exit with the given error code.
 

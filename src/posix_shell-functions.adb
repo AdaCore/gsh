@@ -3,14 +3,13 @@ with Ada.Strings.Hash;
 
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
-with Posix_Shell.Variables; use Posix_Shell.Variables;
 
 package body Posix_Shell.Functions is
 
    package Function_Maps is
       new Ada.Containers.Indefinite_Hashed_Maps
         (Key_Type => String,
-         Element_Type => Node_Access,
+         Element_Type => Shell_Tree_Access,
          Hash => Ada.Strings.Hash,
          Equivalent_Keys => "=");
    use Function_Maps;
@@ -22,24 +21,26 @@ package body Posix_Shell.Functions is
    -- Execute_Function --
    ----------------------
 
-   function Execute_Function (Name : String; Args : String_List)
-     return Integer
+   procedure Execute_Function
+     (State : Shell_State_Access;
+      Name  : String;
+      Args : String_List)
    is
-      Exit_Value : Integer;
-      Node : constant Node_Access := Element (Function_Map, Name);
+      Function_Tree : constant Shell_Tree_Access :=
+        Element (Function_Map, Name);
       Saved_Pos_Params : constant Pos_Params_State :=
-        Set_Positional_Parameters (Args);
+        Get_Positional_Parameters (State.all);
+
    begin
-      pragma Assert (Node /= null);
+      Set_Positional_Parameters (State.all, Args, False);
+      pragma Assert (Function_Tree /= null);
 
-      Exit_Value := Eval (Node.all);
-      Restore_Positional_Parameters (Saved_Pos_Params);
-
-      return Exit_Value;
+      Eval (State, Function_Tree.all);
+      Restore_Positional_Parameters (State.all, Saved_Pos_Params);
 
    exception
       when Shell_Exit_Exception =>
-         Restore_Positional_Parameters (Saved_Pos_Params);
+         Restore_Positional_Parameters (State.all, Saved_Pos_Params);
          raise;
    end Execute_Function;
 
@@ -56,9 +57,9 @@ package body Posix_Shell.Functions is
    -- Register_Function --
    -----------------------
 
-   procedure Register_Function (Name : String; Node : Node_Access) is
+   procedure Register_Function (Name : String; Tree : Shell_Tree_Access) is
    begin
-      Include (Function_Map, Name, Node);
+      Include (Function_Map, Name, Tree);
    end Register_Function;
 
 end Posix_Shell.Functions;

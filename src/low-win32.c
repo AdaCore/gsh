@@ -1,4 +1,5 @@
 #include <_mingw.h>
+#include <stdio.h>
 
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0501

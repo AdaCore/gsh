@@ -1,6 +1,4 @@
 with Ada.Characters.Handling; use Ada.Characters.Handling;
-with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Strings.Hash;
 with Ada.Environment_Variables; use Ada.Environment_Variables;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
@@ -8,47 +6,14 @@ with Interfaces.C; use Interfaces.C;
 with Posix_Shell.Opts; use Posix_Shell.Opts;
 with Ada.Strings.Maps.Constants; use Ada.Strings.Maps.Constants;
 with Dyn_String_Lists; use Dyn_String_Lists;
+with Ada.Unchecked_Deallocation;
+with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 
 pragma Elaborate_All (Dyn_String_Lists);
 
 package body Posix_Shell.Variables is
 
-   Max_Scope : constant Integer := 64;
-   Top_Level_Scope : constant Integer := 1;
-
-   Is_Env_Valid : Boolean := False;
-
-   subtype Scope_Level is Integer range Top_Level_Scope .. Max_Scope;
-
-   Scope : Scope_Level := 1;
-   --  Global variable containing the current scope level
-
-   type Var_Value is record
-      Val         : String_Access;
-      Env_Val     : String_Access;
-      Is_Exported : Boolean := False;
-      Scope_Owner : Scope_Level := 1;
-   end record;
-
-   --  Null_Var_Value : constant Var_Value := (null, False, 1);
-
-   package String_Maps is
-     new Ada.Containers.Indefinite_Hashed_Maps
-       (String,
-        Var_Value,
-        Hash => Ada.Strings.Hash,
-        Equivalent_Keys => "=");
-   use String_Maps;
-
-   type Scope_Context is record
-      Var_Table             : Map;
-      Last_Exit_Status      : Integer := 0;
-      Pos_Params            : Pos_Params_State;
-   end record;
-
-   type Contexts is array (Top_Level_Scope .. Max_Scope) of Scope_Context;
-
-   Global_Context : Contexts;
+   --  Global variable containing the current scope
 
    function Portable_Getpid return Interfaces.C.long;
    pragma Import (C, Portable_Getpid, "getpid");
@@ -70,11 +35,23 @@ package body Posix_Shell.Variables is
       end if;
    end Check_Variable_Name;
 
+   procedure Deallocate (S : in out Shell_State_Access) is
+      procedure Internal_Free is
+        new Ada.Unchecked_Deallocation
+          (Shell_State,
+           Shell_State_Access);
+   begin
+      Internal_Free (S);
+   end Deallocate;
+
    -----------------
    -- Enter_Scope --
    -----------------
 
-   procedure Enter_Scope is
+   function Enter_Scope (Previous : Shell_State) return Shell_State is
+
+      Result : Shell_State;
+
       procedure Enter_Scope_Aux (Position : Cursor);
 
       ---------------------
@@ -85,57 +62,30 @@ package body Posix_Shell.Variables is
          V : constant Var_Value := Element (Position);
          K : constant String := Key (Position);
       begin
-         Insert (Global_Context (Scope).Var_Table, K, V);
+         Insert (Result.Var_Table, K, V);
       end Enter_Scope_Aux;
    begin
-      Scope := Scope + 1;
+      Result.Scope_Level := Previous.Scope_Level + 1;
       --  Create a new var table based on the previous context
-      Reserve_Capacity (Global_Context (Scope).Var_Table, 256);
-      Iterate (Global_Context (Scope - 1).Var_Table,
+      Reserve_Capacity (Result.Var_Table, 256);
+      Iterate (Previous.Var_Table,
                Enter_Scope_Aux'Unrestricted_Access);
 
       --  Copy also the positional parameters status
-      Global_Context (Scope).Pos_Params :=
-        Global_Context (Scope - 1).Pos_Params;
+      Result.Pos_Params := Previous.Pos_Params;
+      Result.Redirections := Previous.Redirections;
+
+      --  Copy the current directory information
+      Result.Current_Dir := new String'(Previous.Current_Dir.all);
+
+      return Result;
    end Enter_Scope;
-
-   ------------------------
-   -- Export_Environment --
-   ------------------------
-
-   procedure Export_Environment is
-
-      procedure Export_Aux (Position : Cursor);
-
-      procedure Export_Aux (Position : Cursor) is
-         V : constant Var_Value := Element (Position);
-         K : constant String := Key (Position);
-         --  Upper_Name : constant String := Translate (K, Upper_Case_Map);
-      begin
-         if V.Is_Exported then
-            Set (K, V.Val.all);
-         elsif V.Env_Val /= null then
-            Set (K, V.Env_Val.all);
-         end if;
-      end Export_Aux;
-
-   begin
-      --  Reset environment
-      if not Is_Env_Valid then
-         Clear;
-         Iterate (Global_Context (Scope).Var_Table,
-                  Export_Aux'Unrestricted_Access);
-         Is_Env_Valid := True;
-      end if;
-   end Export_Environment;
 
    ---------------------
    -- Get_Environment --
    ---------------------
 
-   Get_Env_Cache : Dyn_String_List;
-
-   function Get_Environment return String_List is
+   function Get_Environment (State : Shell_State) return String_List is
 
       Result : Dyn_String_List;
       procedure Export_Aux (Position : Cursor);
@@ -153,44 +103,61 @@ package body Posix_Shell.Variables is
       end Export_Aux;
 
    begin
-      if Is_Env_Valid then
-         return Content (Get_Env_Cache);
-      else
-         --  Reset environment
-         Iterate (Global_Context (Scope).Var_Table,
-                  Export_Aux'Unrestricted_Access);
-         Get_Env_Cache := Result;
-         Is_Env_Valid := True;
-         return Content (Get_Env_Cache);
-      end if;
+      --  Reset environment
+      Iterate (State.Var_Table,
+               Export_Aux'Unrestricted_Access);
+
+      return Content (Result);
    end Get_Environment;
 
    ----------------
    -- Export_Var --
    ----------------
 
-   procedure Export_Var (Name : String) is
-      V : constant String := Get_Var_Value (Name);
+   procedure Export_Var (State : in out Shell_State; Name : String) is
+      V : constant String := Get_Var_Value (State, Name);
    begin
-      Set_Var_Value (Name, V, True);
+      Set_Var_Value (State, Name, V, True);
    end Export_Var;
 
    ----------------
    -- Export_Var --
    ----------------
 
-   procedure Export_Var (Name : String; Value : String) is
+   procedure Export_Var
+     (State : in out Shell_State; Name : String; Value : String)
+   is
    begin
-      Set_Var_Value (Name, Value, True);
+      Set_Var_Value (State, Name, Value, True);
    end Export_Var;
+
+   ---------------------
+   -- Get_Current_Dir --
+   ---------------------
+
+   function Get_Current_Dir
+     (State : Shell_State; Strip_Drive : Boolean := False) return String
+   is
+      Cur : constant String :=  State.Current_Dir.all;
+   begin
+      if Strip_Drive and then Cur (Cur'First + 1) = ':' then
+         if Cur'Length = 2 then
+            return "/";
+         else
+            return Cur (Cur'First + 2 .. Cur'Last);
+         end if;
+      else
+         return Cur;
+      end if;
+   end Get_Current_Dir;
 
    --------------------------
    -- Get_Last_Exit_Status --
    --------------------------
 
-   function Get_Last_Exit_Status return Integer is
+   function Get_Last_Exit_Status (State : Shell_State) return Integer is
    begin
-      return Global_Context (Scope).Last_Exit_Status;
+      return State.Last_Exit_Status;
    end Get_Last_Exit_Status;
 
    -------------------
@@ -198,7 +165,8 @@ package body Posix_Shell.Variables is
    -------------------
 
    function Get_Var_Value
-     (Name            : String;
+     (State           : Shell_State;
+      Name            : String;
       Context         : Annotation;
       Check_Existence : Boolean    := True)
       return Annotated_String
@@ -253,7 +221,7 @@ package body Posix_Shell.Variables is
    begin
       --  If necessary check for variable existence
       if Check_Existence then
-         if not Is_Var_Set (Name) then
+         if not Is_Var_Set (State, Name) then
             return Result;
          end if;
       end if;
@@ -263,11 +231,10 @@ package body Posix_Shell.Variables is
       if Is_Positional_Parameter (Name) then
          declare
             Index : constant Integer := Integer'Value (Name);
-            Shift : constant Integer :=
-              Global_Context (Scope).Pos_Params.Shift;
+            Shift : constant Integer := State.Pos_Params.Shift;
          begin
             Append (Result,
-                    Global_Context (Scope).Pos_Params.Table
+                    State.Pos_Params.Table
                     (Index + Shift).all,
                     Context);
             return Result;
@@ -278,7 +245,9 @@ package body Posix_Shell.Variables is
          --  Expansion of Special parameters (XCU section 2.5.2)
          case Name (Name'First) is
             when '?' =>
-               Append (Result, To_String (Get_Last_Exit_Status), Context);
+               Append
+                 (Result,
+                  To_String (Get_Last_Exit_Status (State)), Context);
                return Result;
             when '$' =>
                Append (Result,
@@ -293,8 +262,7 @@ package body Posix_Shell.Variables is
                --  performed when expanding '@' even if IFS is set to '' or if
                --  we are in a quoted context
                declare
-                  PP : constant Pos_Params_State :=
-                    Global_Context (Scope).Pos_Params;
+                  PP : constant Pos_Params_State := State.Pos_Params;
                begin
                   for J in PP.Table'First + PP.Shift .. PP.Table'Last loop
                      Append (Result, PP.Table (J).all, Context);
@@ -317,14 +285,13 @@ package body Posix_Shell.Variables is
                   --  Set to true when a separator should be added between each
                   --  positional parameter expansion.
 
-                  PP : constant Pos_Params_State :=
-                    Global_Context (Scope).Pos_Params;
+                  PP : constant Pos_Params_State := State.Pos_Params;
                begin
                   --  First compute the field separator if we are in a quoted
                   --  context.
-                  if Is_Var_Set ("IFS") then
+                  if Is_Var_Set (State, "IFS") then
                      declare
-                        IFS : constant String := Get_Var_Value ("IFS");
+                        IFS : constant String := Get_Var_Value (State, "IFS");
                      begin
                         if IFS'Length = 0 then
                            --  IFS is set but has a null value. In that case we
@@ -355,9 +322,9 @@ package body Posix_Shell.Variables is
             when '#' =>
                declare
                   Real_Size : constant Integer :=
-                    Global_Context (Scope).Pos_Params.Table'Length;
+                    State.Pos_Params.Table'Length;
                   Shift : constant Integer :=
-                    Global_Context (Scope).Pos_Params.Shift;
+                    State.Pos_Params.Shift;
                begin
                   Append (Result, To_String (Real_Size - Shift), Context);
                   return Result;
@@ -369,16 +336,16 @@ package body Posix_Shell.Variables is
          end case;
       end if;
 
-      if Contains (Global_Context (Scope).Var_Table, Name) then
+      if Contains (State.Var_Table, Name) then
          Append
            (Result,
             Path_Transform (Element
-              (Global_Context (Scope).Var_Table, Name).Val.all, Name),
+              (State.Var_Table, Name).Val.all, Name),
             Context);
-      elsif Contains (Global_Context (Scope).Var_Table, Upper_Name) then
+      elsif Contains (State.Var_Table, Upper_Name) then
          declare
             Tmp : constant Var_Value := Element
-              (Global_Context (Scope).Var_Table, Upper_Name);
+              (State.Var_Table, Upper_Name);
          begin
             if Tmp.Env_Val /= null then
                Append
@@ -395,8 +362,10 @@ package body Posix_Shell.Variables is
    -- Get_Var_Value --
    -------------------
 
-   function Get_Var_Value (Name : String) return String is
-      Value : constant Annotated_String := Get_Var_Value (Name, NO_ANNOTATION);
+   function Get_Var_Value (State : Shell_State; Name : String) return String
+   is
+      Value : constant Annotated_String := Get_Var_Value
+        (State, Name, NO_ANNOTATION);
    begin
       return Str (Value);
    end Get_Var_Value;
@@ -405,24 +374,57 @@ package body Posix_Shell.Variables is
    -- Import_Environment --
    ------------------------
 
-   procedure Import_Environment is
+   procedure Import_Environment (State : in out Shell_State) is
       procedure Import_Env_Aux (Name, Value : String);
 
       procedure Import_Env_Aux (Name, Value : String) is
          Upper_Name : constant String := Translate (Name, Upper_Case_Map);
       begin
          if Is_Valid_Variable_Name (Upper_Name) then
-            Set_Var_Value (Upper_Name, Value, False, True);
+            Set_Var_Value (State, Upper_Name, Value, False, True);
          end if;
       end Import_Env_Aux;
 
    begin
+      --  First import environment to initialize our variables table
       Iterate (Import_Env_Aux'Unrestricted_Access);
+
+      --  Initialize redirections to default values
+      State.Redirections := (others => (Invalid_FD, null, False));
+      State.Redirections (1) := (1, null, False);
+      State.Redirections (2) := (2, null, False);
+      State.Redirections (0) := (0, null, False);
+
+      --  Initialize current directory
+      --  Note that this is the only place where we get the current dir using
+      --  information from the process. In any other places, user should use
+      --  methods provided with the Shell_State. Indeed this implementation is
+      --  using threads and the notion of current directory is bind to
+      --  the process.
       declare
-         Tmp : constant String_List := Get_Environment;
-         pragma Unreferenced (Tmp);
+         Dir  : constant String := Format_Pathname (Get_Current_Dir, UNIX);
+         Last : Integer := Dir'Last;
       begin
-         Is_Env_Valid := True;
+         if Dir (Dir'Last) = '/' then
+
+         --  If this is the root directory, then we should not strip
+         --  then ending directory separator.  Otherwise, we would end
+         --  up creating an invalid directory name.
+         --
+         --  To determine independently of the type of filesystem whether
+         --  the current directory is the root directory or not, we check
+         --  whether we can find another directory separator before the
+         --  end of Dir. If we find one, then Dir cannot be a root dir,
+         --  in which case we should strip out the ending directory separator.
+            for J in Dir'First .. Dir'Last - 1 loop
+               if Dir (J) = '/' then
+                  Last := Dir'Last - 1;
+               end if;
+            end loop;
+         end if;
+
+
+         State.Current_Dir := new String'(Dir (Dir'First .. Last));
       end;
    end Import_Environment;
 
@@ -487,18 +489,17 @@ package body Posix_Shell.Variables is
    -- Is_Var_Set --
    ----------------
 
-   function Is_Var_Set (Name : String) return Boolean is
+   function Is_Var_Set (State : Shell_State; Name : String) return Boolean is
       Upper_Name : constant String := Translate (Name, Upper_Case_Map);
    begin
       --  Is this a positional parameter
       if Is_Positional_Parameter (Name) then
          declare
             Index : constant Integer := Integer'Value (Name);
-            Shift : constant Integer :=
-              Global_Context (Scope).Pos_Params.Shift;
+            Shift : constant Integer := State.Pos_Params.Shift;
          begin
             if Index + Shift <=
-              Global_Context (Scope).Pos_Params.Table'Last
+              State.Pos_Params.Table'Last
             then
                return True;
             else
@@ -517,10 +518,10 @@ package body Posix_Shell.Variables is
       Check_Variable_Name (Name);
 
       --  Try in the list of local variables...
-      if Contains (Global_Context (Scope).Var_Table, Name) then
+      if Contains (State.Var_Table, Name) then
          return True;
-      elsif Contains (Global_Context (Scope).Var_Table, Upper_Name) and then
-        Element (Global_Context (Scope).Var_Table, Upper_Name).Env_Val /= null
+      elsif Contains (State.Var_Table, Upper_Name) and then
+        Element (State.Var_Table, Upper_Name).Env_Val /= null
       then
          return True;
       end if;
@@ -533,7 +534,11 @@ package body Posix_Shell.Variables is
    -- Leave_Scope --
    -----------------
 
-   procedure Leave_Scope (Keep_Pos_Params : Boolean := False) is
+   procedure Leave_Scope
+     (Current  : in out Shell_State;
+      Previous : in out Shell_State;
+      Keep_Pos_Params : Boolean := False)
+   is
       procedure Leave_Scope_Aux (Position : Cursor);
 
       ---------------------
@@ -543,96 +548,118 @@ package body Posix_Shell.Variables is
       procedure Leave_Scope_Aux (Position : Cursor) is
          V : Var_Value := Element (Position);
       begin
-         if V.Scope_Owner = Scope + 1 and then V.Val /= null then
+         if V.Scope_Owner = Current.Scope_Level and then V.Val /= null then
             Free (V.Val);
          end if;
 
       end Leave_Scope_Aux;
    begin
 
-      Scope := Scope - 1;
-
       --  Clear variable table
-      Iterate (Global_Context (Scope + 1).Var_Table,
+      Iterate (Current.Var_Table,
                Leave_Scope_Aux'Unrestricted_Access);
-      Clear (Global_Context (Scope + 1).Var_Table);
+      Clear (Current.Var_Table);
 
       --  Propagate exit status
-      Global_Context (Scope).Last_Exit_Status :=
-        Global_Context (Scope + 1).Last_Exit_Status;
+      Previous.Last_Exit_Status := Current.Last_Exit_Status;
 
       --  Clear positional parameters
-      if Global_Context (Scope + 1).Pos_Params.Scope = Scope + 1 then
+      if Current.Pos_Params.Scope = Current.Scope_Level then
          if Keep_Pos_Params then
-            if Global_Context (Scope).Pos_Params.Scope = Scope then
-               for J in Global_Context (Scope).Pos_Params.Table'Range loop
-                  Free (Global_Context (Scope).Pos_Params.Table (J));
+
+            --  If the pos params to be overwritten were declared in the
+            --  this state free them
+            if Previous.Pos_Params.Scope = Previous.Scope_Level then
+               for J in Previous.Pos_Params.Table'Range loop
+                  Free (Previous.Pos_Params.Table (J));
                end loop;
             end if;
-            Global_Context (Scope).Pos_Params :=
-              Global_Context (Scope + 1).Pos_Params;
+
+            --  Copy pos params from current to previous.
+            Previous.Pos_Params := Current.Pos_Params;
+            Previous.Pos_Params.Scope := Current.Scope_Level;
+
          else
-            for J in Global_Context (Scope + 1).Pos_Params.Table'Range loop
-               Free (Global_Context (Scope + 1).Pos_Params.Table (J));
+            for J in Current.Pos_Params.Table'Range loop
+               Free (Current.Pos_Params.Table (J));
             end loop;
          end if;
       end if;
 
+      --  Free Current dir
+      Free (Current.Current_Dir);
    end Leave_Scope;
+
+   function Resolve_Path
+     (State : Shell_State; Path : String) return String
+   is
+   begin
+      if Is_Absolute_Path (Path) then
+         return Path;
+      else
+         return Get_Current_Dir (State) & "/" & Path;
+      end if;
+   end Resolve_Path;
 
    -----------------------------------
    -- Restore_Positional_Parameters --
    -----------------------------------
 
-   procedure Restore_Positional_Parameters (State : Pos_Params_State) is
+   procedure Restore_Positional_Parameters
+     (State : in out Shell_State; Pos_Params : Pos_Params_State)
+   is
    begin
       --  Free if necessary previous parameters
-      if Global_Context (Scope).Pos_Params.Scope = Scope then
-         for J in Global_Context (Scope).Pos_Params.Table'Range loop
-            Free (Global_Context (Scope).Pos_Params.Table (J));
+      if State.Pos_Params.Scope = State.Scope_Level then
+         for J in State.Pos_Params.Table'Range loop
+            Free (State.Pos_Params.Table (J));
          end loop;
       end if;
 
-      Global_Context (Scope).Pos_Params := State;
+      State.Pos_Params := Pos_Params;
    end Restore_Positional_Parameters;
 
    ---------------------------
    -- Save_Last_Exit_Status --
    ---------------------------
 
-   procedure Save_Last_Exit_Status (Exit_Status : Integer) is
+   procedure Save_Last_Exit_Status
+     (State : in out Shell_State; Exit_Status : Integer)
+   is
    begin
-      Global_Context (Scope).Last_Exit_Status :=  Exit_Status;
+      State.Last_Exit_Status :=  Exit_Status;
    end Save_Last_Exit_Status;
 
-   function Set_Positional_Parameters
-     (Args : String_List)
+   -------------------------------
+   -- Get_Positional_Parameters --
+   -------------------------------
+
+   function Get_Positional_Parameters
+     (State : Shell_State)
       return Pos_Params_State
    is
-      Args_Copy : constant String_List_Access
-        := new String_List (1 .. Args'Length);
-      Result : constant Pos_Params_State := Global_Context (Scope).Pos_Params;
    begin
-      for J in 1 .. Args'Length loop
-         --  We take the pain of readjusting the index of this array
-         --  so that the first index is 1.  That way, later one, when
-         --  we need to access say $3, we know that its value is at
-         --  index 3 of our array.
-         Args_Copy (J) := new String'(Args (Args'First + J - 1).all);
-      end loop;
+      return State.Pos_Params;
+   end Get_Positional_Parameters;
 
-      --  Set the new parameters
-      Global_Context (Scope).Pos_Params.Table := Args_Copy;
-      Global_Context (Scope).Pos_Params.Scope := Scope;
-      Global_Context (Scope).Pos_Params.Shift := 0;
-      return Result;
-   end Set_Positional_Parameters;
+   ---------------------
+   -- Set_Current_Dir --
+   ---------------------
+   procedure Set_Current_Dir (State : in out Shell_State; Dir : String) is
+   begin
+      Free (State.Current_Dir);
+      State.Current_Dir := new String'(Dir);
+   end Set_Current_Dir;
 
    -------------------------------
    -- Set_Positional_Parameters --
    -------------------------------
 
-   procedure Set_Positional_Parameters (Args : String_List) is
+   procedure Set_Positional_Parameters
+     (State         : in out Shell_State;
+      Args          : String_List;
+      Free_Previous : Boolean := True)
+   is
       Args_Copy : constant String_List_Access
         := new String_List (1 .. Args'Length);
    begin
@@ -645,14 +672,17 @@ package body Posix_Shell.Variables is
       end loop;
 
       --  Free if necessary previous parameters
-      if Global_Context (Scope).Pos_Params.Scope = Scope then
-         for J in Global_Context (Scope).Pos_Params.Table'Range loop
-            Free (Global_Context (Scope).Pos_Params.Table (J));
-         end loop;
+      if Free_Previous then
+         if State.Pos_Params.Scope = State.Scope_Level then
+            for J in State.Pos_Params.Table'Range loop
+               Free (State.Pos_Params.Table (J));
+            end loop;
+         end if;
       end if;
+      --  XXX missing free for the list itself.
 
       --  Set the new parameters
-      Global_Context (Scope).Pos_Params := (Args_Copy, 0, Scope);
+      State.Pos_Params := (Args_Copy, 0, State.Scope_Level);
    end Set_Positional_Parameters;
 
    -------------------
@@ -660,14 +690,14 @@ package body Posix_Shell.Variables is
    -------------------
 
    procedure Set_Var_Value
-     (Name   : String;
+     (State  : in out Shell_State;
+      Name   : String;
       Value  : String;
       Export : Boolean := False;
       Is_Env_Value : Boolean := False)
    is
-      V : Var_Value := (null, null, False, Scope);
-      Is_New_Var : constant Boolean := not Contains
-        (Global_Context (Scope).Var_Table, Name);
+      V : Var_Value := (null, null, False, State.Scope_Level);
+      Is_New_Var : constant Boolean := not Contains (State.Var_Table, Name);
 
       function Path_Transform (S : String; Name : String) return String;
 
@@ -718,9 +748,9 @@ package body Posix_Shell.Variables is
 
       if not Is_New_Var then
          --  This is not a new variable so retrieve its value
-         V := Element (Global_Context (Scope).Var_Table, Name);
+         V := Element (State.Var_Table, Name);
 
-         if V.Scope_Owner = Scope and V.Val /= null then
+         if V.Scope_Owner = State.Scope_Level and V.Val /= null then
             --  The variable has been declared in the current context, so we
             --  can safely free the current value
             Free (V.Val);
@@ -740,30 +770,32 @@ package body Posix_Shell.Variables is
             V.Val := new String'(Effective_Value);
          end if;
 
-         V.Scope_Owner := Scope;
+         V.Scope_Owner := State.Scope_Level;
 
          --  Update the variable table
-         Replace (Global_Context (Scope).Var_Table, Name, V);
+         Replace (State.Var_Table, Name, V);
 
          --  If the variable is exported, the current env is no more valid.
          if V.Is_Exported then
-            Is_Env_Valid := False;
+            State.Is_Env_Valid := False;
          end if;
       else
          --  The variable is new
          if Is_Env_Value then
             --  We are in the context of Import_Environment.
-            Include (Global_Context (Scope).Var_Table, Name,
+            Include (State.Var_Table, Name,
               (new String'(Value),
-               new String'(Value), Export, Scope));
+               new String'(Value), Export, State.Scope_Level));
          else
-            Include (Global_Context (Scope).Var_Table, Name,
-                     (new String'(Effective_Value), null, Export, Scope));
+            Include
+              (State.Var_Table, Name,
+               (new String'(Effective_Value),
+                null, Export, State.Scope_Level));
          end if;
 
          --  Invalidate current env
          if Export then
-            Is_Env_Valid := False;
+            State.Is_Env_Valid := False;
          end if;
       end if;
 
@@ -773,37 +805,39 @@ package body Posix_Shell.Variables is
    -- Shift_Positional_Parameters --
    ---------------------------------
 
-   function Shift_Positional_Parameters (N : Natural := 1) return Boolean is
-      Shift : constant Integer := Global_Context (Scope).Pos_Params.Shift;
+   procedure Shift_Positional_Parameters
+     (State : in out Shell_State; N : Natural; Success : out Boolean)
+   is
+      Shift : constant Integer := State.Pos_Params.Shift;
       Pos_Params_Size : constant Integer :=
-        Global_Context (Scope).Pos_Params.Table.all'Length;
+        State.Pos_Params.Table.all'Length;
    begin
       if Shift + N > Pos_Params_Size then
          --  Shift is too large, report an error.
-         return False;
+         Success := False;
+         return;
       end if;
 
-      Global_Context (Scope).Pos_Params.Shift := Shift + N;
-      return True;
+      State.Pos_Params.Shift := Shift + N;
+      Success := True;
    end Shift_Positional_Parameters;
 
    ---------------
    -- Unset_Var --
    ---------------
 
-   procedure Unset_Var (Name : String) is
+   procedure Unset_Var (State : in out Shell_State; Name : String) is
    begin
-      if Contains (Global_Context (Scope).Var_Table, Name) then
+      if Contains (State.Var_Table, Name) then
          declare
-            V : Var_Value := Element
-              (Global_Context (Scope).Var_Table, Name);
+            V : Var_Value := Element (State.Var_Table, Name);
          begin
-            if V.Scope_Owner = Scope and V.Val /= null then
+            if V.Scope_Owner = State.Scope_Level and V.Val /= null then
                --  The variable has been declared in the current context, so we
                --  can safely free the current value
                Free (V.Val);
             end if;
-            Delete (Global_Context (Scope).Var_Table, Name);
+            Delete (State.Var_Table, Name);
          end;
       end if;
    end Unset_Var;
