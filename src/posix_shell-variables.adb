@@ -78,6 +78,8 @@ package body Posix_Shell.Variables is
       --  Copy the current directory information
       Result.Current_Dir := new String'(Previous.Current_Dir.all);
 
+      --  Reset to 0 for/until/while nested level
+      Result.Loop_Scope_Level := 0;
       return Result;
    end Enter_Scope;
 
@@ -426,6 +428,8 @@ package body Posix_Shell.Variables is
 
          State.Current_Dir := new String'(Dir (Dir'First .. Last));
       end;
+
+      State.Loop_Scope_Level := 0;
    end Import_Environment;
 
    -----------------------------
@@ -841,5 +845,23 @@ package body Posix_Shell.Variables is
          end;
       end if;
    end Unset_Var;
+
+   --------------------------
+   -- Get_Loop_Scope_Level --
+   --------------------------
+
+   function Get_Loop_Scope_Level (S : Shell_State) return Natural is
+   begin
+      return S.Loop_Scope_Level;
+   end Get_Loop_Scope_Level;
+
+   --------------------------
+   -- Set_Loop_Scope_Level --
+   --------------------------
+
+   procedure Set_Loop_Scope_Level (S : in out Shell_State; N : Natural) is
+   begin
+      S.Loop_Scope_Level := N;
+   end Set_Loop_Scope_Level;
 
 end Posix_Shell.Variables;

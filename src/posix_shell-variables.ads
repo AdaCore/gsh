@@ -104,6 +104,10 @@ package Posix_Shell.Variables is
 
    procedure Deallocate (S : in out Shell_State_Access);
 
+   function Get_Loop_Scope_Level (S : Shell_State) return Natural;
+
+   procedure Set_Loop_Scope_Level (S : in out Shell_State; N : Natural);
+
    type Redirection_States is private;
 private
 
@@ -155,6 +159,7 @@ private
       Is_Env_Valid     : Boolean := False;
       Redirections     : Redirection_States;
       Current_Dir      : String_Access := null;
+      Loop_Scope_Level : Natural := 0;
    end record;
 
 end Posix_Shell.Variables;

@@ -233,6 +233,9 @@ package body Posix_Shell.Tree.Evals is
       Eval (S, T, N.Brace_Code);
       Restore_Redirections (S.all, Current);
    exception
+      when E : Continue_Exception | Break_Exception =>
+         Restore_Redirections (S.all, Current);
+         Reraise_Occurrence (E);
       when Shell_Return_Exception =>
          Restore_Redirections (S.all, Current);
    end Eval_Brace;
@@ -402,14 +405,26 @@ package body Posix_Shell.Tree.Evals is
       Is_Valid : Boolean;
       Break_Number : Integer;
       Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+
+      My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S.all) + 1;
    begin
       Set_Redirections (S, N.Redirections);
+      Set_Loop_Scope_Level (S.all, My_Nested_Level);
       for I in Loop_Var_Values'Range loop
+
          begin
             Set_Var_Value (S.all, Loop_Var, Loop_Var_Values (I).all);
             Eval (S, T, N.Loop_Code);
          exception
-            when Continue_Exception => null;
+            when E : Continue_Exception =>
+               To_Integer (Exception_Message (E), Break_Number, Is_Valid);
+               if Break_Number = My_Nested_Level then
+                  null;
+               else
+                  Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
+                  Restore_Redirections (S.all, Current_Redirs);
+                  raise Continue_Exception with To_String (Break_Number);
+               end if;
             when E : Break_Exception =>
                To_Integer (Exception_Message (E), Break_Number, Is_Valid);
                if Break_Number = 1 then
@@ -424,7 +439,7 @@ package body Posix_Shell.Tree.Evals is
       for Index in Loop_Var_Values'Range loop
          Free (Loop_Var_Values (Index));
       end loop;
-
+      Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
       Restore_Redirections (S.all, Current_Redirs);
    end Eval_For;
 
