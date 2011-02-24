@@ -1,0 +1,41 @@
+==== continue without arguments should resume in innermost loop ====
+entering outtermost loop (written twice)
+status should be 0 (written twice)
+status should be 0 (written twice)
+status should be 0 (written twice)
+leaving outtermost loop (written twice)
+entering outtermost loop (written twice)
+status should be 0 (written twice)
+status should be 0 (written twice)
+status should be 0 (written twice)
+leaving outtermost loop (written twice)
+entering outtermost loop (written twice)
+status should be 0 (written twice)
+status should be 0 (written twice)
+status should be 0 (written twice)
+leaving outtermost loop (written twice)
+PASSED
+0
+1
+Entering inner loop
+Exiting inner loop
+Entering inner loop
+Exiting inner loop
+0
++ continue the outter loop
+== stdout ==
+This message should be written twice on stdout
+This message should be written twice on stdout
+status should be 0. Get 0
+== inner_loop.txt ==
+This message should written twice in inner_loop.txt
+This message should written twice in inner_loop.txt
++ continue in an inner brace construct
+== stdout ==
+this message should written twice on stdout
+this message should written twice on stdout
+status should be 0: get 0
+== brace.txt ==
+PASSED
+PASSED
++ Last TEST

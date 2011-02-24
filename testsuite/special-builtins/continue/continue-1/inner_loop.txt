@@ -1,0 +1,2 @@
+This message should written twice in inner_loop.txt
+This message should written twice in inner_loop.txt
