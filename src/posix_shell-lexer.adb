@@ -187,12 +187,6 @@ package body Posix_Shell.Lexer is
       return Result;
    end Read_Command_Token;
 
-   function Read_Command_Token (B : Buffer_Access) return Token_Type is
-      T : constant Token := Read_Command_Token (B);
-   begin
-      return T.T;
-   end Read_Command_Token;
-
    ----------------------------
    -- Read_Command_Token_Aux --
    ----------------------------

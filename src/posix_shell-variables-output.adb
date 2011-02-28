@@ -108,9 +108,7 @@ package body Posix_Shell.Variables.Output is
          --  Close the current redirection file descriptor only if it was not
          --  the same as the one we want to restore and if it is not stdin,
          --  stdout or stderr
-         if Integer (Previous (I).Fd) /= Integer (R (I).Fd)
-           and then Previous (I).Fd not in 0 .. 2
-         then
+         if Previous (I).Can_Be_Closed then
             Close (Previous (I).Fd);
             if Previous (I).Delete_On_Close then
                Delete_File (Previous (I).Filename.all, Success);
@@ -129,7 +127,6 @@ package body Posix_Shell.Variables.Output is
       R : Redirection_Op_Stack;
       Free_Previous : Boolean := False)
    is
-      pragma Unreferenced (Free_Previous);
       Success    : Boolean := False;
       Old_States : constant Redirection_States := S.Redirections;
       New_States : Redirection_States;
@@ -180,6 +177,11 @@ package body Posix_Shell.Variables.Output is
       --  descriptors from the old state.
       New_States := Old_States;
 
+      --  We are not allowed to close file descriptor we are inheriting
+      for J in 0 .. New_States'Last loop
+         New_States (J).Can_Be_Closed := False;
+      end loop;
+
       for J in 1 .. R.Top loop
          declare
             C : constant Redirection_Op := R.Ops (J);
@@ -195,6 +197,7 @@ package body Posix_Shell.Variables.Output is
                   Set_Close_On_Exec
                     (New_States (C.Target_FD).Fd, True, Success);
                   New_States (C.Target_FD).Delete_On_Close := False;
+                  New_States (C.Target_FD).Can_Be_Closed := True;
                   GNAT.Task_Lock.Unlock;
                when OPEN_WRITE =>
                   New_States (C.Target_FD).Filename :=
@@ -212,6 +215,7 @@ package body Posix_Shell.Variables.Output is
                     (New_States (C.Target_FD).Fd, True, Success);
                   New_States (C.Target_FD).Delete_On_Close := False;
                   Lseek (New_States (C.Target_FD).Fd, 0, 2);
+                  New_States (C.Target_FD).Can_Be_Closed := True;
                   GNAT.Task_Lock.Unlock;
                when OPEN_APPEND =>
                   New_States (C.Target_FD).Filename :=
@@ -223,6 +227,7 @@ package body Posix_Shell.Variables.Output is
                     (New_States (C.Target_FD).Fd, True, Success);
                   New_States (C.Target_FD).Delete_On_Close := False;
                   Lseek (New_States (C.Target_FD).Fd, 0, 2);
+                  New_States (C.Target_FD).Can_Be_Closed := True;
                   GNAT.Task_Lock.Unlock;
                when DUPLICATE =>
                   GNAT.Task_Lock.Lock;
@@ -230,6 +235,7 @@ package body Posix_Shell.Variables.Output is
                     Dup (New_States (C.Source_FD).Fd);
                   Set_Close_On_Exec
                     (New_States (C.Target_FD).Fd, True, Success);
+                  New_States (C.Target_FD).Can_Be_Closed := True;
                   GNAT.Task_Lock.Unlock;
                when IOHERE =>
                   declare
@@ -253,6 +259,7 @@ package body Posix_Shell.Variables.Output is
                      Set_Close_On_Exec
                        (New_States (C.Target_FD).Fd, True, Success);
                      New_States (C.Target_FD).Delete_On_Close := True;
+                     New_States (C.Target_FD).Can_Be_Closed := True;
                      GNAT.Task_Lock.Unlock;
                   end;
                when others =>
@@ -264,6 +271,20 @@ package body Posix_Shell.Variables.Output is
       --  All went well, so we can now push the new states.
       --  Ada.Text_IO.Put_Line (New_States (2).Fd'Img);
       GNAT.Task_Lock.Lock;
+
+      if Free_Previous then
+         for I in 0 .. New_States'Last loop
+            --  Close the current redirection file descriptor only if it was
+            --  not the same as the one we want to restore and if it is not
+            --- stdin, stdout or stderr
+            if Old_States (I).Can_Be_Closed then
+               Close (Old_States (I).Fd);
+               if Old_States (I).Delete_On_Close then
+                  Delete_File (Old_States (I).Filename.all, Success);
+               end if;
+            end if;
+         end loop;
+      end if;
       S.Redirections := New_States;
       GNAT.Task_Lock.Unlock;
    end Set_Redirections;
@@ -357,7 +378,7 @@ package body Posix_Shell.Variables.Output is
       --  based on the previous states, we will pop the current states
       --  back.
       S.Redirections (-2) := S.Redirections (0);
-      S.Redirections (0) := (Input_Fd, null, False);
+      S.Redirections (0) := (Input_Fd, null, False, True);
       --  S.Redirections (-1) := S.Redirections (1);
       --  Restore Stdout
       --  S.Redirections (1) := Tmp2;
@@ -389,10 +410,10 @@ package body Posix_Shell.Variables.Output is
 
       --  Save stdout
       S.Redirections (-1) := S.Redirections (1);
-      S.Redirections (1)  := (Pipe.Output, null, False);
+      S.Redirections (1)  := (Pipe.Output, null, False, True);
 
       --  Keep the other side of the pipe
-      S.Redirections (-2) := (Pipe.Input, null, False);
+      S.Redirections (-2) := (Pipe.Input, null, False, True);
 
       Set_Close_On_Exec (Pipe.Output, True, Success);
       Set_Close_On_Exec (Pipe.Input, True, Success);

@@ -309,7 +309,7 @@ package body Posix_Shell.Tree.Evals is
       Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
    begin
       if Command = "exec" then
-         Set_Redirections (S, Redirections);
+         Set_Redirections (S, Redirections, Free_Previous => True);
          Exit_Status := Run
            (S, Command, Arguments, Env);
       else
@@ -427,11 +427,12 @@ package body Posix_Shell.Tree.Evals is
                end if;
             when E : Break_Exception =>
                To_Integer (Exception_Message (E), Break_Number, Is_Valid);
-               if Break_Number = 1 then
+               if Break_Number = My_Nested_Level then
                   exit;
                else
+                  Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
                   Restore_Redirections (S.all, Current_Redirs);
-                  raise Break_Exception with To_String (Break_Number - 1);
+                  raise Break_Exception with To_String (Break_Number);
                end if;
          end;
       end loop;
@@ -622,8 +623,10 @@ package body Posix_Shell.Tree.Evals is
       Break_Number : Integer;
       Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
       Result : Integer := 0;
+      My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S.all) + 1;
    begin
       Set_Redirections (S, N.Redirections);
+      Set_Loop_Scope_Level (S.all, My_Nested_Level);
       loop
          begin
             if not Is_Until then
@@ -638,15 +641,24 @@ package body Posix_Shell.Tree.Evals is
                exit when Get_Last_Exit_Status (S.all) = 0;
             end if;
          exception
-            when Continue_Exception => null;
+            when E : Continue_Exception =>
+               To_Integer (Exception_Message (E), Break_Number, Is_Valid);
+               if Break_Number = My_Nested_Level then
+                  null;
+               else
+                  Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
+                  Restore_Redirections (S.all, Current_Redirs);
+                  raise Continue_Exception with To_String (Break_Number);
+               end if;
             when E : Break_Exception =>
                To_Integer (Exception_Message (E), Break_Number, Is_Valid);
-               if Break_Number = 1 then
+               if Break_Number = My_Nested_Level then
                   Result := Get_Last_Exit_Status (S.all);
                   exit;
                else
+                  Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
                   Restore_Redirections (S.all, Current_Redirs);
-                  raise Break_Exception with To_String (Break_Number - 1);
+                  raise Break_Exception with To_String (Break_Number);
                end if;
          end;
       end loop;

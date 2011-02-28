@@ -133,9 +133,10 @@ private
    use String_Maps;
 
    type Redirection_State is record
-      Fd       : File_Descriptor;
-      Filename : String_Access;
+      Fd              : File_Descriptor;
+      Filename        : String_Access;
       Delete_On_Close : Boolean;
+      Can_Be_Closed   : Boolean;
    end record;
    --  State of Stdin, Stdout or Stderr (file descriptor and filename
    --  if relevant).

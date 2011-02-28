@@ -63,9 +63,6 @@ package Posix_Shell.Lexer is
    function Read_Command_Token (B : Buffer_Access) return Token;
    --  Get the next token in the buffer B with keyword recognition enabled.
 
-   function Read_Command_Token (B : Buffer_Access) return Token_Type;
-   --  Same as previous function except that only the type is returned
-
    procedure Skip_Token (B : Buffer_Access);
    --  Skip token
 

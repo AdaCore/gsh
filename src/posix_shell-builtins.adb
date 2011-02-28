@@ -144,17 +144,36 @@ package body Posix_Shell.Builtins is
      (S : Shell_State_Access; Args : String_List)
       return Integer
    is
-      pragma Unreferenced (S);
       Break_Number : Integer;
       Is_Valid : Boolean;
+      Current_Loop_Level : constant Natural := Get_Loop_Scope_Level (S.all);
    begin
 
+      if Current_Loop_Level = 0 then
+         --  we are not in a loop construct. So ignore the builtin and return 0
+         Put (S.all, 2, "break: only meaningful in a " &
+              "`for', `while', or `until' loop" & ASCII.LF);
+         return 0;
+      end if;
+
       if Args'Length = 0 then
-         Break_Number := 1;
+         Break_Number := Current_Loop_Level;
       else
          To_Integer (Args (Args'First).all, Break_Number, Is_Valid);
          if not Is_Valid then
+            Put (S.all, 2, "break: " &
+                 Args (Args'First).all &
+                 ":numeric argument required" & ASCII.LF);
+            Shell_Exit (S.all, 128);
+         end if;
+
+         if Break_Number < 1 then
             return 1;
+         end if;
+
+         Break_Number := Current_Loop_Level - Break_Number + 1;
+         if Break_Number < 1 then
+            Break_Number := 1;
          end if;
       end if;
 
