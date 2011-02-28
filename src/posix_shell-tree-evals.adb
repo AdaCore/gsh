@@ -663,6 +663,7 @@ package body Posix_Shell.Tree.Evals is
          end;
       end loop;
       Save_Last_Exit_Status (S.all, Result);
+      Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
       Restore_Redirections (S.all, Current_Redirs);
    end Eval_Until_While;
 

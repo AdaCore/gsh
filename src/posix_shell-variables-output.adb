@@ -178,9 +178,11 @@ package body Posix_Shell.Variables.Output is
       New_States := Old_States;
 
       --  We are not allowed to close file descriptor we are inheriting
-      for J in 0 .. New_States'Last loop
-         New_States (J).Can_Be_Closed := False;
-      end loop;
+      if not Free_Previous then
+         for J in 0 .. New_States'Last loop
+            New_States (J).Can_Be_Closed := False;
+         end loop;
+      end if;
 
       for J in 1 .. R.Top loop
          declare
@@ -277,7 +279,9 @@ package body Posix_Shell.Variables.Output is
             --  Close the current redirection file descriptor only if it was
             --  not the same as the one we want to restore and if it is not
             --- stdin, stdout or stderr
-            if Old_States (I).Can_Be_Closed then
+            if Old_States (I).Can_Be_Closed and then
+              Integer (Old_States (I).Fd) /= Integer (New_States (I).Fd)
+            then
                Close (Old_States (I).Fd);
                if Old_States (I).Delete_On_Close then
                   Delete_File (Old_States (I).Filename.all, Success);
