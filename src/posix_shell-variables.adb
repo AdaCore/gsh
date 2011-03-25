@@ -594,12 +594,18 @@ package body Posix_Shell.Variables is
       Free (Current.Current_Dir);
    end Leave_Scope;
 
+   ------------------
+   -- Resolve_Path --
+   ------------------
+
    function Resolve_Path
      (State : Shell_State; Path : String) return String
    is
    begin
       if Is_Absolute_Path (Path) then
          return Path;
+      elsif Path = "" then
+         return "";
       else
          return Get_Current_Dir (State) & "/" & Path;
       end if;
