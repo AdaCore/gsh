@@ -1,0 +1,5 @@
+echo "+ value of \$1 in sourced script: '$1'"
+toto="hello"
+if [ "$1" = "" ]; then
+   false
+fi
