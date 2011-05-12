@@ -781,7 +781,7 @@ package body Posix_Shell.Builtins is
 
       if Args'Length > 1 then
          Error (S.all, "shift: too many arguments");
-         return 1;
+         Shell_Exit (S.all, 1);
       end if;
 
       --  If one argument was provided, convert it to an integer
@@ -793,7 +793,7 @@ package body Posix_Shell.Builtins is
          if not Success then
             Error (S.all, "shift: " & Args (Args'First).all
                    & ": numeric argument required");
-            return 1;
+            Shell_Exit (S.all, 1);
          end if;
 
          if Shift < 0 then
