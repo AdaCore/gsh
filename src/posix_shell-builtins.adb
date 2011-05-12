@@ -94,12 +94,6 @@ package body Posix_Shell.Builtins is
    function Export_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
 
-   function Is_Directory_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
-
-   function Is_File_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
-
    function Set_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
 
@@ -548,42 +542,6 @@ package body Posix_Shell.Builtins is
       return Contains (Builtin_Map, Cmd);
    end Is_Builtin;
 
-   --------------------------
-   -- Is_Directory_Builtin --
-   --------------------------
-
-   function Is_Directory_Builtin
-     (S : Shell_State_Access;
-      Args : String_List)
-      return Integer
-   is
-      pragma Unreferenced (S);
-   begin
-      if Is_Directory (Args (Args'First).all) then
-         return 0;
-      else
-         return 1;
-      end if;
-   end Is_Directory_Builtin;
-
-   ---------------------
-   -- Is_File_Builtin --
-   ---------------------
-
-   function Is_File_Builtin
-     (S : Shell_State_Access;
-      Args : String_List)
-      return Integer
-   is
-      pragma Unreferenced (S);
-   begin
-      if Is_Regular_File (Args (Args'First).all) then
-         return 0;
-      else
-         return 1;
-      end if;
-   end Is_File_Builtin;
-
    -------------------
    -- Limit_Builtin --
    -------------------
@@ -961,8 +919,6 @@ begin
 
    --  Register all the builtins.
    Include (Builtin_Map, "pwd",           Pwd_Builtin'Access);
-   Include (Builtin_Map, "-d",            Is_Directory_Builtin'Access);
-   Include (Builtin_Map, "-f",            Is_File_Builtin'Access);
    Include (Builtin_Map, ".",             Source_Builtin'Access);
    Include (Builtin_Map, "cd",            Change_Dir_Builtin'Access);
    Include (Builtin_Map, "echo",          Echo_Builtin'Access);
