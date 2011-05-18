@@ -21,6 +21,8 @@ package Posix_Shell.Opts is
 
    Run_Command : Boolean := False;
 
+   Debug_Lexer : Boolean := False;
+
    procedure Process_Command_Line (Success : out Boolean);
    --  Process all the switches and arguments on the command line.
    --  This also verifies that a non-empty script filename is provided.

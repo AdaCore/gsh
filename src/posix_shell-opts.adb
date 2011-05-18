@@ -46,7 +46,8 @@ package body Posix_Shell.Opts is
             if Arg = "-n" then
                Do_Script_Evaluation := False;
                Dump_Node_Table := True;
-
+            elsif Arg = "--debug-lexer" then
+               Debug_Lexer := True;
             elsif Arg = "-x" then
                Debug_Mode := True;
             elsif Arg = "-e" then

@@ -551,6 +551,27 @@ package body Posix_Shell.Parser is
 
       procedure Context_Syntax_Error (Expected : Context);
 
+      function Context_Image (C : Context) return String;
+
+      -------------------
+      -- Context_Image --
+      -------------------
+
+      function Context_Image (C : Context) return String is
+      begin
+         case C is
+            when NULL_CONTEXT       => return "";
+            when IF_COND_CONTEXT    => return "expect 'then'";
+            when IF_THEN_CONTEXT    => return "expect 'else', 'elif' or 'fi'";
+            when IF_ELSE_CONTEXT    => return "expect 'fi'";
+            when SUBSHELL_CONTEXT   => return "expect ')'";
+            when CASE_ITEM_CONTEXT  => return "expect 'esac' or ';;'";
+            when LOOP_COND_CONTEXT  => return "expect 'do'";
+            when DO_GROUP_CONTEXT   => return "expect 'done'";
+            when BRACEGROUP_CONTEXT => return "expect '}'";
+         end case;
+      end Context_Image;
+
       --------------------------
       -- Context_Syntax_Error --
       --------------------------
@@ -558,7 +579,7 @@ package body Posix_Shell.Parser is
       procedure Context_Syntax_Error (Expected : Context) is
       begin
          if C /= Expected then
-            Syntax_Error (Read_Token (B), "non expected token");
+            Syntax_Error (Read_Token (B), Context_Image (C));
          end if;
       end Context_Syntax_Error;
       pragma Inline (Context_Syntax_Error);

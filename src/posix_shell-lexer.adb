@@ -2,6 +2,9 @@ with Ada.Exceptions; use Ada.Exceptions;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell.Variables; use Posix_Shell.Variables;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
+with Posix_Shell.Opts; use Posix_Shell.Opts;
+with Ada.Text_IO;
+
 with Ada.Unchecked_Deallocation;
 
 package body Posix_Shell.Lexer is
@@ -183,6 +186,12 @@ package body Posix_Shell.Lexer is
       --  Free unnecessary string
       if Result.T in T_IF .. T_RBRACE then
          T.S := Null_Annotated_String;
+      end if;
+
+      if Debug_Lexer then
+         Ada.Text_IO.Put_Line
+           (Ada.Text_IO.Standard_Error,
+            "ctoken:" & Token_Pos_Img (Result));
       end if;
       return Result;
    end Read_Command_Token;
@@ -418,14 +427,22 @@ package body Posix_Shell.Lexer is
    ----------------
 
    function Read_Token (B : Buffer_Access) return Token is
+      Result : Token;
    begin
       if B.Valid_Cache then
          Set_Pos (B.B, B.Next_Token_Pos);
          B.Valid_Cache := False;
-         return B.Next_Token;
+         Result := B.Next_Token;
       else
-         return Read_Token_Aux (B);
+         Result := Read_Token_Aux (B);
       end if;
+
+      if Debug_Lexer then
+         Ada.Text_IO.Put_Line
+              (Ada.Text_IO.Standard_Error,
+               "token:" & Token_Pos_Img (Result));
+      end if;
+      return Result;
    end Read_Token;
 
    function Read_Token (B : Buffer_Access) return Token_Type is
@@ -1090,7 +1107,12 @@ package body Posix_Shell.Lexer is
 
    function Token_Pos_Img (T : Token) return String is
    begin
-      return Image (T.Pos) & "-> " & Token_Type_Img (T.T);
+      if T.T = T_WORD then
+         return Image (T.Pos) & ":" & Token_Type_Img (T.T)
+           & "(" & Image (T.S) & ")";
+      else
+         return Image (T.Pos) & ":" & Token_Type_Img (T.T);
+      end if;
    end Token_Pos_Img;
 
    --------------------
