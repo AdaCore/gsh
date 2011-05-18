@@ -186,9 +186,11 @@ package body Posix_Shell.Builtins is
       return Integer
    is
       Fd : File_Descriptor;
-      Buffer : aliased String (1 .. 1024 * 1024);
+      Buffer : String_Access := null;
       R : Integer;
    begin
+
+      Buffer := new String (1 .. 1024 *1024);
 
       --  If no argument is given to cat then we assume that stdin should be
       --  dump.
@@ -209,16 +211,18 @@ package body Posix_Shell.Builtins is
                     ": No such file or directory" & ASCII.LF);
             else
                loop
-                  R := Read (Fd, Buffer'Address, Buffer'Last);
+                  R := Read (Fd, Buffer.all'Address, Buffer.all'Last);
                   if R > 0 then
-                     Put (S.all, 1, Strip_CR (Buffer (1 .. R)));
+                     Put (S.all, 1, Strip_CR (Buffer.all (1 .. R)));
                   end if;
-                  exit when R /= Buffer'Last;
+                  exit when R /= Buffer.all'Last;
                end loop;
                Close (Fd);
             end if;
          end if;
       end loop;
+
+      Free (Buffer);
 
       return 0;
    end Cat_Builtin;
