@@ -8,7 +8,9 @@ project Posix_Shell is
    Coverage  : Boolean_Type := external ("COVERAGE", "false");
    Gnatmem   : Boolean_Type := external ("GNATMEM", "false");
 
-   Default_Switches := ("-gnat05", "-gnatwcfijklmopruvz", "-gnaty", "-gnatwe");
+   --  Default_Switches := ("-gnat05", "-gnatwcfijklmopruvz", "-gnaty", "-gnatwe");
+   Default_Switches := ("-gnat05", "-gnatwcfijklmopruvz", "-gnaty");
+
    Default_Libs     := ("");
 
    Dev_Switches := ("-g", "-O0");
