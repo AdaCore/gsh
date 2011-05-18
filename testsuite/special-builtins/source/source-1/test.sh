@@ -15,3 +15,13 @@ echo "++ sourcing a script + positional arg"
 . ./test.sub a b c
 echo "return status: $?"
 
+echo "++ return in a sourced scripts"
+. ./test.sub1
+echo "return status: $?"
+
+echo "++ exit in a sourced script"
+(. ./test.sub2;
+ echo "this message should not be print"
+)
+echo "return status: $?"
+

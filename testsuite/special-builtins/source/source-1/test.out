@@ -9,3 +9,9 @@ return status: 1
 ++ sourcing a script + positional arg
 + value of $1 in sourced script: 'a'
 return status: 0
+++ return in a sourced scripts
+in test.sub1
+return status: 1
+++ exit in a sourced script
+in test.sub2
+return status: 42
