@@ -534,6 +534,15 @@ package body Posix_Shell.Variables is
       return False;
    end Is_Var_Set;
 
+   -----------------------
+   -- Is_Xtrace_Enabled --
+   -----------------------
+
+   function Is_Xtrace_Enabled (S : Shell_State) return Boolean is
+   begin
+      return S.XTrace_Enabled;
+   end Is_Xtrace_Enabled;
+
    -----------------
    -- Leave_Scope --
    -----------------
@@ -810,6 +819,15 @@ package body Posix_Shell.Variables is
       end if;
 
    end Set_Var_Value;
+
+   ----------------
+   -- Set_Xtrace --
+   ----------------
+
+   procedure Set_Xtrace (S : in out Shell_State; Value : Boolean) is
+   begin
+      S.XTrace_Enabled := Value;
+   end Set_Xtrace;
 
    ---------------------------------
    -- Shift_Positional_Parameters --

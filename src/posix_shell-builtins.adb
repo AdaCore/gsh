@@ -748,6 +748,7 @@ package body Posix_Shell.Builtins is
          return 0;
       end if;
 
+      --  Parse options
       for Index in Args'Range loop
          if Args (Index)'Length > 0 then
             case Args (Index) (Args (Index)'First) is
@@ -755,10 +756,16 @@ package body Posix_Shell.Builtins is
                   if Args (Index).all = "--" then
                      Saved_Index := Index + 1;
                      exit;
+                  elsif Args (Index).all = "-x" then
+                     Set_Xtrace (S.all, True);
                   else
                      null;
                   end if;
-               when '+' => null;
+               when '+' =>
+                  if Args (Index).all = "+x" then
+                     Set_Xtrace (S.all, False);
+                  end if;
+
                when others => Saved_Index := Index; exit;
             end case;
          end if;

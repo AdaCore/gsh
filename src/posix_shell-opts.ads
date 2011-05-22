@@ -1,4 +1,5 @@
 with GNAT.Strings; use GNAT.Strings;
+with Posix_Shell.Variables; use Posix_Shell.Variables;
 
 package Posix_Shell.Opts is
 
@@ -14,16 +15,12 @@ package Posix_Shell.Opts is
    --
    --  Set to False with the '-n' switch.
 
-   Debug_Mode : Boolean := False;
-   --  If True, then print traces of all the commands executed by the shell.
-   --
-   --  Set to True with the '-x' switch.
-
    Run_Command : Boolean := False;
 
    Debug_Lexer : Boolean := False;
 
-   procedure Process_Command_Line (Success : out Boolean);
+   procedure Process_Command_Line
+     (State : Shell_State_Access; Success : out Boolean);
    --  Process all the switches and arguments on the command line.
    --  This also verifies that a non-empty script filename is provided.
    --

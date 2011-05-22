@@ -1,6 +1,5 @@
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
-with Posix_Shell.Opts; use Posix_Shell.Opts;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Functions; use Posix_Shell.Functions;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
@@ -122,7 +121,7 @@ package body Posix_Shell.Commands_Preprocessor is
       Exit_Status : Integer;
    begin
 
-      if Debug_Mode then
+      if Is_Xtrace_Enabled (S.all) then
          Ada.Text_IO.Put (Ada.Text_IO.Standard_Error, "+ " & Cmd);
          for I in Args'Range loop
             Ada.Text_IO.Put (Ada.Text_IO.Standard_Error,

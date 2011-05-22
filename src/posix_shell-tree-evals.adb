@@ -8,7 +8,6 @@ with Posix_Shell.Utils; use  Posix_Shell.Utils;
 with Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
-with Posix_Shell.Opts; use Posix_Shell.Opts;
 with GNAT.Task_Lock;
 
 package body Posix_Shell.Tree.Evals is
@@ -356,7 +355,7 @@ package body Posix_Shell.Tree.Evals is
             Eval_Assign (New_State, N, True);
          end if;
 
-         if Debug_Mode then
+         if Is_Xtrace_Enabled (S.all) then
             Ada.Text_IO.Put_Line
               (Ada.Text_IO.Standard_Error,
                "(pos " & Image (N.Pos) & ")");
@@ -374,7 +373,7 @@ package body Posix_Shell.Tree.Evals is
             end loop;
          end if;
 
-         if Debug_Mode then
+         if Is_Xtrace_Enabled (S.all) then
             Ada.Text_IO.Put_Line
               (Ada.Text_IO.Standard_Error,
                "(return " & Get_Last_Exit_Status (New_State.all)'Img & ")");

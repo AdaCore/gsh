@@ -22,7 +22,9 @@ package body Posix_Shell.Opts is
    -- Process_Command_Line --
    --------------------------
 
-   procedure Process_Command_Line (Success : out Boolean) is
+   procedure Process_Command_Line
+     (State : Shell_State_Access; Success : out Boolean)
+   is
       Arg_Number : Positive := 1;
    begin
       Success := True;
@@ -49,7 +51,7 @@ package body Posix_Shell.Opts is
             elsif Arg = "--debug-lexer" then
                Debug_Lexer := True;
             elsif Arg = "-x" then
-               Debug_Mode := True;
+               Set_Xtrace (State.all, True);
             elsif Arg = "-e" then
                null;
             elsif Arg = "-c" then

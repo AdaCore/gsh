@@ -108,6 +108,10 @@ package Posix_Shell.Variables is
 
    procedure Set_Loop_Scope_Level (S : in out Shell_State; N : Natural);
 
+   procedure Set_Xtrace (S : in out Shell_State; Value : Boolean);
+   function Is_Xtrace_Enabled (S : Shell_State) return Boolean;
+
+
    type Redirection_States is private;
 private
 
@@ -161,6 +165,7 @@ private
       Redirections     : Redirection_States;
       Current_Dir      : String_Access := null;
       Loop_Scope_Level : Natural := 0;
+      XTrace_Enabled   : Boolean := False;
    end record;
 
 end Posix_Shell.Variables;

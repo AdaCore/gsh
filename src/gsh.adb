@@ -57,7 +57,7 @@ begin
       Save_Last_Exit_Status (State.all, 0);
 
       --  Process the command line.
-      Process_Command_Line (Success);
+      Process_Command_Line (State, Success);
       if not Success then
          return 2;
       end if;
