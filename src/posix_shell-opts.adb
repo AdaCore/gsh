@@ -95,7 +95,7 @@ package body Posix_Shell.Opts is
       end if;
 
       --  Read the buffer
-      B := ne	w Token_Buffer;
+      B := new Token_Buffer;
       if Has_Command_String then
          B.all := New_Buffer (Argument (Arg_Number));
          Arg_Number := Arg_Number + 1;
