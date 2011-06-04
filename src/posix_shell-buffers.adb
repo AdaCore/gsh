@@ -218,9 +218,6 @@ package body Posix_Shell.Buffers is
          Close (F);
 
          if Bytes_Read /= Expected_Bytes_Read then
-            --  Error (Filename & ": Read " & To_String (Bytes_Read)
-            --       & " bytes (expected " & To_String (Expected_Bytes_Read)
-            --       & " bytes).");
             raise Buffer_Read_Error;
          end if;
 
