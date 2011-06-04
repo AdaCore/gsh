@@ -3,7 +3,6 @@ with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell.Variables.Output;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Annotated_String_Lists; use Annotated_String_Lists;
-with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 
 package body Posix_Shell.Parser is
 
@@ -469,6 +468,19 @@ package body Posix_Shell.Parser is
       Expect_Token (B, T_RBRACE);
       return Add_Brace_Node (T, Brace_Code);
    end Parse_Brace_Group;
+
+   ------------------
+   -- Parse_Buffer --
+   ------------------
+
+   function Parse_Buffer (B : Buffer_Access) return Shell_Tree_Access is
+      T : constant Shell_Tree_Access := New_Tree;
+      N : Node_Id := 0;
+   begin
+      N := Parse (B, T);
+      Set_Tree_Toplevel (T, N);
+      return T;
+   end Parse_Buffer;
 
    -----------------------
    -- Parse_Case_Clause --

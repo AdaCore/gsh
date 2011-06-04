@@ -23,8 +23,9 @@ function GSH return Integer is
 
    Status : Integer := 0;
 
-   Success : Boolean;
    State : constant Shell_State_Access := new Shell_State;
+
+   Script_Buffer : Buffer_Access := null;
 
 begin
    Import_Environment (State.all);
@@ -57,30 +58,13 @@ begin
       Save_Last_Exit_Status (State.all, 0);
 
       --  Process the command line.
-      Process_Command_Line (State, Success);
-      if not Success then
-         return 2;
+      Process_Command_Line (State, Script_Buffer, Status);
+
+      if Status /= 0 then
+         return Status;
       end if;
 
-      --  Set the positional parameters.
-      Set_Positional_Parameters (State.all, Script_Arguments);
-
-      begin
-         if not Run_Command then
-            T := Parse_File (Script_Name);
-         else
-            T := Parse_String (Script_Name);
-         end if;
-      exception
-         when Buffer_Read_Error =>
-            --  The error reporting has already been done by
-            --  Get_Buffer_From_File. So just abort with exit code 127.
-            return 127;
-      end;
-
-      --  if Dump_Node_Table then
-      --    Dump (N);
-      --  end if;
+      T := Parse_Buffer (Script_Buffer);
 
       if Do_Script_Evaluation then
          begin

@@ -1,16 +1,11 @@
 with Ada.Command_Line; use Ada.Command_Line;
 with Ada.Text_IO; use Ada.Text_IO;
+with Ada.Strings.Unbounded;
+with GNAT.OS_Lib;
+with GNAT.Strings; use GNAT.Strings;
+
 
 package body Posix_Shell.Opts is
-
-   Script_Name_Argument : Natural := 0;
-   --  The index in the list of command arguments where the script
-   --  name is provided. Zero means unset.
-
-   First_Script_Argument : Natural := 0;
-   --  The index of the first script argument in the command line.
-   --  Zero means unset. A value that's greater than the number of
-   --  total arguments means no script argument was provided.
 
    procedure Usage;
    --  Print the usage of GSH on standard error.
@@ -23,11 +18,20 @@ package body Posix_Shell.Opts is
    --------------------------
 
    procedure Process_Command_Line
-     (State : Shell_State_Access; Success : out Boolean)
+     (State : Shell_State_Access; B : out Buffer_Access; Status : out Integer)
    is
       Arg_Number : Positive := 1;
+
+      Has_Command_String : Boolean := False;
+      --  Set to true if the first positional argument is the string to be
+      --  parsed
+
+      Read_From_Stdin : Boolean := False;
+      --  Should we read script from stdin ?
+
    begin
-      Success := True;
+
+      Status := 0;
 
       --  First, process all switches.
 
@@ -45,6 +49,7 @@ package body Posix_Shell.Opts is
             --  having processed the switch.
             Arg_Number := Arg_Number + 1;
 
+
             if Arg = "-n" then
                Do_Script_Evaluation := False;
                Dump_Node_Table := True;
@@ -55,71 +60,103 @@ package body Posix_Shell.Opts is
             elsif Arg = "-e" then
                null;
             elsif Arg = "-c" then
-
-               Run_Command := True;
+               Has_Command_String := True;
+            elsif Arg = "-s" then
+               Read_From_Stdin := True;
             elsif Arg = "--" then
                exit;
-
             else --  Unknown switch
                Usage_Error ("Unknown switch """ & Arg & """");
-               Success := False;
+               Status := 2;
                return;
             end if;
          end;
       end loop;
 
-      --  Now that all switches have been processed, the next argument
-      --  (if present) is the name of the script to execute.
-
-      if Arg_Number > Argument_Count then
-         Usage_Error ("script name is missing");
-         Success := False;
+      if Read_From_Stdin and Has_Command_String then
+         --  We cannot read script both from stdin and from first parameter
+         Usage_Error ("cannot pass both -s and -c");
+         Status := 2;
          return;
       end if;
-      Script_Name_Argument := Arg_Number;
 
-      --  All remaining arguments, if any, are arguments for the script.
-      First_Script_Argument := Arg_Number + 1;
+      --  Handle the case in which no positional parameter is passed to the
+      --  shell
+      if Arg_Number > Argument_Count then
+         if Has_Command_String then
+            Usage_Error ("-c option requires an argument");
+            Status := 2;
+            return;
+         end if;
 
-   end Process_Command_Line;
+         --  We don't have any script filename pass has argument so script
+         --  should be read from stdin
+         Read_From_Stdin := True;
+      end if;
 
-   ----------------------
-   -- Script_Arguments --
-   ----------------------
+      --  Read the buffer
+      B := ne	w Token_Buffer;
+      if Has_Command_String then
+         B.all := New_Buffer (Argument (Arg_Number));
+         Arg_Number := Arg_Number + 1;
+         if Arg_Number <= Argument_Count then
+            Set_Script_Name (State.all, Argument (Arg_Number));
+            Arg_Number := Arg_Number + 1;
+         end if;
+      elsif Read_From_Stdin then
+         declare
+            use Ada.Strings.Unbounded;
+            use GNAT.OS_Lib;
+            Result : Unbounded_String := To_Unbounded_String ("");
+            Buffer : String (1 .. 4096);
+            Buffer_Size : constant Integer := 4096;
+            N : Integer;
+         begin
+            loop
+               N := Read (Standin, Buffer'Address, Buffer_Size);
+               Append (Result, Buffer (1 .. N));
+               exit when N < Buffer_Size;
+            end loop;
+            B.all := New_Buffer (To_String (Result));
+         end;
+         Set_Script_Name (State.all, Command_Name);
+      else
+         begin
+            B.all := New_Buffer_From_File (Argument (Arg_Number));
+         exception
+            when Buffer_Read_Error =>
+               Put_Line (Standard_Error,
+                         Argument (Arg_Number) &
+                         ": no such file or directory");
+               Status := 127;
+               return;
+         end;
 
-   function Script_Arguments return String_List is
-      Nb_Args : constant Integer := Argument_Count - First_Script_Argument + 1;
-   begin
-      --  If no script arguments were provided then return an empty list.
-      if Nb_Args < 1 then
+         Set_Script_Name (State.all, Argument (Arg_Number));
+         Arg_Number := Arg_Number + 1;
+      end if;
+
+      --  We have the buffer. The last thing to do is to set correctly the
+      --  positional arguments
+
+      if Arg_Number > Argument_Count then
+         --  no positional parameters
          declare
             Empty_List : String_List (1 .. 0);
          begin
-            return Empty_List;
+            Set_Positional_Parameters (State.all, Empty_List);
+         end;
+      else
+         declare
+            Args : String_List (1 .. Argument_Count - Arg_Number + 1);
+         begin
+            for J in Arg_Number .. Argument_Count loop
+               Args (J - Arg_Number + 1) := new String'(Argument (J));
+            end loop;
+            Set_Positional_Parameters (State.all, Args);
          end;
       end if;
-
-      --  Build the string list and then return it.
-      declare
-         Args : String_List (1 .. Nb_Args);
-      begin
-         for J in 1 .. Nb_Args loop
-            Args (J) := new String'(Argument (First_Script_Argument + J - 1));
-            --  Ada.Text_IO.Put_Line (Args (J).all);
-         end loop;
-
-         return Args;
-      end;
-   end Script_Arguments;
-
-   -----------------
-   -- Script_Name --
-   -----------------
-
-   function Script_Name return String is
-   begin
-      return Argument (Script_Name_Argument);
-   end Script_Name;
+   end Process_Command_Line;
 
    -----------
    -- Usage --

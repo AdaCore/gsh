@@ -3,7 +3,6 @@ with Ada.Environment_Variables; use Ada.Environment_Variables;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Interfaces.C; use Interfaces.C;
-with Posix_Shell.Opts; use Posix_Shell.Opts;
 with Ada.Strings.Maps.Constants; use Ada.Strings.Maps.Constants;
 with Dyn_String_Lists; use Dyn_String_Lists;
 with Ada.Unchecked_Deallocation;
@@ -80,6 +79,11 @@ package body Posix_Shell.Variables is
 
       --  Reset to 0 for/until/while nested level
       Result.Loop_Scope_Level := 0;
+
+      Result.XTrace_Enabled := Previous.XTrace_Enabled;
+
+      Result.Script_Name := Previous.Script_Name;
+
       return Result;
    end Enter_Scope;
 
@@ -332,7 +336,7 @@ package body Posix_Shell.Variables is
                   return Result;
                end;
             when '0' =>
-               Append (Result, Script_Name, Context);
+               Append (Result, State.Script_Name.all, Context);
                return Result;
             when others => null;
          end case;
@@ -703,6 +707,15 @@ package body Posix_Shell.Variables is
       --  Set the new parameters
       State.Pos_Params := (Args_Copy, 0, State.Scope_Level);
    end Set_Positional_Parameters;
+
+   ---------------------
+   -- Set_Script_Name --
+   ---------------------
+
+   procedure Set_Script_Name (S : in out Shell_State; Value : String) is
+   begin
+      S.Script_Name := new String'(Value);
+   end Set_Script_Name;
 
    -------------------
    -- Set_Var_Value --
