@@ -160,7 +160,6 @@ package body Posix_Shell.Lexer is
       Result.Next_Token_Pos := Current_Pos (Result.B);
       Result.Valid_Cache := False;
       return Result;
-
    end New_Buffer_From_File;
 
    --------------
