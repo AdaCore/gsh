@@ -1,6 +1,8 @@
 with Posix_Shell.Builtins_Printf; use Posix_Shell.Builtins_Printf;
 with Posix_Shell.Builtins_Expr; use Posix_Shell.Builtins_Expr;
 with Posix_Shell.Builtins.Test; use Posix_Shell.Builtins.Test;
+with Posix_Shell.Builtins.Tail; use Posix_Shell.Builtins.Tail;
+with Posix_Shell.Builtins.Head; use Posix_Shell.Builtins.Head;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Parser; use Posix_Shell.Parser;
@@ -190,14 +192,14 @@ package body Posix_Shell.Builtins is
       R : Integer;
    begin
 
-      Buffer := new String (1 .. 1024 *1024);
-
       --  If no argument is given to cat then we assume that stdin should be
       --  dump.
       if Args'Length = 0 then
          Put (S.all, 1, Read (S.all, 0));
          return 0;
       end if;
+
+      Buffer := new String (1 .. 1024 *1024);
 
       for J in Args'Range loop
          --  '-' means that we need to dump stdin otherwise the argument is
@@ -960,4 +962,6 @@ begin
    Include (Builtin_Map, "cat",           Cat_Builtin'Access);
    Include (Builtin_Map, "read",          Read_Builtin'Access);
    Include (Builtin_Map, "rm",            Rm_Builtin'Access);
+   Include (Builtin_Map, "tail",          Tail_Builtin'Access);
+   Include (Builtin_Map, "head",          Head_Builtin'Access);
 end Posix_Shell.Builtins;
