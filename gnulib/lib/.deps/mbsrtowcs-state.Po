@@ -1,0 +1,44 @@
+mbsrtowcs-state.o: mbsrtowcs-state.c ../config.h wchar.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/include/stddef.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/stdio.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/_mingw.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/include/stdarg.h \
+ sys/types.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/sys/types.h \
+ time.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/time.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/wchar.h \
+ wctype.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/wctype.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/include/stdint.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/stdint.h
+
+../config.h:
+
+wchar.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/include/stddef.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/stdio.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/_mingw.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/include/stdarg.h:
+
+sys/types.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/sys/types.h:
+
+time.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/time.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/wchar.h:
+
+wctype.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/wctype.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/include/stdint.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/stdint.h:

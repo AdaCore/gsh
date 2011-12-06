@@ -1,0 +1,29 @@
+dirfd.o: dirfd.c ../config.h dirent.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/dirent.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/_mingw.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/io.h \
+ sys/types.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/sys/types.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/include/stddef.h \
+ errno.h \
+ c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/errno.h
+
+../config.h:
+
+dirent.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/dirent.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/_mingw.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/io.h:
+
+sys/types.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/sys/types.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/include/stddef.h:
+
+errno.h:
+
+c:\gnatpro\6.4.2\bin\../lib/gcc/i686-pc-mingw32/4.5.2/../../../../i686-pc-mingw32/include/errno.h:
