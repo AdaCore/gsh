@@ -1,10 +1,9 @@
-with Posix_Shell.Regexp; use Posix_Shell.Regexp;
-
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Functions; use Posix_Shell.Functions;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Utils; use  Posix_Shell.Utils;
+with Posix_Shell.GNULib; use Posix_Shell.GNULib;
 with Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
@@ -256,16 +255,8 @@ package body Posix_Shell.Tree.Evals is
             declare
                Str : constant String := Eval_String_Unsplit
                  (S, Element (Current_Case.Pattern_List, I), True);
-               Reg : Posix_Shell.Regexp.Regexp;
             begin
-               begin
-                  Reg := Compile (Str, True);
-               exception
-                  when Error_In_Regexp =>
-                     Ada.Text_IO.Put_Line (Str);
-                     raise Program_Error;
-               end;
-               if Match (Case_Value, Reg) then
+               if Fnmatch (Str, Case_Value) then
                   if Current_Case.Match_Code /= Null_Node then
                      Eval (S, T, Current_Case.Match_Code);
                   else
