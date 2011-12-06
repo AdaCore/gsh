@@ -1,2 +1,4 @@
 testsuite/out/*
 obj/*
+gnutools/bin/sh.exe
+gnutools/bin/gsh.exe
