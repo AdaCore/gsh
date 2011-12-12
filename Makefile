@@ -1,11 +1,12 @@
 PREFIX=install
 
 all:
-	gprbuild -p -P posix_shell
+	gprbuild -p -P posix_shell -XBUILD=prod
 
 check:
-	cd testsuite && python ./testsuite.py
+	(export PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && cd testsuite && python ./testsuite.py)
 
+.PHONY: install
 install:
 	mkdir -p $(PREFIX)
 	cp -p -r gnutools/* $(PREFIX)/
