@@ -73,8 +73,6 @@ class Artifact(object):
             self.result = self.file_content(result_prefix + '.result', 'unknown').split(':')[0]
             self.diff = self.file_content(result_prefix + '.diff')
             self.report = self.file_content(result_prefix + '.report')
-            for goal in self.coverage_goals:
-                self.check_coverage_goal(goal)
 
             if self.result == 'OK':
                 return (1, 0)
