@@ -10,6 +10,11 @@ case $dummy in
 esac
 echo $?
 
+case $dummy in
+   [!h]*) echo FAILED;;
+       *) echo PASSED;;
+esac
+
 true
 case $dummy in
   hello) echo "PASSED";;

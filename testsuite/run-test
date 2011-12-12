@@ -5,7 +5,7 @@ Run a gprbuild test located in test_dir
 """
 
 from gnatpython.env import Env
-from gnatpython.fileutils import find, mv, split_file
+from gnatpython.fileutils import find, mv, split_file, cp
 from gnatpython.main import Main
 from gnatpython.stringutils import Filter
 from gnatpython.testdriver import TestRunner, add_run_test_options
@@ -15,8 +15,25 @@ import os
 import sys
 
 class TestGNATPython(TestRunner):
+    def __init__(self,
+                 test,
+                 discs,
+                 result_dir,
+                 temp_dir=Env().tmp_dir,
+                 enable_cleanup=True,
+                 restricted_discs=None,
+                 test_args=None,
+                 failed_only=False,
+                 default_timeout=780,
+                 use_basename=True):
+        TestRunner.__init__(self, test, discs, result_dir, temp_dir, 
+                            enable_cleanup, restricted_discs, test_args,
+                            failed_only, default_timeout, use_basename=False)
+
     def write_results(self):
         self.result['msg'] = "%-48s (%s)" % (split_file (self.test + '/description')[0], self.result['msg'])
+        if os.path.isfile(self.output):
+            cp(self.output, self.result_prefix + '.report')
         TestRunner.write_results(self)
 
         
