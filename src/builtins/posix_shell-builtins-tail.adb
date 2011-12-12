@@ -22,6 +22,8 @@ package body Posix_Shell.Builtins.Tail is
       Relative_To_End : Boolean := True;
       Line_Number : Integer := 10;
 
+      Enable_Minus_N_Opt : Boolean := True;
+
       function Parse_Number (S : String) return Boolean;
       --  return true if the argument is +n, -n or n where n a natural
 
@@ -51,6 +53,9 @@ package body Posix_Shell.Builtins.Tail is
                --  ignore that option for the moment
                null;
             elsif CA = "-c" or else CA = "-n" then
+               --  We cannot have a -<number> option after a -n
+               Enable_Minus_N_Opt := False;
+
                if CA = "-c" then
                   Use_Char_Mode := True;
                end if;
@@ -58,13 +63,13 @@ package body Posix_Shell.Builtins.Tail is
 
                --  Check that we have an argument
                if Current_Arg > Args_Last then
-                  Put (S.all, 2, "tail: option -c requires an argument");
+                  Error (S.all, "tail: option -c requires an argument");
                   return 1;
                end if;
 
                --  Check that the argument is an integer
                if not Parse_Number (Args (Current_Arg).all) then
-                  Put (S.all, 2, "tail: invalid context");
+                  Error (S.all, "tail: invalid context");
                   return 1;
                end if;
 
@@ -75,10 +80,13 @@ package body Posix_Shell.Builtins.Tail is
                begin
                   To_Integer (CA (CA'First + 1 .. CA'Last),
                               Line_Number, Is_Valid);
-                  if not Is_Valid then
-                     Put (S.all, 2, "tail: invalid context");
+                  if not Is_Valid or else not Enable_Minus_N_Opt then
+                     Error (S.all, "tail: invalid context");
                      return 1;
                   end if;
+
+                  --  Only one -number option is accepted
+                  Enable_Minus_N_Opt := False;
                end;
             else
                exit;
