@@ -31,7 +31,9 @@ package Posix_Shell.Utils is
    --  the cygwin/mingwin interaction. We also remove the ending directory
    --  separator because this is what shells will typically do.
 
-   function Locate_Exec (Exec_Name : String) return String_Access;
+   function Locate_Exec
+     (S : Shell_State; Exec_Name : String)
+      return String_Access;
    --  This function correspond to the one implemented in GNAT.OS_Lib with the
    --  difference that it does not replace path components which are links
 

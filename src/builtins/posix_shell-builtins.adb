@@ -710,7 +710,7 @@ package body Posix_Shell.Builtins is
       Rm_Last : Natural := 0;
       Have_File : Boolean := False;
    begin
-      Rm_Binary_Path := Locate_Exec_On_Path ("rm.exe");
+      Rm_Binary_Path := Locate_Exec (S.all, "rm.exe");
       for J in Args'Range loop
          if Is_Directory (Args (J).all)
            or else Is_Regular_File (Args (J).all)

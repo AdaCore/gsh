@@ -1,51 +1,8 @@
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
-with System; use System;
 with GNAT.OS_Lib;
-with Ada.Unchecked_Conversion;
 
 
 package body Posix_Shell.Utils is
-
-   function C_String_Length (S : Address) return Integer;
-   --  Returns the length of a C string. Does check for null address
-   --  (returns 0).
-
-   function To_Path_String_Access
-     (Path_Addr : Address;
-      Path_Len  : Integer) return String_Access;
-   --  Converts a C String to an Ada String. We could do this making use of
-   --  Interfaces.C.Strings but we prefer not to import that entire package
-
-   ------------
-   -- Append --
-   ------------
-
---     procedure Append
---       (L : in out Dynamic_String_Lists.Instance;
---        E : String_List)
---     is
---        use Dynamic_String_Lists;
---        Old_Last : constant Integer := Last (L);
---        New_Last : constant Integer := Old_Last + E'Length;
---     begin
---        Set_Last (L, New_Last);
---        L.Table (Old_Last + 1 .. New_Last) := Table_Type (E);
---     end Append;
-
-   ---------------------
-   -- C_String_Length --
-   ---------------------
-
-   function C_String_Length (S : Address) return Integer is
-      function Strlen (S : Address) return Integer;
-      pragma Import (C, Strlen, "strlen");
-   begin
-      if S = Null_Address then
-         return 0;
-      else
-         return Strlen (S);
-      end if;
-   end C_String_Length;
 
    -------------------------------
    -- Current_Working_Directory --
@@ -119,50 +76,60 @@ package body Posix_Shell.Utils is
    -- Locate_Exec --
    -----------------
 
+   Executables_Extensions : constant array (1 .. 3) of String_Access :=
+     (new String'(""), new String'(".exe"), new String'(".bat"));
+   --  Constant list of extensions we are looking for when searching for an
+   --  executable.
+
    function Locate_Exec
-     (Exec_Name : String) return String_Access
+     (S : Shell_State; Exec_Name : String) return String_Access
    is
-      function Locate_Exec_On_Path (C_Exec_Name : Address) return Address;
-      pragma Import (C, Locate_Exec_On_Path, "__gnat_locate_exec_on_path");
-
-      procedure Free (Ptr : System.Address);
-      pragma Import (C, Free, "free");
-
-      C_Exec_Name  : String (1 .. Exec_Name'Length + 1);
-      Path_Addr    : Address;
-      Path_Len     : Integer;
-      Result       : String_Access;
-
+      Current_Path : constant String := Get_Var_Value (S, "PATH");
+      Path_Start : Integer := Current_Path'First;
+      Result : String_Access := null;
    begin
-      C_Exec_Name (1 .. Exec_Name'Length)   := Exec_Name;
-      C_Exec_Name (C_Exec_Name'Last)        := ASCII.NUL;
-
-      Path_Addr := Locate_Exec_On_Path (C_Exec_Name'Address);
-      Path_Len  := C_String_Length (Path_Addr);
-
-      if Path_Len = 0 then
-         return null;
-
-      else
-         Result := To_Path_String_Access (Path_Addr, Path_Len);
-         Free (Path_Addr);
-
-         --  Always return an absolute path name
-
-         if not GNAT.OS_Lib.Is_Absolute_Path (Result.all) then
+      if Base_Name (Exec_Name) /= Exec_Name then
+         --  A path is present in the required executable so don't look in the
+         --  PATH. Just guess extension
+         for E in Executables_Extensions'Range loop
             declare
-               Absolute_Path : constant String :=
-                 GNAT.OS_Lib.Normalize_Pathname
-                   (Result.all,
-                    Resolve_Links => False);
+               Ext : constant String := Executables_Extensions (E).all;
+               Tentative_Path : constant String :=
+                 Resolve_Path (S, Exec_Name & Ext);
             begin
-               Free (Result);
-               Result := new String'(Absolute_Path);
+               if GNAT.OS_Lib.Is_Regular_File (Tentative_Path) then
+                  Result := new String'(Tentative_Path);
+                  return Result;
+               end if;
             end;
-         end if;
-
+         end loop;
          return Result;
       end if;
+
+      for Pos in Current_Path'Range loop
+         if Current_Path (Pos) = ':' then
+            --  we have a path check if our executable is there
+            if Path_Start < Pos then
+               for E in Executables_Extensions'Range loop
+                  declare
+                     Ext : constant String := Executables_Extensions (E).all;
+                     Tentative_Path : constant String :=
+                       Resolve_Path
+                         (S, Current_Path (Path_Start .. Pos - 1)
+                          & "/" & Exec_Name & Ext);
+                  begin
+                     if GNAT.OS_Lib.Is_Regular_File (Tentative_Path) then
+                        Result := new String'(Tentative_Path);
+                        return Result;
+                     end if;
+                  end;
+               end loop;
+            end if;
+
+            Path_Start := Pos + 1;
+         end if;
+      end loop;
+      return Result;
    end Locate_Exec;
 
    --------------
@@ -216,36 +183,6 @@ package body Posix_Shell.Utils is
          return 1;
       end if;
    end To_Integer;
-
-   ---------------------------
-   -- To_Path_String_Access --
-   ---------------------------
-
-   function To_Path_String_Access
-     (Path_Addr : Address;
-      Path_Len  : Integer) return String_Access
-   is
-      subtype Path_String is String (1 .. Path_Len);
-      type    Path_String_Access is access Path_String;
-
-      function Address_To_Access is new
-        Ada.Unchecked_Conversion (Source => Address,
-                              Target => Path_String_Access);
-
-      Path_Access : constant Path_String_Access :=
-                      Address_To_Access (Path_Addr);
-
-      Return_Val  : String_Access;
-
-   begin
-      Return_Val := new String (1 .. Path_Len);
-
-      for J in 1 .. Path_Len loop
-         Return_Val (J) := Path_Access (J);
-      end loop;
-
-      return Return_Val;
-   end To_Path_String_Access;
 
    ---------------
    -- To_String --

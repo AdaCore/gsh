@@ -2,36 +2,19 @@ with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Functions; use Posix_Shell.Functions;
+with Posix_Shell.Utils; use Posix_Shell.Utils;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Ada.Text_IO;
-with GNAT.Task_Lock;
 
 package body Posix_Shell.Commands_Preprocessor is
 
-   Executables_Extensions : constant array (1 .. 4) of String_Access :=
-     (new String'(""),
-      new String'(".vxe"),
-      new String'(".exe"),
-      new String'(".out"));
-   --  ??? The ".exe" extension is only valid on Windows. We should
-   --  ??? probably change this constant into a function.
-   --  ??? I don't understand the ".vxe" or ".out" extensions, though.
+   function Get_Launcher
+     (S : Shell_State; Filename : String_Access) return String_List;
 
-   function Find_Exec (Cmd : String) return String_Access;
-   function Get_Launcher (Filename : String_Access) return String_List;
-
-   function Find_Exec (Cmd : String) return String_Access is
-      Exec_Path : String_Access := null;
-   begin
-      for I in Executables_Extensions'Range loop
-         Exec_Path := Locate_Exec_On_Path
-           (Cmd & Executables_Extensions (I).all);
-         exit when Exec_Path /= null;
-      end loop;
-      return Exec_Path;
-   end Find_Exec;
-
-   function Get_Launcher (Filename : String_Access) return String_List is
+   function Get_Launcher
+     (S : Shell_State; Filename : String_Access)
+      return String_List
+   is
       Fd           : File_Descriptor;
       Buffer       : aliased String (1 .. 256);
       Buffer_Last  : Natural := 0;
@@ -53,7 +36,8 @@ package body Posix_Shell.Commands_Preprocessor is
             for J in 3 .. Buffer_Last loop
                --  First check for token delimiters
                if Token_First > 0
-                 and then (Buffer (J) = ' ' or else Buffer (J) = ASCII.LF)
+                 and then (Buffer (J) = ' ' or else Buffer (J) = ASCII.LF
+                           or else Buffer (J) = ASCII.CR)
                then
                   Result_Last := Result_Last + 1;
                   if Result_Last = 1 then
@@ -70,6 +54,7 @@ package body Posix_Shell.Commands_Preprocessor is
 
                case Buffer (J) is
                   when ' '      => null; -- skip spaces
+                  when ASCII.CR => exit; -- a CR mark the end of the parsing
                   when ASCII.LF => exit; -- a LF mark the end of the parsing
                   when others =>
                      if Token_First = 0 then
@@ -88,7 +73,8 @@ package body Posix_Shell.Commands_Preprocessor is
       --  call.
       declare
          Original_Cmd : constant String := Filename.all;
-         Cmd : constant String := Base_Name (Result (1).all, ".exe");
+         Cmd : constant String := Base_Name (Result (Result'First).all,
+                                             ".exe");
       begin
          if Cmd = "bash" or Cmd = "sh" then
             Free (Result (1));
@@ -98,7 +84,7 @@ package body Posix_Shell.Commands_Preprocessor is
          if Result (1).all /= Original_Cmd then
             --  resolve now the launcher path
             declare
-               Tmp : constant String_Access := Find_Exec (Result (1).all);
+               Tmp : constant String_Access := Locate_Exec (S, Result (1).all);
             begin
                Free (Result (1));
                Result (1) := Tmp;
@@ -146,27 +132,21 @@ package body Posix_Shell.Commands_Preprocessor is
       --  This command can only be an executable. See if we can
       --  locate an executable using the various possible filename
       --  extensions.
-      for I in Executables_Extensions'Range loop
-         GNAT.Task_Lock.Lock;
-         declare
-            Real_Current_Dir : constant String := Get_Current_Dir;
-         begin
-            Change_Dir (Get_Current_Dir (S.all));
-            Exec_Path := Locate_Exec_On_Path
-              (Cmd & Executables_Extensions (I).all);
-            Change_Dir (Real_Current_Dir);
-         end;
-         GNAT.Task_Lock.Unlock;
-         exit when Exec_Path /= null;
-      end loop;
+      Exec_Path := Locate_Exec (S.all, Cmd);
 
       if Exec_Path = null then
          Put (S.all, 2, Cmd & ": command not found"); New_Line (S.all, 2);
          return 127;
       end if;
 
+      if Is_Xtrace_Enabled (S.all) then
+         Ada.Text_IO.Put (Ada.Text_IO.Standard_Error,
+                          "+ resolve to " & Exec_Path.all);
+         Ada.Text_IO.New_Line (Ada.Text_IO.Standard_Error);
+      end if;
+
       declare
-         Launcher : String_List := Get_Launcher (Exec_Path);
+         Launcher : String_List := Get_Launcher (S.all, Exec_Path);
          Cmd_Line : constant String_List := Launcher & Args;
       begin
          if Cmd_Line (Cmd_Line'First) = null then
@@ -175,6 +155,12 @@ package body Posix_Shell.Commands_Preprocessor is
             Exit_Status := 127;
          else
 
+            if Is_Xtrace_Enabled (S.all) then
+               Ada.Text_IO.Put (Ada.Text_IO.Standard_Error,
+                                "+ resolve to " &
+                                  Cmd_Line (Cmd_Line'First).all);
+               Ada.Text_IO.New_Line (Ada.Text_IO.Standard_Error);
+            end if;
             Exit_Status := Blocking_Spawn
               (Cmd_Line,
                Get_Current_Dir (S.all),
