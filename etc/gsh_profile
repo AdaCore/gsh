@@ -1,0 +1,9 @@
+#/bin/bash
+
+# Configuration file read by gsh when -i or --login is passed
+
+# Put the gnutools packaged with gsh in the PATH
+PATH=`$0/../dirname $0`:$PATH
+export PATH
+
+ 

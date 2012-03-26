@@ -3,7 +3,8 @@ with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Strings.Unbounded;
 with GNAT.OS_Lib;
 with GNAT.Strings; use GNAT.Strings;
-
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
+with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 
 package body Posix_Shell.Opts is
 
@@ -18,7 +19,10 @@ package body Posix_Shell.Opts is
    --------------------------
 
    procedure Process_Command_Line
-     (State : Shell_State_Access; B : out Buffer_Access; Status : out Integer)
+     (State : Shell_State_Access;
+      B : out Buffer_Access;
+      Status : out Integer;
+      Is_Interactive : out Boolean)
    is
       Arg_Number : Positive := 1;
 
@@ -27,10 +31,13 @@ package body Posix_Shell.Opts is
       --  parsed
 
       Read_From_Stdin : Boolean := False;
-      --  Should we read script from stdin ?
 
+      Is_Login_Shell : Boolean := False;
+      --  when true gshrc will be sourced
+
+      GSHRC_Status : Integer := 0;
    begin
-
+      Is_Interactive := False;
       Status := 0;
 
       --  First, process all switches.
@@ -61,6 +68,11 @@ package body Posix_Shell.Opts is
                null;
             elsif Arg = "-c" then
                Has_Command_String := True;
+            elsif Arg = "-i" then
+               Is_Interactive := True;
+               Is_Login_Shell := True;
+            elsif Arg = "--login" then
+               Is_Login_Shell := True;
             elsif Arg = "-s" then
                Read_From_Stdin := True;
             elsif Arg = "--" then
@@ -104,21 +116,23 @@ package body Posix_Shell.Opts is
             Arg_Number := Arg_Number + 1;
          end if;
       elsif Read_From_Stdin then
-         declare
-            use Ada.Strings.Unbounded;
-            use GNAT.OS_Lib;
-            Result : Unbounded_String := To_Unbounded_String ("");
-            Buffer : String (1 .. 4096);
-            Buffer_Size : constant Integer := 4096;
-            N : Integer;
-         begin
-            loop
-               N := Read (Standin, Buffer'Address, Buffer_Size);
-               Append (Result, Buffer (1 .. N));
-               exit when N < Buffer_Size;
-            end loop;
-            B.all := New_Buffer (To_String (Result));
-         end;
+         if not Is_Interactive then
+            declare
+               use Ada.Strings.Unbounded;
+               use GNAT.OS_Lib;
+               Result : Unbounded_String := To_Unbounded_String ("");
+               Buffer : String (1 .. 4096);
+               Buffer_Size : constant Integer := 4096;
+               N : Integer;
+            begin
+               loop
+                  N := Read (Standin, Buffer'Address, Buffer_Size);
+                  Append (Result, Buffer (1 .. N));
+                  exit when N < Buffer_Size;
+               end loop;
+               B.all := New_Buffer (To_String (Result));
+            end;
+         end if;
          Set_Script_Name (State.all, Command_Name);
       else
          begin
@@ -156,6 +170,13 @@ package body Posix_Shell.Opts is
             Set_Positional_Parameters (State.all, Args);
          end;
       end if;
+
+      if Is_Login_Shell then
+         GSHRC_Status := Execute_Builtin
+           (State, ".",
+            (1 => new String'(Command_Name & "/../../etc/gsh_profile")));
+      end if;
+
    end Process_Command_Line;
 
    -----------

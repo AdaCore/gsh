@@ -9,7 +9,9 @@ check:
 .PHONY: install
 install:
 	mkdir -p $(PREFIX)
+	mkdir -p $(PREFIX)/etc
 	cp -p -r gnutools/* $(PREFIX)/
+	cp -r etc/* $(PREFIX)/etc
 	cp -p obj/prod/no-cov/no-gmem/gsh.exe $(PREFIX)/bin/sh.exe
 	cp -p obj/prod/no-cov/no-gmem/gsh.exe $(PREFIX)/bin/gsh.exe
 
