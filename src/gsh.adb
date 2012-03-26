@@ -12,6 +12,8 @@ with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
 with Posix_Shell.Variables; use Posix_Shell.Variables;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Opts; use Posix_Shell.Opts;
+with Posix_Shell.Builtins; use Posix_Shell.Builtins;
+
 with Posix_Shell; use Posix_Shell;
 
 ---------
@@ -28,6 +30,7 @@ function GSH return Integer is
    Script_Buffer : Buffer_Access := null;
 
 begin
+   Register_Default_Builtins;
    Import_Environment (State.all);
 
    declare

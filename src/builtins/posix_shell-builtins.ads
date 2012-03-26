@@ -10,4 +10,7 @@ package Posix_Shell.Builtins is
      (S : Shell_State_Access; Cmd : String; Args : String_List) return Integer;
    --  Execute the given builtin.
 
+   procedure Register_Default_Builtins;
+   --  Register all default builtins
+
 end Posix_Shell.Builtins;
