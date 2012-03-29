@@ -3,7 +3,7 @@ PREFIX=install
 all: readline/readline.a
 	gprbuild -p -P posix_shell -XBUILD=prod
 
-readline/readline.a:
+readline/readline.a: readline/Makefile
 	cd readline && make
 
 readline/Makefile:
