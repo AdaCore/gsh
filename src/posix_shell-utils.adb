@@ -1,6 +1,6 @@
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;
-
+with Interfaces.C.Strings; use Interfaces.C.Strings;
 
 package body Posix_Shell.Utils is
 
@@ -131,6 +131,21 @@ package body Posix_Shell.Utils is
       end loop;
       return Result;
    end Locate_Exec;
+
+   --------------
+   -- Readline --
+   --------------
+
+   function Internal_Readline (P : chars_ptr) return chars_ptr;
+   pragma Import (C, Internal_Readline, "internal_readline");
+
+   function Readline (Prompt : String) return String is
+      Result : chars_ptr := Internal_Readline (New_String (Prompt));
+      Result_Str : constant String := Value (Result);
+   begin
+      Free (Result);
+      return Result_Str;
+   end Readline;
 
    --------------
    -- Strip_CR --

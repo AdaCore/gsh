@@ -37,6 +37,8 @@ package Posix_Shell.Utils is
    --  This function correspond to the one implemented in GNAT.OS_Lib with the
    --  difference that it does not replace path components which are links
 
+   function Readline (Prompt : String) return String;
+
    function Strip_CR (Str : String) return String;
    --  This function removes all CR from a given string STR
 

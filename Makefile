@@ -1,7 +1,13 @@
 PREFIX=install
 
-all:
+all: readline/readline.a
 	gprbuild -p -P posix_shell -XBUILD=prod
+
+readline/readline.a:
+	cd readline && make
+
+readline/Makefile:
+	cd readline && ./configure --disable-shared --build=i686-pc-mingw32 --prefix=`pwd`/readline-install
 
 check:
 	(export PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && cd testsuite && python ./testsuite.py)

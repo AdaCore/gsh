@@ -14,6 +14,7 @@ with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Opts; use Posix_Shell.Opts;
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
+with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Ada.Strings.Unbounded;
 with GNAT.OS_Lib;
 with Posix_Shell; use Posix_Shell;
@@ -72,23 +73,12 @@ begin
 
       loop
          if Is_Interactive then
-            Put (State.all, 1, "$ ");
             declare
-               use Ada.Strings.Unbounded;
-               use GNAT.OS_Lib;
-               Result : Unbounded_String := To_Unbounded_String ("");
-               Buffer : String (1 .. 4096);
-               Buffer_Size : constant Integer := 4096;
-               N : Integer;
+               Line : constant String := Readline("$ ");
             begin
-               loop
-                  N := Read (Standin, Buffer'Address, Buffer_Size);
-                  Append (Result, Buffer (1 .. N));
-                  exit when N < Buffer_Size;
-               end loop;
                Deallocate (Script_Buffer);
                Script_Buffer :=
-                 new Token_Buffer'(New_Buffer (To_String (Result)));
+                 new Token_Buffer'(New_Buffer (Line));
             end;
          end if;
          T := Parse_Buffer (Script_Buffer);
