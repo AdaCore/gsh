@@ -157,7 +157,11 @@ package body Posix_Shell.Utils is
    begin
       for J in Str'Range loop
          case Str (J) is
-            when ASCII.CR => null;
+            when ASCII.CR =>
+               if J /= Str'Last and then Str (J + 1) /= ASCII.LF then
+                  Last := Last + 1;
+                  Result (Last) := Str (J);
+               end if;
             when others   =>
                Last := Last + 1;
                Result (Last) := Str (J);
