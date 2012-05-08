@@ -149,6 +149,7 @@ package body Posix_Shell.Commands_Preprocessor is
          Launcher : String_List := Get_Launcher (S.all, Exec_Path);
          Cmd_Line : constant String_List := Launcher & Args;
       begin
+
          if Cmd_Line (Cmd_Line'First) = null then
             Put (S.all, 2, Cmd & ": can't launch program");
             New_Line (S.all, 2);
