@@ -15,9 +15,8 @@ with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Opts; use Posix_Shell.Opts;
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
-with Ada.Strings.Unbounded;
-with GNAT.OS_Lib;
 with Posix_Shell; use Posix_Shell;
+with Ada.Directories; use Ada.Directories;
 
 ---------
 -- GSH --
@@ -73,14 +72,16 @@ begin
 
       loop
          if Is_Interactive then
+            Set_Directory (Get_Var_Value (State.all, "PWD"));
             declare
-               Line : constant String := Readline("$ ");
+               Line : constant String := Readline ("$ ");
             begin
                Deallocate (Script_Buffer);
                Script_Buffer :=
                  new Token_Buffer'(New_Buffer (Line));
             end;
          end if;
+
          T := Parse_Buffer (Script_Buffer);
 
          if Do_Script_Evaluation then
