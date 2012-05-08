@@ -1,4 +1,3 @@
-with Ada.Text_IO;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell.Variables.Output;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
@@ -1003,8 +1002,6 @@ package body Posix_Shell.Parser is
                declare
                   T : constant Token := Read_Token (B);
                begin
-                  Ada.Text_IO.Put_Line (Token_Pos_Img (T));
-               --  Syntax_Error (Read_Token (B), "non expected token");
                   raise Shell_Syntax_Error;
                end;
          end case;
