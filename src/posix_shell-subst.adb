@@ -558,12 +558,28 @@ package body Posix_Shell.Subst is
       Result_String : String (1 .. Length (Result));
       Result_Index  : Integer := 1;
    begin
-      if Has_Null_String (Result) then
+      if Has_Null_String (Result) or else Case_Pattern then
          for I in 1 .. Length (Result) loop
-            if Get_Annotation (Result, I) /= NULL_STRING then
-               Result_String (Result_Index) := Str (Result) (I);
-               Result_Index := Result_Index + 1;
-            end if;
+            declare
+               Current_Char : constant Character := Str (Result) (I);
+            begin
+
+               if Get_Annotation (Result, I) /= NULL_STRING then
+                  if Get_Annotation (Result, I) = UNSPLITABLE and then
+                    Case_Pattern
+                  then
+                     case Current_Char is
+                        when '*' | '?' | '[' | ']' =>
+                           Result_String (Result_Index) := '\';
+                           Result_Index := Result_Index + 1;
+                        when others =>
+                           null;
+                     end case;
+                  end if;
+                  Result_String (Result_Index) := Current_Char;
+                  Result_Index := Result_Index + 1;
+               end if;
+            end;
          end loop;
 
          if Result_Index = 1 then

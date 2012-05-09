@@ -1,5 +1,17 @@
 dummy="hello"
 
+# Check handling of quoted '*', '?', '[', ']'
+case $dummy in
+  *'*'*) echo FAILED;;
+      *) echo PASSED;;
+esac
+
+toto='?'
+case $dummy in
+   *"$toto"*) echo FAILED;;
+     *$toto*) echo PASSED;;
+esac
+
 # set exit status to 1 and ensure that if no case is matched then exit
 # status is 0 and not 1
 false
