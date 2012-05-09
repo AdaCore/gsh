@@ -4,6 +4,7 @@ with Posix_Shell.Functions; use Posix_Shell.Functions;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Utils; use  Posix_Shell.Utils;
 with Posix_Shell.GNULib; use Posix_Shell.GNULib;
+with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 with Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
@@ -598,6 +599,35 @@ package body Posix_Shell.Tree.Evals is
          when Shell_Exit_Exception =>
             null;
       end;
+
+      --  Do we have a trap registered ?
+      declare
+         Exit_Trap_Action : constant String_Access :=
+           Get_Trap_Action (New_State.all, 0);
+         Trap_Status : Integer;
+         Saved_Status : Integer;
+         pragma Warnings (Off, Trap_Status);
+      begin
+         if Exit_Trap_Action /= null and then
+           Exit_Trap_Action.all'Length > 0
+         then
+            Saved_Status := Get_Last_Exit_Status (New_State.all);
+            Trap_Status := Execute_Builtin (New_State,
+                                           "eval",
+                                            (1 => Exit_Trap_Action));
+            Save_Last_Exit_Status (New_State.all, Saved_Status);
+         end if;
+      exception
+         when Shell_Return_Exception =>
+            --  A return outside of a function or a sourced script
+            --  is not legitimate.
+            Error (New_State.all, "return: can only `return'"
+                   & " from a function or sourced script");
+            Save_Last_Exit_Status (New_State.all, 1);
+         when Shell_Exit_Exception =>
+            null;
+      end;
+
       Restore_Redirections (New_State.all, Current_Redirs);
       Leave_Scope (New_State.all, S.all);
    end Eval_Subshell;

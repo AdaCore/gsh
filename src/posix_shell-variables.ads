@@ -113,6 +113,15 @@ package Posix_Shell.Variables is
    procedure Set_Xtrace (S : in out Shell_State; Value : Boolean);
    function Is_Xtrace_Enabled (S : Shell_State) return Boolean;
 
+   procedure Set_Trap_Action
+     (S : in out Shell_State;
+      Action : String_Access;
+      Signal_Number : Integer);
+
+   function Get_Trap_Action
+     (S : Shell_State; Signal_Number : Integer)
+      return String_Access;
+
 
    type Redirection_States is private;
 private
@@ -157,6 +166,7 @@ private
    --  (S : Shell_State_Access; R : Redirection_Op_Stack);
    --  Set a new redirection context.
 
+   type Trap_Action_List is array (0 .. 15) of String_Access;
 
    type Shell_State is record
       Var_Table        : Map;
@@ -167,6 +177,7 @@ private
       Redirections     : Redirection_States;
       Current_Dir      : String_Access := null;
       Script_Name      : String_Access := null;
+      Trap_Actions     : Trap_Action_List := (others => null);
       Loop_Scope_Level : Natural := 0;
       XTrace_Enabled   : Boolean := False;
    end record;

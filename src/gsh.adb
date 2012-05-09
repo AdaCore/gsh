@@ -17,6 +17,7 @@ with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell; use Posix_Shell;
 with Ada.Directories; use Ada.Directories;
+with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 ---------
 -- GSH --
@@ -91,6 +92,34 @@ begin
             exception
                when Shell_Exit_Exception =>
                   Status := Get_Last_Exit_Status (State.all);
+               when Shell_Return_Exception =>
+                  Put
+                    (State.all, 2,
+                     "return: can only `return' from a " &
+                       "function or sourced script" & ASCII.LF);
+                  Save_Last_Exit_Status (State.all, 1);
+                  Status := 1;
+
+            end;
+
+            --  Do we have a trap registered ?
+            declare
+               Exit_Trap_Action : constant String_Access :=
+                 Get_Trap_Action (State.all, 0);
+               Trap_Status : Integer;
+               pragma Warnings (Off, Trap_Status);
+            begin
+
+               if Exit_Trap_Action /= null and then
+                 Exit_Trap_Action.all'Length > 0
+               then
+                  Trap_Status := Execute_Builtin (State,
+                                                  "eval",
+                                                  (1 => Exit_Trap_Action));
+               end if;
+            exception
+               when Shell_Exit_Exception =>
+                  Status := Get_Last_Exit_Status (State.all);
                   exit;
                when Shell_Return_Exception =>
                   Put
@@ -101,6 +130,7 @@ begin
                   Status := 1;
 
             end;
+
          end if;
          Free_Node (T);
          if not Is_Interactive then

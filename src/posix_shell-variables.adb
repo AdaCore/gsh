@@ -603,6 +603,13 @@ package body Posix_Shell.Variables is
          end if;
       end if;
 
+      --  Free Trap actions
+      for J in Current.Trap_Actions'Range loop
+         if Current.Trap_Actions (J) /= null then
+            Free (Current.Trap_Actions (J));
+         end if;
+      end loop;
+
       --  Free Current dir
       Free (Current.Current_Dir);
    end Leave_Scope;
@@ -716,6 +723,35 @@ package body Posix_Shell.Variables is
    begin
       S.Script_Name := new String'(Value);
    end Set_Script_Name;
+
+   ---------------------
+   -- Set_Trap_Action --
+   ---------------------
+
+   procedure Set_Trap_Action
+     (S : in out Shell_State;
+      Action : String_Access;
+      Signal_Number : Integer)
+   is
+   begin
+      if S.Trap_Actions (Signal_Number) /= null then
+         Free (S.Trap_Actions (Signal_Number));
+      end if;
+
+      S.Trap_Actions (Signal_Number) := Action;
+   end Set_Trap_Action;
+
+   ---------------------
+   -- Get_Trap_Action --
+   ---------------------
+
+   function Get_Trap_Action
+     (S : Shell_State; Signal_Number : Integer)
+      return String_Access
+   is
+   begin
+      return S.Trap_Actions (Signal_Number);
+   end Get_Trap_Action;
 
    -------------------
    -- Set_Var_Value --

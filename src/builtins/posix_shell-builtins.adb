@@ -87,6 +87,9 @@ package body Posix_Shell.Builtins is
    function Source_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
 
+   function Trap_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
+
    function True_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
 
@@ -127,9 +130,6 @@ package body Posix_Shell.Builtins is
      (S : Shell_State_Access; Args : String_List) return Integer;
 
    function Unset_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
-
-   function Rm_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
 
    -------------------
@@ -689,10 +689,9 @@ package body Posix_Shell.Builtins is
       Include (Builtin_Map, "exec",          Exec_Builtin'Access);
       Include (Builtin_Map, "continue",      Continue_Builtin'Access);
       Include (Builtin_Map, "break",         Break_Builtin'Access);
-      Include (Builtin_Map, "trap",          True_Builtin'Access);
+      Include (Builtin_Map, "trap",          Trap_Builtin'Access);
       Include (Builtin_Map, "cat",           Cat_Builtin'Access);
       Include (Builtin_Map, "read",          Read_Builtin'Access);
-      Include (Builtin_Map, "rm",            Rm_Builtin'Access);
       Include (Builtin_Map, "tail",          Tail_Builtin'Access);
       Include (Builtin_Map, "head",          Head_Builtin'Access);
    end Register_Default_Builtins;
@@ -739,45 +738,6 @@ package body Posix_Shell.Builtins is
       --  happy.
       return 0;
    end Return_Builtin;
-
-   ----------------
-   -- Rm_Builtin --
-   ----------------
-
-   function Rm_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
-   is
-      Rm_Binary_Path : String_Access := null;
-      Rm_Args : String_List (1 .. Args'Length) := (others => null);
-      Rm_Last : Natural := 0;
-      Have_File : Boolean := False;
-   begin
-      Rm_Binary_Path := Locate_Exec (S.all, "rm.exe");
-      for J in Args'Range loop
-         if Is_Directory (Args (J).all)
-           or else Is_Regular_File (Args (J).all)
-         then
-            Rm_Last := Rm_Last + 1;
-            Rm_Args (Rm_Last) := Args (J);
-            Have_File := True;
-         elsif Args (J).all'Length > 0
-           and then Args (J).all (Args (J).all'First) = '-'
-         then
-            Rm_Last := Rm_Last + 1;
-            Rm_Args (Rm_Last) := Args (J);
-         end if;
-      end loop;
-
-      if Have_File then
-         return Run
-           (S,
-            Rm_Binary_Path.all,
-            Rm_Args (1 .. Rm_Last),
-            Get_Environment (S.all));
-      else
-         return 0;
-      end if;
-   end Rm_Builtin;
 
    -----------------
    -- Set_Builtin --
@@ -919,6 +879,50 @@ package body Posix_Shell.Builtins is
 
       return Return_Code;
    end Source_Builtin;
+
+   ------------------
+   -- Trap_Builtin --
+   ------------------
+
+   function Trap_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+
+   begin
+      if Args'Length = 0 then
+         --  To be implemented (should show the list of registered actions)
+         null;
+         return 0;
+      elsif Args'Length = 1 then
+         Error (S.all, "trap: invalid number of arguments");
+         return 1;
+      end if;
+
+      for J in Args'First + 1 .. Args'Last loop
+         declare
+            Cond : constant String := Args (J).all;
+            Signal_Number : Integer;
+         begin
+            if Cond = "EXIT" or else Cond = "0" then
+               Signal_Number := 0;
+            else
+               --  Just ignore other signals for the moment ...
+               Signal_Number := -1;
+            end if;
+
+            if Signal_Number >= 0 then
+               if Args (Args'First).all = "-" then
+                  Set_Trap_Action (S.all, null, Signal_Number);
+               else
+                  Set_Trap_Action (S.all,
+                                   new String'(Args (Args'First).all),
+                                   Signal_Number);
+               end if;
+            end if;
+         end;
+      end loop;
+      return 0;
+   end Trap_Builtin;
 
    ------------------
    -- True_Builtin --

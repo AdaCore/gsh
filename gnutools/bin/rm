@@ -1,0 +1,15 @@
+#!python
+
+from gnatpython.fileutils import rm
+import argparse
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Remove files and directories')
+    parser.add_argument("-f", "--force", help="ignore nonexistent files, never prompt", action="store_true")
+    parser.add_argument("-r", "--recursive", help="remove directories and their contents recursively", action="store_true")
+    parser.add_argument("files", nargs="*")
+    args = parser.parse_args()
+    if len(args.files) > 0:
+        rm(args.files, recursive=args.recursive)
+    
+    
