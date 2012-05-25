@@ -11,7 +11,7 @@ project Posix_Shell is
    --  Default_Switches := ("-gnat05", "-gnatwcfijklmopruvz", "-gnaty", "-gnatwe");
    Default_Switches := ("-gnat05", "-gnatwcfijklmopruvz", "-gnaty");
 
-   Default_Libs     := ( "-Lgnulib/lib", "-Lgnulib", "-lgshgnu", "-lgnu", "-Lreadline", "-lreadline");
+   Default_Libs     := ("-lntdll", "-Lgnulib/lib", "-Lgnulib", "-lgshgnu", "-lgnu", "-Lreadline", "-lreadline", "-Wl,--stack=0x2000000");
 
    Dev_Switches := ("-g", "-O0");
 
