@@ -1,5 +1,6 @@
 with GNAT.Strings; use GNAT.Strings;
 with Posix_Shell.Variables; use Posix_Shell.Variables;
+with Interfaces.C; use Interfaces.C;
 
 package Posix_Shell.Utils is
 
@@ -38,6 +39,10 @@ package Posix_Shell.Utils is
    --  difference that it does not replace path components which are links
 
    function Readline (Prompt : String) return String;
+
+   function Delete_File (Filename : String) return long;
+   --  Delete file Filename and return 0 on success and a Windows error code
+   --  otherwise.
 
    function Strip_CR (Str : String) return String;
    --  This function removes all CR from a given string STR

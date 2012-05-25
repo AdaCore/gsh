@@ -1,5 +1,7 @@
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;
+with System;
+with Ada.Characters.Conversions;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 
 package body Posix_Shell.Utils is
@@ -44,6 +46,25 @@ package body Posix_Shell.Utils is
          return Dir (Dir'First .. Last);
       end if;
    end Current_Working_Directory;
+
+   -----------------
+   -- Delete_File --
+   -----------------
+
+   function Delete_File (Filename : String) return long is
+
+      function Delete_File_Internal
+        (Filename : System.Address; Length : Integer)
+         return long;
+      pragma Import (C, Delete_File_Internal, "safe_unlink_interface");
+
+      Norm_Path : constant String := GNAT.OS_Lib.Normalize_Pathname
+        (Filename, Resolve_Links => False);
+   begin
+      return Delete_File_Internal
+        (Ada.Characters.Conversions.To_Wide_String
+           ("\??\" & Norm_Path)'Address, Norm_Path'Length + 4);
+   end Delete_File;
 
    -----------------
    -- Integer_Not --
