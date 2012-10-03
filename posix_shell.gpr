@@ -13,7 +13,9 @@ project Posix_Shell is
 
    Default_Libs     := ("-lntdll", "-Lgnulib/lib", "-Lgnulib", "-lgshgnu", "-lgnu", "-Lreadline", "-lreadline", "-Wl,--stack=0x2000000");
 
-   Dev_Switches := ("-g", "-O0");
+   Default_C_Switches := ("-I" & external("DDK_DIR"));
+
+   Dev_Switches := ("-g", "-O0", external("DDK_DIR"));
 
    case Coverage is
       when "true" =>  Default_Switches := Default_Switches & ("-fprofile-arcs", "-ftest-coverage");
@@ -56,6 +58,7 @@ project Posix_Shell is
          when "dev" =>
             for Default_Switches ("c") use ("-g");
             for Default_Switches ("ada") use ("-g");
+
       end case;
    end Builder;
 
@@ -63,9 +66,10 @@ project Posix_Shell is
       case Build is
          when "prod" =>
             for Default_Switches ("ada") use ("-O2", "-gnatpn") & Default_Switches;
+	    for Default_Switches ("c") use ("-O2") & Default_C_Switches;
          when "dev" =>
             for Default_Switches ("ada") use ("-gnata") & Dev_Switches & Default_Switches;
-            for Default_Switches ("c") use Dev_Switches;
+            for Default_Switches ("c") use Dev_Switches & Default_C_Switches;
       end case;
    end Compiler;
 

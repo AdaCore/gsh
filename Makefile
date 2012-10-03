@@ -1,7 +1,13 @@
 PREFIX=install
 
+GCC_BIN:=$(shell dirname $$(which gcc))
+DDK_DIR:=$(shell echo `dirname $(GCC_BIN)`/i686-pc-mingw32/include/ddk)
+
+
 all:
-	gprbuild -p -P posix_shell -XBUILD=prod
+	echo $(GCC_BIN)
+	echo $(DDK_DIR)
+	gprbuild -p -P posix_shell -XBUILD=prod -XDDK_DIR=$(DDK_DIR)
 
 readline/libreadline.a: readline/Makefile
 	cd readline && make

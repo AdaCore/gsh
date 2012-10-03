@@ -19,6 +19,27 @@
  *                                                                          *
  ****************************************************************************/
 
+/* With compiler using mingw64, we cannot include both usual windows includes
+ * such as windows.h and the include files coming from the ddk (behavior
+ * closer to ms compilers. Not also that we need also to add explicit -I
+ * option pointing to the ddk includes.
+ *
+ * Sourcing basetsd.h ensure _W64 is defined when using mingw64 based
+ * compiler. */
+
+#include "basetsd.h"
+
+#ifdef _W64
+
+/* on mingw64, includes are relative to ddk directory. */
+#include "ntddk.h"
+#include "ntifs.h"
+/* not defined in the ddk include files... */
+#define MAX_PATH 260
+__declspec(dllimport) void WINAPI Sleep(unsigned long dwMilliseconds);
+
+#else /* _W64 */
+
 #include "windows.h"
 #include "winnt.h"
 #include "ntdef.h"
@@ -28,7 +49,8 @@
 #include "ddk/ntddk.h"
 #include "ddk/winddk.h"
 #include "ddk/ntifs.h"
-#include "limits.h"
+
+#endif /* _W64 */
 
 WCHAR digit_image[] = L"0123456789ABCDEF";
 WCHAR trash_dir[] = L"\\tmp\\trash\\";
@@ -104,7 +126,7 @@ move_away(HANDLE h, UNICODE_STRING filename)
    }
    dest.Length += 16 * sizeof(WCHAR);
 
-   /* Not really usefull but great if we want to print our buffer using
+   /* Not really useful but great if we want to print our buffer using
       printf.  */
    dest.Buffer[dest.Length / sizeof(WCHAR)] = L'\0';
 
@@ -137,8 +159,6 @@ is_dir_empty (HANDLE h)
                        + 3 * PATH_MAX * sizeof (WCHAR);
    PFILE_NAMES_INFORMATION pfni = (PFILE_NAMES_INFORMATION) malloc (bufsiz);
 
-   PFILE_NAMES_INFORMATION pfni_start = pfni;
-
    NTSTATUS status = NtQueryDirectoryFile (h, NULL, NULL, 0, &io, pfni,
                                            bufsiz, FileNamesInformation,
                                            FALSE, NULL, TRUE);
@@ -167,7 +187,7 @@ is_dir_empty (HANDLE h)
                   && status != STATUS_OBJECT_NAME_NOT_FOUND
                   && status != STATUS_OBJECT_PATH_NOT_FOUND)
                 {
-                  free(pfni_start);
+                  free(pfni);
                   return STATUS_DIRECTORY_NOT_EMPTY;
                 }
             }
@@ -177,7 +197,7 @@ is_dir_empty (HANDLE h)
   while (NT_SUCCESS (NtQueryDirectoryFile (h, NULL, NULL, 0, &io, pfni,
                                            bufsiz, FileNamesInformation,
                                            FALSE, NULL, FALSE)));
-  free(pfni_start);
+  free(pfni);
   return STATUS_SUCCESS;
 }
 
