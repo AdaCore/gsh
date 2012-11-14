@@ -12,6 +12,7 @@ with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
+with Posix_Shell.Functions; use Posix_Shell.Functions;
 
 with Ada.Strings.Unbounded;
 with Ada.Containers.Indefinite_Hashed_Maps;
@@ -135,6 +136,9 @@ package body Posix_Shell.Builtins is
      (S : Shell_State_Access; Args : String_List) return Integer;
 
    function Rm_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
+
+   function Type_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
 
    -------------------
@@ -700,6 +704,7 @@ package body Posix_Shell.Builtins is
       Include (Builtin_Map, "tail",          Tail_Builtin'Access);
       Include (Builtin_Map, "head",          Head_Builtin'Access);
       Include (Builtin_Map, "rm",            Rm_Builtin'Access);
+      Include (Builtin_Map, "type",          Type_Builtin'Access);
    end Register_Default_Builtins;
 
    --------------------
@@ -1085,6 +1090,37 @@ package body Posix_Shell.Builtins is
    begin
       return 0;
    end True_Builtin;
+
+   ------------------
+   -- Type_Builtin --
+   ------------------
+
+   function Type_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+      Exit_Status : Integer := 0;
+      Exec_Path : String_Access;
+   begin
+      for Index in Args'Range loop
+         if Is_Builtin (Args (Index).all) then
+            Put (S.all, 1, Args (Index).all & " is a builtin");
+            New_Line (S.all, 1);
+         elsif Is_Function (Args (Index).all) then
+            Put (S.all, 1, Args (Index).all & " is a function");
+            New_Line (S.all, 1);
+         else
+            Exec_Path := Locate_Exec (S.all, Args (Index).all);
+            if Exec_Path = null then
+               Error (S.all, Args (Index).all & ": not found");
+               Exit_Status := 1;
+            else
+               Put (S.all, 1, Args (Index).all & " is " & Exec_Path.all);
+               New_Line (S.all, 1);
+            end if;
+         end if;
+      end loop;
+      return Exit_Status;
+   end Type_Builtin;
 
    -------------------
    -- Unset_Builtin --
