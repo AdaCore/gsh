@@ -452,6 +452,10 @@ do
     # Copy the file name to the temp name.
     (umask $cp_umask && $doit_exec $cpprog "$src" "$dsttmp") &&
 
+    if [ -f "$dsttmp.exe" ]; then
+       dsttmp="$dsttmp.exe"
+    fi
+
     # and set any options; do chmod last to preserve setuid bits.
     #
     # If any of these fail, we abort the whole thing.  If we want to
