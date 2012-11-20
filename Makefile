@@ -26,6 +26,7 @@ install:
 	cp -r etc/* $(PREFIX)/etc
 	cp -p obj/prod/no-cov/no-gmem/gsh.exe $(PREFIX)/bin/sh.exe
 	cp -p obj/prod/no-cov/no-gmem/gsh.exe $(PREFIX)/bin/gsh.exe
+	cp -p obj/prod/no-cov/no-gmem/gsh.exe $(PREFIX)/bin/bash.exe
 
 clean:
 	-rm -rf obj/*
