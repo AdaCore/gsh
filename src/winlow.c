@@ -241,6 +241,32 @@ safe_unlink (UNICODE_STRING name)
    status = NtQueryAttributesFile(&attr, &file_basic_information);
    if (!NT_SUCCESS (status)) return (UNLINK_RESULT) { status, 0x1 };
 
+   /* The file is read-only so first attempt to remove that flag. Otherwise
+      we will be able to delete the file only by moving it away which takes
+      far more long time.  */ 
+   if (FILE_ATTRIBUTE_READONLY & file_basic_information.FileAttributes)
+     {
+       /* Open the file in write mode */
+       status = NtOpenFile(&handle, FILE_WRITE_ATTRIBUTES,
+                           &attr, &io, FILE_SHARE_VALID_FLAGS, flags);
+       if (NT_SUCCESS (status))
+         {
+           file_basic_information.FileAttributes = file_basic_information.FileAttributes &
+             ~FILE_ATTRIBUTE_READONLY;
+           /* Push the updated attributes */
+           NTSTATUS status2 = NtSetInformationFile(handle,
+                                                   &io, &file_basic_information,
+                                                   sizeof(file_basic_information),
+                                                   FileBasicInformation);
+
+           NtClose(handle);
+
+           /* Redo the query on the file */
+           status = NtQueryAttributesFile(&attr, &file_basic_information);
+           if (!NT_SUCCESS (status)) return (UNLINK_RESULT) { status, 0x1 };
+          }
+     }
+
    if (FILE_ATTRIBUTE_DIRECTORY & file_basic_information.FileAttributes)
        is_dir = TRUE;
        /* When we trying to delete a directory we might need to list its
