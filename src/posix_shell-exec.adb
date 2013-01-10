@@ -225,10 +225,9 @@ package body Posix_Shell.Exec is
                J := J + 1;
                Res (J) := '"';
 
-            elsif Arg (K) = ' ' then
+            elsif Arg (K) = ' ' or else Arg (K) = ASCII.HT then
                Res (J) := Arg (K);
                Quote_Needed := True;
-
             else
                Res (J) := Arg (K);
             end if;
