@@ -145,6 +145,19 @@ package body Posix_Shell.Utils is
                      end if;
                   end;
                end loop;
+            else
+	       for E in Executables_Extensions'Range loop
+                  declare
+                     Ext : constant String := Executables_Extensions (E).all;
+                     Tentative_Path : constant String :=
+                       Resolve_Path (S, "./" & Exec_Name & Ext);
+                  begin
+                     if GNAT.OS_Lib.Is_Regular_File (Tentative_Path) then
+                        Result := new String'(Tentative_Path);
+                        return Result;
+                     end if;
+                  end;
+               end loop;
             end if;
 
             Path_Start := Pos + 1;
