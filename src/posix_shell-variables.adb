@@ -778,6 +778,7 @@ package body Posix_Shell.Variables is
                Result : String (1 .. S'Length * 3);
                Result_Last : Integer := 0;
                Is_First : Boolean := True;
+               Last_Was_Slash : Boolean := False;
                Index : Natural := S'First;
             begin
                loop
@@ -785,6 +786,7 @@ package body Posix_Shell.Variables is
                      Result_Last := Result_Last + 1;
                      Result (Result_Last) := ';';
                      Is_First := True;
+                     Last_Was_Slash := False;
                   elsif S (Index) = '/' then
                      if Is_First then
                         Result_Last := Result_Last + 2;
@@ -792,9 +794,32 @@ package body Posix_Shell.Variables is
                         Result (Result_Last) := ':';
                      end if;
                      Is_First := False;
+                     Last_Was_Slash := True;
                      Result_Last := Result_Last + 1;
                      Result (Result_Last) := '\';
+                  elsif S (Index) = '.' then
+                     if Is_First or else Last_Was_Slash then
+                        if Index < S'Last then
+                           if S (Index + 1) = '/' then
+                              Index := Index + 1;
+                              Last_Was_Slash := True;
+                           elsif S (Index + 1) = ':' then
+                              null;
+                           else
+                              Result_Last := Result_Last + 1;
+                              Result (Result_Last) := S (Index);
+                              Last_Was_Slash := False;
+                           end if;
+                        end if;
+                     else
+                        Result_Last := Result_Last + 1;
+                        Result (Result_Last) := S (Index);
+                        Last_Was_Slash := False;
+                     end if;
+                     Is_First := False;
                   else
+                     Is_First := False;
+                     Last_Was_Slash := False;
                      Result_Last := Result_Last + 1;
                      Result (Result_Last) := S (Index);
                   end if;
