@@ -14,6 +14,9 @@ package Posix_Shell is
       PARAM_EVAL_BEGIN,      --  likewise for parameter evaluation
       PARAM_EVAL_END,
       NULL_STRING,           --  a '' string (character value is ignored)
+      QUOTED_NULL_STRING,    --  a '' string but that should also be ignored
+                             --  even inside a quote. This state is used only
+                             --  in relation with "$@" expansion
       UNSPLITABLE,           --  character cannot be a field separator
       FIELD_SEP);            --  character must be a field separator
    --  List of possible annotations.

@@ -228,6 +228,9 @@ package body Posix_Shell.Annotated_Strings is
                when NULL_STRING         =>
                   Result (F .. F + 3) := "<N/>";
                   Result_Last := F + 3;
+               when QUOTED_NULL_STRING  =>
+                  Result (F .. F + 3) := "<Q/>";
+                  Result_Last := F + 3;
                when UNSPLITABLE         =>
                   Result (F .. F + 7) := "<U>" & Source.Str (Index) & "</U>";
                   Result_Last := F + 7;

@@ -158,6 +158,7 @@ package body Posix_Shell.Subst is
 
       type State is
         (EMPTY_FIELD,
+         FORCED_EMPTY_FIELD,
          NULL_WORD_FIELD,
          QUOTED_WORD_FIELD,
          WORD_FIELD);
@@ -179,6 +180,8 @@ package body Posix_Shell.Subst is
       begin
          case Current_State is
             when EMPTY_FIELD =>
+               null;
+            when FORCED_EMPTY_FIELD =>
                null;
             when NULL_WORD_FIELD =>
                --  We have a null word so create an empty field
@@ -235,6 +238,7 @@ package body Posix_Shell.Subst is
 
       --  Perform field splitting
       for I in Str (Result)'Range loop
+
          declare
             CC : constant Character := Get_Character (Result, I);
             CA : constant Annotation := Get_Annotation (Result, I);
@@ -251,6 +255,14 @@ package body Posix_Shell.Subst is
                   --  a null word that should not be ignored.
                   if Current_State = EMPTY_FIELD then
                      Current_State := NULL_WORD_FIELD;
+                  end if;
+               when QUOTED_NULL_STRING =>
+                  --  In that case no empty word should be generated if the
+                  --  word contains only QUOTED_NULL_STRING and NULL_STRING.
+                  if Current_State = EMPTY_FIELD or else
+                    Current_State = NULL_WORD_FIELD
+                  then
+                     Current_State := FORCED_EMPTY_FIELD;
                   end if;
                when UNSPLITABLE =>
                   --  The character is marked as unsplitable so don't check for
@@ -374,6 +386,11 @@ package body Posix_Shell.Subst is
                   end if;
                when ESCAPE_SEQUENCE =>
                   Append (Buffer, Str (S) (Index), UNSPLITABLE);
+               when QUOTED_NULL_STRING =>
+                  --  We got the result of $@ with no positional parameters set
+                  --  We should give that information to the part of the code
+                  --  in charge of field splitting.
+                  Append (Buffer, Str (S) (Index), QUOTED_NULL_STRING);
                when others =>
                   Append (Buffer, Str (S) (Index), UNSPLITABLE);
             end case;

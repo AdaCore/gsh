@@ -269,8 +269,10 @@ package body Posix_Shell.Variables is
                --  we are in a quoted context
                declare
                   PP : constant Pos_Params_State := State.Pos_Params;
+                  Has_Parameter : Boolean := False;
                begin
                   for J in PP.Table'First + PP.Shift .. PP.Table'Last loop
+                     Has_Parameter := True;
                      Append (Result, PP.Table (J).all, Context);
 
                      --  Add a 'forced' field separator which is not influenced
@@ -279,6 +281,19 @@ package body Posix_Shell.Variables is
                            Append (Result, ' ', FIELD_SEP);
                      end if;
                   end loop;
+
+                  if not Has_Parameter and Context = UNSPLITABLE then
+                     --  There is no parameter so we will return a null string.
+                     --  But for @ variable, even if we are inside a quote
+                     --  construct, we should not at the end return '' but
+                     --  nothing. Example:
+                     --
+                     --  for d in "$EMPTY_VAR"; do echo "hello"; done
+                     --  for d in "$@"; do echo "hello2"; done
+                     --
+                     --  should output "hello" :-)
+                     return To_Annotated_String ("N", QUOTED_NULL_STRING);
+                  end if;
                   return Result;
                end;
             when '*' =>
