@@ -276,7 +276,7 @@ package body Posix_Shell.Builtins.Test is
                   Real_File : constant String := Is_File (Param.all);
                begin
                   if Real_File /= "" then
-                     return To_Integer (Is_Directory (Param.all));
+                     return To_Integer (Is_Directory (Real_File));
                   else
                      return To_Integer (False);
                   end if;
