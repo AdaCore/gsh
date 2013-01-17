@@ -1,0 +1,2 @@
+cat << EOF
+One line :-)

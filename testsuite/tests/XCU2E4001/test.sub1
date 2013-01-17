@@ -1,0 +1,2 @@
+echo "in test.sub1"
+return 1

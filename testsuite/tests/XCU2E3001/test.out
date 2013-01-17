@@ -1,0 +1,76 @@
+==== continue without arguments should resume in innermost loop ====
+entering outtermost loop (written twice)
+status should be 0 (written twice)
+status should be 0 (written twice)
+leaving outtermost loop (written twice)
+entering outtermost loop (written twice)
+status should be 0 (written twice)
+status should be 0 (written twice)
+leaving outtermost loop (written twice)
+status: 0
+
+==== continue without arguments should resume in innermost loop (while) ====
+entering outtermost loop (written twice)
+status should be 0 (written twice)
+status should be 0 (written twice)
+leaving outtermost loop (written twice)
+entering outtermost loop (written twice)
+leaving outtermost loop (written twice)
+status: 0
+
+==== continue with n too high ====
+should be written twice (outter)
+should be written twice (inner)
+should be written twice (outter)
+should be written twice (inner)
+status: 0
+
+==== continue with n too high (while) ====
+should be written twice (outter)
+should not be written
+should be written twice (outter)
+should not be written
+status: 0
+
+==== continue with n negative ====
+status: 1
+==== continue with n negative (while) ====
+status: 0
+
+==== continue the middle loop ====
++ stdout
+This message should be written 4 times on stdout
+This message should be written 4 times on stdout
+This message should be written 4 times on stdout
+This message should be written 4 times on stdout
+status should be 0. Get 0
++ inner_loop.txt
+This message should written 4 times in inner_loop.txt
+This message should written 4 times in inner_loop.txt
+This message should written 4 times in inner_loop.txt
+This message should written 4 times in inner_loop.txt
+
+
+==== continue the middle loop (while)====
++ stdout
+This message should be written 4 times on stdout
+This message should be written 4 times on stdout
+This message should be written 4 times on stdout
+This message should be written 4 times on stdout
+status should be 0. Get 0
++ inner_loop.txt
+This message should written 4 times in inner_loop.txt
+This message should written 4 times in inner_loop.txt
+This message should written 4 times in inner_loop.txt
+This message should written 4 times in inner_loop.txt
+
+==== continue in an inner brace construct ====
+== stdout ==
+this message should written twice on stdout
+this message should written twice on stdout
+status should be 0: get 0
+== brace.txt ==
+PASSED
+PASSED
++ Last TEST
+status: 128
