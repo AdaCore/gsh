@@ -2,12 +2,13 @@ PREFIX=install
 
 GCC_BIN:=$(shell dirname $$(which gcc))
 DDK_DIR:=$(shell echo `dirname $(GCC_BIN)`/i686-pc-mingw32/include/ddk)
-
+BUILD=prod
+COVERAGE=false
 
 all:
 	echo $(GCC_BIN)
 	echo $(DDK_DIR)
-	gprbuild -p -P posix_shell -XBUILD=prod -XDDK_DIR=$(DDK_DIR)
+	gprbuild -p -P posix_shell -XBUILD=$(BUILD) -XCOVERAGE=$(COVERAGE) -XDDK_DIR=$(DDK_DIR)
 
 readline/libreadline.a: readline/Makefile
 	cd readline && make
@@ -16,7 +17,7 @@ readline/Makefile:
 	cd readline && ./configure --disable-shared --build=i686-pc-mingw32 --prefix=`pwd`/readline-install
 
 check:
-	(PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && export PATH && cd testsuite && python ./testsuite.py)
+	@(PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && export PATH && cd testsuite && python ./testsuite.py)
 
 .PHONY: install
 install:

@@ -15,7 +15,7 @@ project Posix_Shell is
 
    Default_C_Switches := ("-I" & external("DDK_DIR"));
 
-   Dev_Switches := ("-g", "-O0", external("DDK_DIR"));
+   Dev_Switches := ("-g", "-O0");
 
    case Coverage is
       when "true" =>  Default_Switches := Default_Switches & ("-fprofile-arcs", "-ftest-coverage");
