@@ -572,7 +572,9 @@ package body Posix_Shell.Subst is
    is
       Result : constant Annotated_String := Eval_String_Aux
         (SS, S, Case_Pattern, Quote_Removal_Only);
-      Result_String : String (1 .. Length (Result));
+      -- we create a buffer or twice the size as some characters might be
+      -- excaped in case construct context
+      Result_String : String (1 .. Length (Result) * 2);
       Result_Index  : Integer := 1;
    begin
       if Has_Null_String (Result) or else Case_Pattern then
