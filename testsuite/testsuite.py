@@ -19,7 +19,6 @@ from glob import glob
 import logging
 import os
 import sys
-import rest
 import re
 logger = logging.getLogger('gnatpython.testsuite')
 
