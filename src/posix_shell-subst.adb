@@ -189,8 +189,14 @@ package body Posix_Shell.Subst is
             when QUOTED_WORD_FIELD =>
                Append (Result_List, new String'(To_String (Buffer)));
             when WORD_FIELD =>
-               Append (Result_List,
-                       Filename_Expansion (SS, To_String (Buffer)));
+               if Is_File_Expansion_Enabled(SS.all) then
+                  Append (Result_List,
+                          Filename_Expansion (SS, To_String (Buffer)));
+               else
+                  Append (Result_List,
+                          new String'(To_String (Buffer)));
+               end if;
+
          end case;
 
          if Current_State /= EMPTY_FIELD then

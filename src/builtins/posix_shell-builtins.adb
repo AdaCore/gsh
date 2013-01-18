@@ -916,12 +916,16 @@ package body Posix_Shell.Builtins is
                      exit;
                   elsif Args (Index).all = "-x" then
                      Set_Xtrace (S.all, True);
+                  elsif Args (Index).all = "-f" then
+                     Set_File_Expansion (S.all, False);
                   else
                      null;
                   end if;
                when '+' =>
                   if Args (Index).all = "+x" then
                      Set_Xtrace (S.all, False);
+                  elsif Args (Index).all = "+f" then
+                     Set_File_Expansion (S.all, True);
                   end if;
 
                when others => Saved_Index := Index; exit;

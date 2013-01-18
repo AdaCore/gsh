@@ -81,6 +81,7 @@ package body Posix_Shell.Variables is
       Result.Loop_Scope_Level := 0;
 
       Result.XTrace_Enabled := Previous.XTrace_Enabled;
+      Result.File_Expansion_Enabled := Previous.File_Expansion_Enabled;
 
       Result.Script_Name := Previous.Script_Name;
 
@@ -451,6 +452,15 @@ package body Posix_Shell.Variables is
       State.Loop_Scope_Level := 0;
    end Import_Environment;
 
+   -------------------------------
+   -- Is_File_Expansion_Enabled --
+   -------------------------------
+
+   function Is_File_Expansion_Enabled (S : Shell_State) return Boolean is
+   begin
+      return S.File_Expansion_Enabled;
+   end Is_File_Expansion_Enabled;
+
    -----------------------------
    -- Is_Positional_Parameter --
    -----------------------------
@@ -695,6 +705,15 @@ package body Posix_Shell.Variables is
       Free (State.Current_Dir);
       State.Current_Dir := new String'(Dir);
    end Set_Current_Dir;
+
+   ------------------------
+   -- Set_File_Expansion --
+   ------------------------
+
+   procedure Set_File_Expansion (S: in out Shell_State; Value : Boolean) is
+   begin
+      S.File_Expansion_Enabled := Value;
+   end Set_File_Expansion;
 
    -------------------------------
    -- Set_Positional_Parameters --

@@ -111,7 +111,12 @@ package Posix_Shell.Variables is
    procedure Set_Script_Name (S : in out Shell_State; Value : String);
 
    procedure Set_Xtrace (S : in out Shell_State; Value : Boolean);
+
+   procedure Set_File_Expansion (S: in out Shell_State; Value : Boolean);
+
    function Is_Xtrace_Enabled (S : Shell_State) return Boolean;
+
+   function Is_File_Expansion_Enabled (S : Shell_State) return Boolean;
 
    procedure Set_Trap_Action
      (S : in out Shell_State;
@@ -180,6 +185,7 @@ private
       Trap_Actions     : Trap_Action_List := (others => null);
       Loop_Scope_Level : Natural := 0;
       XTrace_Enabled   : Boolean := False;
+      File_Expansion_Enabled : Boolean := True;
    end record;
 
 end Posix_Shell.Variables;
