@@ -1,0 +1,7 @@
+echo "Basic pipe test"
+echo "false" | grep false &&  echo "PASSED" || echo "FAILED"
+echo "Basic pipe negation test"
+! echo "false" | grep false && echo "FAILED" || echo "PASSED"
+echo "Length 1 negated pipe tests"
+! false && echo "PASSED" || echo "FAILED"
+! false | true && echo "FAILED" || echo "PASSED"
