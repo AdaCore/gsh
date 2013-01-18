@@ -1084,7 +1084,7 @@ package body Posix_Shell.Parser is
          end case;
       end loop;
 
-      if Last (Childs) = 1 then
+      if Last (Childs) = 1 and then not Pipe_Negation then
          Result := Childs.Table (1);
       else
          Result := Add_Pipe_Node
