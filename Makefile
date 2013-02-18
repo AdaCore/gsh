@@ -1,21 +1,33 @@
+# This variable contains the root dir in which the project is installed
+# You can safely change it when calling make install
 PREFIX=install
 
+# Find the DDK directory
 GCC_BIN:=$(shell dirname $$(which gcc))
 DDK_DIR:=$(shell echo `dirname $(GCC_BIN)`/i686-pc-mingw32/include/ddk)
+
+# Check if we are on unix or windows system
+SYS:=$(strip $(shell if test -d $(DDK_DIR); then echo 'windows'; else echo 'unix'; fi))
+EXTEXT:=$(strip $(shell if test "$(SYS)" = "windows"; then echo ".exe"; fi))
+
+# Variables that control compilation flags, debuggging mode, ...
 BUILD=prod
 COVERAGE=false
 
+# Main build target
 all:
-	echo $(GCC_BIN)
-	echo $(DDK_DIR)
-	gprbuild -p -P posix_shell -XBUILD=$(BUILD) -XCOVERAGE=$(COVERAGE) -XDDK_DIR=$(DDK_DIR)
+	@echo "building gsh for $(SYS)"
+	gprbuild -p -P posix_shell -XBUILD=$(BUILD) -XCOVERAGE=$(COVERAGE) \
+		 -XDDK_DIR=$(DDK_DIR) -XSYS=$(SYS)
 
+# Use this if you need to recompile libreadline (Windows only)
 readline/libreadline.a: readline/Makefile
 	cd readline && make
 
 readline/Makefile:
 	cd readline && ./configure --disable-shared --build=i686-pc-mingw32 --prefix=`pwd`/readline-install
 
+# Launch the testsuite
 check:
 	@(PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && export PATH && cd testsuite && python ./testsuite.py)
 
@@ -23,11 +35,13 @@ check:
 install:
 	mkdir -p $(PREFIX)
 	mkdir -p $(PREFIX)/etc
-	cp -p -r gnutools/* $(PREFIX)/
+	if [ "$(SYS)" = "windows" ]; then cp -p -r gnutools/* $(PREFIX)/; fi
 	cp -r etc/* $(PREFIX)/etc
-	cp -p obj/prod/no-cov/no-gmem/gsh.exe $(PREFIX)/bin/sh.exe
-	cp -p obj/prod/no-cov/no-gmem/gsh.exe $(PREFIX)/bin/gsh.exe
-	cp -p obj/prod/no-cov/no-gmem/gsh.exe $(PREFIX)/bin/bash.exe
+	cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/gsh$(EXEXT)
+	if [ "$(SYS)" = "windows" ]; then \
+	  cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/sh$(EXEEXT) && \
+	  cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/bash$(EXEXT); \
+	fi
 
 clean:
 	-rm -rf obj/*

@@ -2,16 +2,32 @@ project Posix_Shell is
 
    type Build_Type is ("dev", "prod");
    type Boolean_Type is ("true", "false");
+   type System_Type is ("windows", "unix");
 
    Build     : Build_Type   := external ("BUILD", "dev");
    Build_Dir : Build_Type   := Build;
    Coverage  : Boolean_Type := external ("COVERAGE", "false");
    Gnatmem   : Boolean_Type := external ("GNATMEM", "false");
+   Sys       : System_Type := external ("SYS", "windows");
 
-   --  Default_Switches := ("-gnat05", "-gnatwcfijklmopruvz", "-gnaty", "-gnatwe");
    Default_Switches := ("-gnat05", "-gnatwcfijklmopruvz", "-gnaty");
 
-   Default_Libs     := ("-lntdll", "-Lgnulib/lib", "-Lgnulib", "-lgshgnu", "-lgnu", "-Lreadline", "-lreadline", "-Wl,--stack=0x2000000");
+   Default_Libs := ();
+
+   case Sys is
+      when "windows" => Default_Libs := ("-lntdll",
+                                         "-Lgnulib/lib",
+                                         "-Lgnulib",
+                                         "-lgshgnu",
+                                         "-lgnu",
+                                         "-Lreadline",
+                                         "-lreadline",
+                                         "-Wl,--stack=0x2000000");
+
+      when "unix" => Default_Libs := ("-lreadline",
+                                      "-Llua/install/lib",
+                                      "-llua");
+   end case;
 
    Default_C_Switches := ("-I" & external("DDK_DIR"));
 
@@ -31,7 +47,7 @@ project Posix_Shell is
    end case;
 
    for Main use ("gsh.adb");
-   for Source_Dirs use (".", "src", "src/builtins");
+   for Source_Dirs use (".", "src", "src/builtins", "src/" & Sys);
 
    for Languages use ("Ada", "C");
 

@@ -13,6 +13,7 @@ with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
 with Posix_Shell.Functions; use Posix_Shell.Functions;
+with Posix_Shell.Rm; use Posix_Shell.Rm;
 
 with Ada.Strings.Unbounded;
 with Ada.Containers.Indefinite_Hashed_Maps;
@@ -693,7 +694,6 @@ package body Posix_Shell.Builtins is
       Include (Builtin_Map, "[",             Test_Builtin'Access);
       Include (Builtin_Map, "printf",        Builtin_Printf'Access);
       Include (Builtin_Map, "expr",          Builtin_Expr'Access);
-      Include (Builtin_Map, "wc",            Wc_Builtin'Access);
       Include (Builtin_Map, ":",             True_Builtin'Access);
       Include (Builtin_Map, "exec",          Exec_Builtin'Access);
       Include (Builtin_Map, "continue",      Continue_Builtin'Access);
@@ -701,10 +701,14 @@ package body Posix_Shell.Builtins is
       Include (Builtin_Map, "trap",          Trap_Builtin'Access);
       Include (Builtin_Map, "cat",           Cat_Builtin'Access);
       Include (Builtin_Map, "read",          Read_Builtin'Access);
-      Include (Builtin_Map, "tail",          Tail_Builtin'Access);
-      Include (Builtin_Map, "head",          Head_Builtin'Access);
-      Include (Builtin_Map, "rm",            Rm_Builtin'Access);
-      Include (Builtin_Map, "type",          Type_Builtin'Access);
+      if GNAT.Directory_Operations.Dir_Separator = '\' then
+         --  No need to include these builtins on non-windows machines
+         Include (Builtin_Map, "wc",            Wc_Builtin'Access);
+         Include (Builtin_Map, "tail",          Tail_Builtin'Access);
+         Include (Builtin_Map, "head",          Head_Builtin'Access);
+         Include (Builtin_Map, "rm",            Rm_Builtin'Access);
+         Include (Builtin_Map, "type",          Type_Builtin'Access);
+      end if;
    end Register_Default_Builtins;
 
    --------------------

@@ -254,6 +254,13 @@ package body Posix_Shell.Exec is
                  (Args (K).all, Norm_Args (K - Args'First + Norm_Args'First));
             end if;
          end loop;
+      else
+         for K in Args'Range loop
+            if Args (K) /= null then
+               Norm_Args (K - Args'First + Norm_Args'First) :=
+                 new String'(Args (K).all & ASCII.NUL);
+            end if;
+         end loop;
       end if;
    end Normalize_Arguments;
 

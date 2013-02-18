@@ -40,10 +40,6 @@ package Posix_Shell.Utils is
 
    function Readline (Prompt : String) return String;
 
-   function Delete_File (Filename : String) return long;
-   --  Delete file Filename and return 0 on success and a Windows error code
-   --  otherwise.
-
    function Strip_CR (Str : String) return String;
    --  This function removes all CR from a given string STR
 
