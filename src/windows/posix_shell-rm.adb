@@ -1,3 +1,7 @@
+with System;
+with Ada.Characters.Conversions;
+with GNAT.OS_Lib;
+
 package body Posix_Shell.Rm is
 
    -----------------
