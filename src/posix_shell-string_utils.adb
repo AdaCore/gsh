@@ -25,7 +25,16 @@ package body Posix_Shell.String_Utils is
       Pos : Integer := S'Last;
       Newline_Found : Integer := 0;
    begin
-      while Newline_Found < Size + 1 and then Pos >= S'First loop
+      if S = "" then
+         return "";
+      end if;
+
+      --  The last line might end or not with a LF character
+      if S (Pos) = ASCII.LF then
+         Pos := Pos - 1;
+      end if;
+
+      while Newline_Found < Size and then Pos >= S'First loop
          if S (Pos) = ASCII.LF then
             Newline_Found := Newline_Found + 1;
          end if;
@@ -33,7 +42,7 @@ package body Posix_Shell.String_Utils is
       end loop;
 
       --  Ignore last LF found
-      if Newline_Found = Size + 1 then
+      if Newline_Found = Size then
          Pos := Pos + 1;
       end if;
 
