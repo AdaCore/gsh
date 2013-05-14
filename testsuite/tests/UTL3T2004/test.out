@@ -1,14 +1,7 @@
-==== Test basic value ====
-10 4
-11 3 
-12 2
-13 1
+==== Get last line of file cr/lf line ending ====
+12 2
+13 1
 status: 0
-==== Test tail -0 ====
-status: 0
-==== Test tail -4t (should return error) ====
-[error] tail: invalid context
-status:1
-==== Test tail -4 -5 (should return error) ====
-[error] tail: invalid context
-status:1
+==== Get last line of file cr/lf line ending (last line without line ending) ====
+13 1
+last line without lineendingstatus: 0

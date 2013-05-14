@@ -9,7 +9,7 @@ status: 0
 ==== Test tail -4t (should return error) ====
 [error] tail: invalid context 
 status:1
-==== Test tail -4 -n 5 (should not return error ???) ====
+==== Test tail -4 -n 5 (should not return error) ====
 9  5
 10 4
 11 3
@@ -19,7 +19,7 @@ status:0
 ==== Test tail -n 4 -5 (should return error) ====
 [error] tail: invalid context
 status:1
-==== Test tail -n 4 -n 3 (should output 3 lines)
+==== Test tail -n 4 -n 3 (should output 3 lines) ====
 11 3 
 12 2
 13 1
