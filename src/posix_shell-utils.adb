@@ -1,7 +1,32 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                              Posix_Shell.Utils                           --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2013, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;
-with System;
-with Ada.Characters.Conversions;
+with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 
 package body Posix_Shell.Utils is
@@ -86,64 +111,76 @@ package body Posix_Shell.Utils is
    function Locate_Exec
      (S : Shell_State; Exec_Name : String) return String_Access
    is
-      Current_Path : constant String := Get_Var_Value (S, "PATH");
-      Path_Start : Integer := Current_Path'First;
+      Paths : constant String := Get_Var_Value (S, "PATH");
+      Path_Start : Integer := Paths'First;
       Result : String_Access := null;
+
+      function Get_Path (Path : String) return String;
+      --  Return the corresponding path associated with an element of the PATH
+      --  env variable. Basically the function returns identity or "." the
+      --  element length is 0 (POSIX requires that null components in the PATH
+      --  env var are handled as ".".
+
+      function Get_File (Path : String) return String_Access;
+      --  given a path, probe for file existence with the common windows
+      --  executable extensions ("", ".exe" and ".bat"). Returns the path of
+      --  first encountered file. Note that if no file is found then null is
+      --  returned.
+
+      --------------
+      -- Get_File --
+      --------------
+
+      function Get_File (Path : String) return String_Access is
+      begin
+         for E in Executables_Extensions'Range loop
+            declare
+               Ext : constant String := Executables_Extensions (E).all;
+               Win_Path : constant String := Resolve_Path (S, Path & Ext);
+            begin
+               if GNAT.OS_Lib.Is_Regular_File (Win_Path) then
+                  return new String'(Win_Path);
+               end if;
+            end;
+         end loop;
+
+         --  No suitable file was found so return null
+         return null;
+      end Get_File;
+
+      --------------
+      -- Get_Path --
+      --------------
+
+      function Get_Path (Path : String) return String is
+      begin
+         if Path'Length > 0 then
+            return Path & "/";
+         else
+            return "./";
+         end if;
+      end Get_Path;
+
    begin
       if Base_Name (Exec_Name) /= Exec_Name then
          --  A path is present in the required executable so don't look in the
          --  PATH. Just guess extension
-         for E in Executables_Extensions'Range loop
-            declare
-               Ext : constant String := Executables_Extensions (E).all;
-               Tentative_Path : constant String :=
-                 Resolve_Path (S, Exec_Name & Ext);
-            begin
-               if GNAT.OS_Lib.Is_Regular_File (Tentative_Path) then
-                  Result := new String'(Tentative_Path);
-                  return Result;
-               end if;
-            end;
+         Result := Get_File (Exec_Name);
+      else
+         --  Path passed to the function is a base name so scan PATH variable
+         for Pos in Paths'Range loop
+            if Paths (Pos) = ':' then
+               Result := Get_File
+                 (Get_Path (Paths (Path_Start .. Pos - 1)) & Exec_Name);
+               exit when Result /= null;
+               Path_Start := Pos + 1;
+            elsif Pos = Paths'Last then
+               Result := Get_File
+                 (Get_Path (Paths (Path_Start .. Pos)) & Exec_Name);
+            end if;
          end loop;
-         return Result;
       end if;
 
-      for Pos in Current_Path'Range loop
-         if Current_Path (Pos) = ':' then
-            --  we have a path check if our executable is there
-            if Path_Start < Pos then
-               for E in Executables_Extensions'Range loop
-                  declare
-                     Ext : constant String := Executables_Extensions (E).all;
-                     Tentative_Path : constant String :=
-                       Resolve_Path
-                         (S, Current_Path (Path_Start .. Pos - 1)
-                          & "/" & Exec_Name & Ext);
-                  begin
-                     if GNAT.OS_Lib.Is_Regular_File (Tentative_Path) then
-                        Result := new String'(Tentative_Path);
-                        return Result;
-                     end if;
-                  end;
-               end loop;
-            else
-	       for E in Executables_Extensions'Range loop
-                  declare
-                     Ext : constant String := Executables_Extensions (E).all;
-                     Tentative_Path : constant String :=
-                       Resolve_Path (S, "./" & Exec_Name & Ext);
-                  begin
-                     if GNAT.OS_Lib.Is_Regular_File (Tentative_Path) then
-                        Result := new String'(Tentative_Path);
-                        return Result;
-                     end if;
-                  end;
-               end loop;
-            end if;
-
-            Path_Start := Pos + 1;
-         end if;
-      end loop;
       return Result;
    end Locate_Exec;
 
