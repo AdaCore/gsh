@@ -1,3 +1,29 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                                   GSH                                    --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2013, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 
@@ -39,6 +65,7 @@ begin
    declare
       Current_Dir : constant String := Get_Current_Dir (State.all, True);
       Is_Interactive : Boolean;
+      Should_Exit : Boolean := False;
    begin
       --  Reset PWD and OLDPWD in order to avoid inheriting the values
       --  from the parent process.
@@ -92,6 +119,7 @@ begin
             exception
                when Shell_Exit_Exception =>
                   Status := Get_Last_Exit_Status (State.all);
+                  Should_Exit := True;
                when Shell_Return_Exception =>
                   Put
                     (State.all, 2,
@@ -103,37 +131,39 @@ begin
             end;
 
             --  Do we have a trap registered ?
-            declare
-               Exit_Trap_Action : constant String_Access :=
-                 Get_Trap_Action (State.all, 0);
-               Trap_Status : Integer;
-               pragma Warnings (Off, Trap_Status);
-            begin
+            if not Is_Interactive or else Should_Exit then
+               declare
+                  Exit_Trap_Action : constant String_Access :=
+                    Get_Trap_Action (State.all, 0);
+                  Trap_Status : Integer;
+                  pragma Warnings (Off, Trap_Status);
+               begin
 
-               if Exit_Trap_Action /= null and then
-                 Exit_Trap_Action.all'Length > 0
-               then
-                  Trap_Status := Execute_Builtin (State,
-                                                  "eval",
-                                                  (1 => Exit_Trap_Action));
-               end if;
-            exception
-               when Shell_Exit_Exception =>
-                  Status := Get_Last_Exit_Status (State.all);
-                  exit;
-               when Shell_Return_Exception =>
-                  Put
-                    (State.all, 2,
-                     "return: can only `return' from a " &
-                       "function or sourced script" & ASCII.LF);
-                  Save_Last_Exit_Status (State.all, 1);
-                  Status := 1;
+                  if Exit_Trap_Action /= null and then
+                    Exit_Trap_Action.all'Length > 0
+                  then
+                     Trap_Status := Execute_Builtin (State,
+                                                     "eval",
+                                                     (1 => Exit_Trap_Action));
+                  end if;
+               exception
+                  when Shell_Exit_Exception =>
+                     Status := Get_Last_Exit_Status (State.all);
+                     exit;
+                  when Shell_Return_Exception =>
+                     Put
+                       (State.all, 2,
+                        "return: can only `return' from a " &
+                          "function or sourced script" & ASCII.LF);
+                     Save_Last_Exit_Status (State.all, 1);
+                     Status := 1;
 
-            end;
+               end;
+            end if;
 
          end if;
          Free_Node (T);
-         if not Is_Interactive then
+         if not Is_Interactive or Should_Exit then
             exit;
          end if;
       end loop;
@@ -147,7 +177,6 @@ begin
          Put_Line (Exception_Message (E));
          --  Put_Line (Symbolic_Traceback (E));
          return 127;
-
 
    end;
 
