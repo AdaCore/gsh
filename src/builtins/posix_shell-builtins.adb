@@ -1,3 +1,29 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                           Posix_Shell.Builtins                           --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2013, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Posix_Shell.Builtins_Printf; use Posix_Shell.Builtins_Printf;
 with Posix_Shell.Builtins_Expr; use Posix_Shell.Builtins_Expr;
 with Posix_Shell.Builtins.Test; use Posix_Shell.Builtins.Test;
@@ -267,7 +293,6 @@ package body Posix_Shell.Builtins is
          return 0;
       end if;
 
-
       if not Is_Directory (Abs_Dir) then
          Put (S.all, 2, "cd: " & Dir_Name & ": No such file or directory");
          New_Line (S.all, 2);
@@ -529,7 +554,26 @@ package body Posix_Shell.Builtins is
    is
    begin
       for I in Args'Range loop
-         Export_Var (S.all, Args (I).all);
+         declare
+            Arg : constant String := Args (I).all;
+            Equal_Pos : Integer := Arg'First;
+         begin
+            for Index in Arg'Range loop
+               if Arg (Index) = '=' then
+                  Equal_Pos := Index;
+                  exit;
+               end if;
+            end loop;
+
+            if Equal_Pos > Arg'First then
+               Set_Var_Value (S.all,
+                              Arg (Arg'First .. Equal_Pos - 1),
+                              Arg (Equal_Pos + 1 .. Arg'Last),
+                              Export => True);
+            else
+               Export_Var (S.all, Arg);
+            end if;
+         end;
       end loop;
       return 0;
    end Export_Builtin;
@@ -837,7 +881,6 @@ package body Posix_Shell.Builtins is
                      "': no such file or directory");
          end if;
       end Rm_Tree;
-
 
    begin
 
