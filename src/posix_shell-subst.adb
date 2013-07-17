@@ -1,9 +1,36 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                              Posix_Shell.Subst                           --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2013, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Posix_Shell.Exec;       use Posix_Shell.Exec;
 with Posix_Shell.Variables.Output;     use Posix_Shell.Variables.Output;
 with Posix_Shell.Parser;     use Posix_Shell.Parser;
 with Posix_Shell.Tree;       use Posix_Shell.Tree;
 with Posix_Shell.Utils;      use Posix_Shell.Utils;
 with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
+with Posix_Shell.GNULib;     use Posix_Shell.GNULib;
 
 with Ada.Strings.Unbounded;
 with Ada.Directories;
@@ -25,6 +52,7 @@ package body Posix_Shell.Subst is
                                 Word : Annotated_String;
                                 Modifier : Character;
                                 Treat_Null_As_Unset : Boolean;
+                                Largest : Boolean;
                                 Note : Annotation)
      return Annotated_String;
    --  Perform the expansion of the given parameter and word following
@@ -78,6 +106,7 @@ package body Posix_Shell.Subst is
       Parameter_Last : Integer;
       Word_First : Integer;
       Treat_Null_As_Unset : Boolean := False;
+      Largest : Boolean := False;
    begin
       --  If no expansion is needed, then the expression is actually
       --  a variable name. Return its value.
@@ -104,7 +133,7 @@ package body Posix_Shell.Subst is
       --  hand, a null word is allowed.
       for J in E'First + 1 .. E'Last loop
          if E (J) = '-' or else E (J) = '=' or else E (J) = '?'
-           or else E (J) = '+'
+           or else E (J) = '+' or else E (J) = '%' or else E (J) = '#'
          then
             Modifier := E (J);
             Parameter_Last := J - 1;
@@ -125,6 +154,17 @@ package body Posix_Shell.Subst is
          Parameter_Last := Parameter_Last - 1;
       end if;
 
+      --  check for suffix/prefix removal if this the largest or the smallest
+      if Modifier = '%' and Word_First <= E'Last and E (Word_First) = '%' then
+         Largest := True;
+         Word_First := Word_First + 1;
+      end if;
+
+      if Modifier = '#' and Word_First <= E'Last and E (Word_First) = '#' then
+         Largest := True;
+         Word_First := Word_First + 1;
+      end if;
+
       --  Return the expanded result...
       declare
          Word : constant Annotated_String := Slice (Expr, Word_First, E'Last);
@@ -134,6 +174,7 @@ package body Posix_Shell.Subst is
                                Word => Word,
                                Modifier => Modifier,
                                Treat_Null_As_Unset => Treat_Null_As_Unset,
+                               Largest => Largest,
                                Note => Note);
       begin
          return Result;
@@ -189,7 +230,7 @@ package body Posix_Shell.Subst is
             when QUOTED_WORD_FIELD =>
                Append (Result_List, new String'(To_String (Buffer)));
             when WORD_FIELD =>
-               if Is_File_Expansion_Enabled(SS.all) then
+               if Is_File_Expansion_Enabled (SS.all) then
                   Append (Result_List,
                           Filename_Expansion (SS, To_String (Buffer)));
                else
@@ -578,8 +619,8 @@ package body Posix_Shell.Subst is
    is
       Result : constant Annotated_String := Eval_String_Aux
         (SS, S, Case_Pattern, Quote_Removal_Only);
-      -- we create a buffer or twice the size as some characters might be
-      -- excaped in case construct context
+      --  we create a buffer or twice the size as some characters might be
+      --  excaped in case construct context
       Result_String : String (1 .. Length (Result) * 2);
       Result_Index  : Integer := 1;
    begin
@@ -626,6 +667,7 @@ package body Posix_Shell.Subst is
                                 Word : Annotated_String;
                                 Modifier : Character;
                                 Treat_Null_As_Unset : Boolean;
+                                Largest : Boolean;
                                 Note : Annotation)
      return Annotated_String
    is
@@ -690,6 +732,56 @@ package body Posix_Shell.Subst is
             else
                return To_Annotated_String ("", Note);
             end if;
+         when '%' =>
+            --  Implement remove suffix
+            declare
+               Word_Value : constant String :=
+                 Eval_String_Unsplit (SS, Word, Case_Pattern => True);
+
+               P_Value : constant String := Str (Parameter_Value);
+            begin
+               if Largest then
+                  for J in P_Value'Range loop
+                     if Fnmatch (Word_Value, P_Value (J .. P_Value'Last)) then
+                        return Slice (Parameter_Value, 1, J - 1);
+                     end if;
+                  end loop;
+               else
+                  for J in reverse P_Value'Range loop
+                     if Fnmatch (Word_Value, P_Value (J .. P_Value'Last)) then
+                        return Slice (Parameter_Value, 1, J - 1);
+                     end if;
+                  end loop;
+               end if;
+
+               return Parameter_Value;
+            end;
+         when '#' =>
+            --  Implement remove prefix
+            declare
+               Word_Value : constant String :=
+                 Eval_String_Unsplit (SS, Word, Case_Pattern => True);
+
+               P_Value : constant String := Str (Parameter_Value);
+            begin
+               if not Largest then
+                  for J in P_Value'Range loop
+                     if Fnmatch (Word_Value, P_Value (P_Value'First .. J)) then
+                        return Slice (Parameter_Value, J + 1,
+                                      Length (Parameter_Value));
+                     end if;
+                  end loop;
+               else
+                  for J in reverse P_Value'Range loop
+                     if Fnmatch (Word_Value, P_Value (P_Value'First .. J)) then
+                        return Slice (Parameter_Value, J + 1,
+                                     Length (Parameter_Value));
+                     end if;
+                  end loop;
+               end if;
+
+               return Parameter_Value;
+            end;
 
          when others =>
             --  Impossible!
