@@ -23,10 +23,7 @@ project Posix_Shell is
                                          "-Lreadline",
                                          "-lreadline",
                                          "-Wl,--stack=0x2000000");
-
-      when "unix" => Default_Libs := ("-lreadline",
-                                      "-Llua/install/lib",
-                                      "-llua");
+      when "unix" => Default_Libs := ("-lreadline");
    end case;
 
    Default_C_Switches := ("-I" & external("DDK_DIR"));

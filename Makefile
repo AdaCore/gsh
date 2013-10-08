@@ -27,7 +27,7 @@ BUILD=prod
 COVERAGE=false
 
 # Main build target
-all: lua/install/liblua.a
+all:
 	@echo "building gsh for $(SYS)"
 	gprbuild -p -P posix_shell -XBUILD=$(BUILD) -XCOVERAGE=$(COVERAGE) \
 		 -XDDK_DIR=$(DDK_DIR) -XSYS=$(SYS)
