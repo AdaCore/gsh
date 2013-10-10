@@ -745,6 +745,7 @@ package body Posix_Shell.Builtins is
       Include (Builtin_Map, "trap",          Trap_Builtin'Access);
       Include (Builtin_Map, "cat",           Cat_Builtin'Access);
       Include (Builtin_Map, "read",          Read_Builtin'Access);
+
       if GNAT.Directory_Operations.Dir_Separator = '\' then
          --  No need to include these builtins on non-windows machines
          Include (Builtin_Map, "wc",            Wc_Builtin'Access);
@@ -1199,14 +1200,96 @@ package body Posix_Shell.Builtins is
       return 0;
    end Unsetenv_Builtin;
 
+   ----------------
+   -- Wc_Builtin --
+   ----------------
+
    function Wc_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer
    is
-      pragma Unreferenced (Args);
-      Result : constant String := Read (S.all, 0);
+      Line_Count : Integer := 0;
+      Word_Count : Integer := 0;
+      Byte_Count : Integer := 0;
+      Show_Line_Count : Boolean := False;
+      Show_Word_Count : Boolean := False;
+      Show_Byte_Count : Boolean := False;
+      File_List_Index : Integer := -1;
+      Has_Option : Boolean := False;
    begin
-      Put (S.all, 1, To_String (Result'Length));
-      Put (S.all, 1, ASCII.LF & "");
+      --  Parse arguments
+      for Index in Args'Range loop
+         if Args (Index).all (Args (Index)'First) = '-' then
+            Has_Option := True;
+            for Char_Index in Args (Index)'First + 1 .. Args (Index)'Last loop
+               case Args (Index) (Char_Index) is
+                  when 'w' => Show_Word_Count := True;
+                  when 'c' => Show_Byte_Count := True;
+                  when 'l' => Show_Line_Count := True;
+                  when others =>
+                     Put (S.all, 2,
+                          "unexpected option " &
+                            Args (Index) (Char_Index) & ASCII.LF);
+                     return 1;
+               end case;
+            end loop;
+         else
+            File_List_Index := Index;
+            exit;
+         end if;
+      end loop;
+
+      if not Has_Option then
+         --  no option has been passed. the default is to show everything
+         Show_Line_Count := True;
+         Show_Word_Count := True;
+         Show_Byte_Count := True;
+      end if;
+
+      --  At this stage we read data either from files passed as arguments or
+      --  if no file has been passed from stdin
+      if File_List_Index /= -1 then
+         Put (S.all, 2, "file as argument not supported" & ASCII.LF);
+         return 1;
+      else
+         declare
+            --  Not the best way as we push the full stdin content in memory
+            --  but should not be a problem
+            Stdin_Str : constant String := Read (S.all, 0);
+            In_Word : Boolean := False;
+         begin
+            for Index in Stdin_Str'Range loop
+               case Stdin_Str (Index) is
+                  when ' ' | ASCII.HT | ASCII.LF =>
+                     if In_Word then
+                        Word_Count := Word_Count + 1;
+                        In_Word := False;
+                     end if;
+                  when others =>
+                     In_Word := True;
+               end case;
+               if Stdin_Str (Index) = ASCII.LF then
+                  Line_Count := Line_Count + 1;
+               end if;
+               Byte_Count := Byte_Count + 1;
+            end loop;
+            if In_Word then
+               Word_Count := Word_Count + 1;
+            end if;
+
+            if Show_Line_Count then
+               Put (S.all, 1, Integer'Image (Line_Count));
+            end if;
+            if Show_Word_Count then
+               Put (S.all, 1, Integer'Image (Word_Count));
+            end if;
+
+            if Show_Byte_Count then
+               Put (S.all, 1, Integer'Image (Byte_Count));
+            end if;
+            Put (S.all, 1, ASCII.LF & "");
+         end;
+      end if;
+
       return 0;
    end Wc_Builtin;
 
