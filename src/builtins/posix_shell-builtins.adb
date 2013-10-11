@@ -745,10 +745,11 @@ package body Posix_Shell.Builtins is
       Include (Builtin_Map, "trap",          Trap_Builtin'Access);
       Include (Builtin_Map, "cat",           Cat_Builtin'Access);
       Include (Builtin_Map, "read",          Read_Builtin'Access);
+      Include (Builtin_Map, "wc",            Wc_Builtin'Access);
 
       if GNAT.Directory_Operations.Dir_Separator = '\' then
          --  No need to include these builtins on non-windows machines
-         Include (Builtin_Map, "wc",            Wc_Builtin'Access);
+
          Include (Builtin_Map, "tail",          Tail_Builtin'Access);
          Include (Builtin_Map, "head",          Head_Builtin'Access);
          Include (Builtin_Map, "rm",            Rm_Builtin'Access);
@@ -1207,14 +1208,70 @@ package body Posix_Shell.Builtins is
    function Wc_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer
    is
-      Line_Count : Integer := 0;
-      Word_Count : Integer := 0;
-      Byte_Count : Integer := 0;
+
+      Global_Line_Count : Integer := 0;
+      Global_Word_Count : Integer := 0;
+      Global_Byte_Count : Integer := 0;
       Show_Line_Count : Boolean := False;
       Show_Word_Count : Boolean := False;
       Show_Byte_Count : Boolean := False;
       File_List_Index : Integer := -1;
       Has_Option : Boolean := False;
+
+      procedure Count (Content : String; Content_Name : String);
+      --  Update counter taking into account the content passed as argument.
+
+      -----------
+      -- Count --
+      -----------
+
+      procedure Count (Content : String; Content_Name : String) is
+         Line_Count : Integer := 0;
+         Word_Count : Integer := 0;
+         Byte_Count : Integer := 0;
+         In_Word : Boolean := False;
+      begin
+         for Index in Content'Range loop
+            case Content (Index) is
+               when ' ' | ASCII.HT | ASCII.LF | ASCII.CR =>
+                  if In_Word then
+                     Word_Count := Word_Count + 1;
+                     In_Word := False;
+                  end if;
+               when others =>
+                  In_Word := True;
+            end case;
+            if Content (Index) = ASCII.LF then
+               Line_Count := Line_Count + 1;
+            end if;
+            Byte_Count := Byte_Count + 1;
+         end loop;
+         if In_Word then
+            Word_Count := Word_Count + 1;
+         end if;
+
+         if Show_Line_Count then
+            Put (S.all, 1, Integer'Image (Line_Count));
+         end if;
+         if Show_Word_Count then
+            Put (S.all, 1, Integer'Image (Word_Count));
+         end if;
+
+         if Show_Byte_Count then
+            Put (S.all, 1, Integer'Image (Byte_Count));
+         end if;
+
+         if Content_Name'Length > 0 then
+            Put (S.all, 1, " " & Content_Name);
+         end if;
+
+         Put (S.all, 1, ASCII.LF & "");
+
+         Global_Byte_Count := Global_Byte_Count + Byte_Count;
+         Global_Word_Count := Global_Word_Count + Word_Count;
+         Global_Line_Count := Global_Line_Count + Line_Count;
+      end Count;
+
    begin
       --  Parse arguments
       for Index in Args'Range loop
@@ -1248,46 +1305,51 @@ package body Posix_Shell.Builtins is
       --  At this stage we read data either from files passed as arguments or
       --  if no file has been passed from stdin
       if File_List_Index /= -1 then
-         Put (S.all, 2, "file as argument not supported" & ASCII.LF);
-         return 1;
-      else
-         declare
-            --  Not the best way as we push the full stdin content in memory
-            --  but should not be a problem
-            Stdin_Str : constant String := Read (S.all, 0);
-            In_Word : Boolean := False;
-         begin
-            for Index in Stdin_Str'Range loop
-               case Stdin_Str (Index) is
-                  when ' ' | ASCII.HT | ASCII.LF =>
-                     if In_Word then
-                        Word_Count := Word_Count + 1;
-                        In_Word := False;
-                     end if;
-                  when others =>
-                     In_Word := True;
-               end case;
-               if Stdin_Str (Index) = ASCII.LF then
-                  Line_Count := Line_Count + 1;
+         for File_Index in File_List_Index .. Args'Last loop
+            declare
+               Fd : File_Descriptor;
+               Fl : Long_Integer := 0;
+               Buffer : String_Access := null;
+               R : Integer;
+               pragma Unreferenced (R);
+            begin
+               Fd := Open_Read (Resolve_Path (S.all, Args (File_Index).all),
+                                Binary);
+               if Fd < 0 then
+                  Put (S.all, 2, "wc: " & Args (File_Index).all &
+                       ": No such file or directory" & ASCII.LF);
+               else
+                  Fl := File_Length (Fd);
+                  Buffer := new String (1 .. Integer (Fl));
+                  R := Read (Fd, Buffer.all'Address, Buffer.all'Last);
+                  Count (Buffer.all, Args (File_Index).all);
+                  Close (Fd);
+                  Free (Buffer);
                end if;
-               Byte_Count := Byte_Count + 1;
-            end loop;
-            if In_Word then
-               Word_Count := Word_Count + 1;
+
+            end;
+         end loop;
+
+         --  more than 2 files so print totals
+         if Args'Last - File_List_Index > 0 then
+            if Show_Line_Count then
+               Put (S.all, 1, Integer'Image (Global_Line_Count));
             end if;
 
-            if Show_Line_Count then
-               Put (S.all, 1, Integer'Image (Line_Count));
-            end if;
             if Show_Word_Count then
-               Put (S.all, 1, Integer'Image (Word_Count));
+               Put (S.all, 1, Integer'Image (Global_Word_Count));
             end if;
 
             if Show_Byte_Count then
-               Put (S.all, 1, Integer'Image (Byte_Count));
+               Put (S.all, 1, Integer'Image (Global_Byte_Count));
             end if;
-            Put (S.all, 1, ASCII.LF & "");
-         end;
+
+            Put (S.all, 1, " total" & ASCII.LF);
+
+         end if;
+
+      else
+         Count (Read (S.all, 0), "");
       end if;
 
       return 0;
