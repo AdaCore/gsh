@@ -1,3 +1,29 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                           Posix_Shell.Tree.Evals                         --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2013, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Functions; use Posix_Shell.Functions;
@@ -9,8 +35,14 @@ with Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 with GNAT.Task_Lock;
+with GNAT.Regpat; use GNAT.Regpat;
 
 package body Posix_Shell.Tree.Evals is
+
+   Special_Builtin_Matcher : constant Pattern_Matcher := Compile
+     ("^(eval|exec|source|\.)$");
+   --  Regexp used to check if a command is a special builtin (see open group
+   --  definition of special builtins).
 
    procedure Eval_List (S : Shell_State_Access; T : Shell_Tree; N : Node);
    procedure Eval_Case (S : Shell_State_Access; T : Shell_Tree; N : Node);
@@ -88,7 +120,6 @@ package body Posix_Shell.Tree.Evals is
          entry Start (Pipe_Input : out File_Descriptor);
          entry Get_Exit_Status;
       end Eval_Task;
-
 
       task body Eval_Task is
          S_Copy : constant Shell_State_Access := new Shell_State;
@@ -339,12 +370,29 @@ package body Posix_Shell.Tree.Evals is
            Eval_String_List (S, N.Cmd & N.Arguments);
          Args : constant String_List
            := Result_String (Result_String'First + 1 .. Result_String'Last);
+         Cmd : constant String := Result_String (Result_String'First).all;
+
+         Is_Special_Builtin : Boolean := False;
+
          New_State : Shell_State_Access := S;
       begin
          Set_Var_Value (S.all, "LINENO", To_String (Get_Lineno (N.Pos)));
+
+         --  Is the command a special builtin ?
+         if Match (Special_Builtin_Matcher, Cmd) then
+            Is_Special_Builtin := True;
+         end if;
+
          if Length (N.Cmd_Assign_List) > 0 then
-            New_State := new Shell_State;
-            New_State.all := Enter_Scope (S.all);
+            --  As stated by posix shell standard (2.14 Special Built-In
+            --  Utilities). Variable assignments specified with special
+            --  built-in utilities remain in effect after the built-in
+            --  completes. Note that most of the shell such as bash do not
+            --  respect this requirement.
+            if not Is_Special_Builtin then
+               New_State := new Shell_State;
+               New_State.all := Enter_Scope (S.all);
+            end if;
             Eval_Assign (New_State, N, True);
          end if;
 
@@ -357,8 +405,7 @@ package body Posix_Shell.Tree.Evals is
          if Result_String'Length > 0 then
             Eval_Cmd (S => New_State,
                       T => T,
-                      Command => Result_String
-                        (Result_String'First).all,
+                      Command => Cmd,
                       Arguments => Args,
                       Redirections => N.Redirections);
             for J in Result_String'Range loop
@@ -372,7 +419,7 @@ package body Posix_Shell.Tree.Evals is
                "(return " & Get_Last_Exit_Status (New_State.all)'Img & ")");
          end if;
 
-         if Length (N.Cmd_Assign_List) > 0 then
+         if Length (N.Cmd_Assign_List) > 0 and not Is_Special_Builtin then
             Leave_Scope (New_State.all, S.all, True);
          end if;
       end;
@@ -510,7 +557,6 @@ package body Posix_Shell.Tree.Evals is
          entry Start (Pipe_Input : in out File_Descriptor; N : Node_Id);
       end Eval_Task;
 
-
       task body Eval_Task is
          S_Copy : constant Shell_State_Access := new Shell_State;
          Cmd_Node : Node_Id;
@@ -548,7 +594,6 @@ package body Posix_Shell.Tree.Evals is
          end if;
          GNAT.Task_Lock.Unlock;
 
-
          --  accept Get_Exit_Status do
          --  Destroy scope and ensure exit_status is correctly set.
          --   Leave_Scope (S_Copy.all, S.all);
@@ -563,7 +608,6 @@ package body Posix_Shell.Tree.Evals is
       for J in N.Pipe_Childs'First .. N.Pipe_Childs'Last - 1 loop
          My_Tasks (J).Start (Input_Fd, N.Pipe_Childs (J));
       end loop;
-
 
       declare
          S_Copy : constant Shell_State_Access := new Shell_State;
