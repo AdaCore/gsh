@@ -1,3 +1,29 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                           Posix_Shell.Variables                          --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2013, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Environment_Variables; use Ada.Environment_Variables;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
@@ -445,7 +471,6 @@ package body Posix_Shell.Variables is
             end loop;
          end if;
 
-
          State.Current_Dir := new String'(Dir (Dir'First .. Last));
       end;
 
@@ -710,7 +735,7 @@ package body Posix_Shell.Variables is
    -- Set_File_Expansion --
    ------------------------
 
-   procedure Set_File_Expansion (S: in out Shell_State; Value : Boolean) is
+   procedure Set_File_Expansion (S : in out Shell_State; Value : Boolean) is
    begin
       S.File_Expansion_Enabled := Value;
    end Set_File_Expansion;
@@ -754,8 +779,52 @@ package body Posix_Shell.Variables is
    ---------------------
 
    procedure Set_Script_Name (S : in out Shell_State; Value : String) is
+
+      function Path_Transform (S : String) return String;
+      --  Transform windows path into a unix like path
+
+      --------------------
+      -- Path_Transform --
+      --------------------
+
+      function Path_Transform (S : String) return String is
+      begin
+         if Directory_Separator = '\' then
+            declare
+               Result : String (1 .. S'Length);
+               Result_Last : Integer := 0;
+               Is_First : Boolean := True;
+               Index : Natural := S'First;
+            begin
+               loop
+                  if Is_First and then Index + 1 <= S'Last and then
+                    S (Index + 1) = ':'
+                  then
+                     Index := Index + 1;
+                     Is_First := False;
+                  elsif S (Index) = ';' then
+                     Result_Last := Result_Last + 1;
+                     Result (Result_Last) := ':';
+                     Is_First := True;
+                  elsif S (Index) = '\' then
+                     Result_Last := Result_Last + 1;
+                     Result (Result_Last) := '/';
+                  else
+                     Result_Last := Result_Last + 1;
+                     Result (Result_Last) := S (Index);
+                  end if;
+                  Index := Index + 1;
+                  exit when Index > S'Last;
+               end loop;
+               return Result (1 .. Result_Last);
+            end;
+
+         else
+            return S;
+         end if;
+      end Path_Transform;
    begin
-      S.Script_Name := new String'(Value);
+      S.Script_Name := new String'(Path_Transform (Value));
    end Set_Script_Name;
 
    ---------------------
@@ -808,6 +877,7 @@ package body Posix_Shell.Variables is
          if (Name = "PATH" or else Name = "HOME") and then
            Directory_Separator = '\'
          then
+
             declare
                Result : String (1 .. S'Length * 3);
                Result_Last : Integer := 0;
@@ -860,7 +930,9 @@ package body Posix_Shell.Variables is
                   Index := Index + 1;
                   exit when Index > S'Last;
                end loop;
+
                return Result (1 .. Result_Last);
+
             end;
 
          else

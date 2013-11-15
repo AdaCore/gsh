@@ -1,3 +1,29 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                           Posix_Shell.Variables                          --
+--                                                                          --
+--                                 S p e c                                  --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2013, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Ada.Containers.Indefinite_Hashed_Maps;
@@ -112,7 +138,7 @@ package Posix_Shell.Variables is
 
    procedure Set_Xtrace (S : in out Shell_State; Value : Boolean);
 
-   procedure Set_File_Expansion (S: in out Shell_State; Value : Boolean);
+   procedure Set_File_Expansion (S : in out Shell_State; Value : Boolean);
 
    function Is_Xtrace_Enabled (S : Shell_State) return Boolean;
 
@@ -126,7 +152,6 @@ package Posix_Shell.Variables is
    function Get_Trap_Action
      (S : Shell_State; Signal_Number : Integer)
       return String_Access;
-
 
    type Redirection_States is private;
 private
