@@ -368,60 +368,69 @@ package body Posix_Shell.Tree.Evals is
       declare
          Result_String : String_List :=
            Eval_String_List (S, N.Cmd & N.Arguments);
-         Args : constant String_List
-           := Result_String (Result_String'First + 1 .. Result_String'Last);
-         Cmd : constant String := Result_String (Result_String'First).all;
 
-         Is_Special_Builtin : Boolean := False;
-
-         New_State : Shell_State_Access := S;
       begin
-         Set_Var_Value (S.all, "LINENO", To_String (Get_Lineno (N.Pos)));
 
-         --  Is the command a special builtin ?
-         if Match (Special_Builtin_Matcher, Cmd) then
-            Is_Special_Builtin := True;
+         if Result_String'Length = 0 then
+            return;
          end if;
 
-         if Length (N.Cmd_Assign_List) > 0 then
-            --  As stated by posix shell standard (2.14 Special Built-In
-            --  Utilities). Variable assignments specified with special
-            --  built-in utilities remain in effect after the built-in
-            --  completes. Note that most of the shell such as bash do not
-            --  respect this requirement.
-            if not Is_Special_Builtin then
-               New_State := new Shell_State;
-               New_State.all := Enter_Scope (S.all);
+         declare
+            Args : constant String_List
+              := Result_String (Result_String'First + 1 .. Result_String'Last);
+            Cmd : constant String := Result_String (Result_String'First).all;
+
+            Is_Special_Builtin : Boolean := False;
+
+            New_State : Shell_State_Access := S;
+         begin
+            Set_Var_Value (S.all, "LINENO", To_String (Get_Lineno (N.Pos)));
+
+            --  Is the command a special builtin ?
+            if Match (Special_Builtin_Matcher, Cmd) then
+               Is_Special_Builtin := True;
             end if;
-            Eval_Assign (New_State, N, True);
-         end if;
 
-         if Is_Xtrace_Enabled (S.all) then
-            Ada.Text_IO.Put_Line
-              (Ada.Text_IO.Standard_Error,
-               "(pos " & Image (N.Pos) & ")");
-         end if;
+            if Length (N.Cmd_Assign_List) > 0 then
+               --  As stated by posix shell standard (2.14 Special Built-In
+               --  Utilities). Variable assignments specified with special
+               --  built-in utilities remain in effect after the built-in
+               --  completes. Note that most of the shell such as bash do not
+               --  respect this requirement.
+               if not Is_Special_Builtin then
+                  New_State := new Shell_State;
+                  New_State.all := Enter_Scope (S.all);
+               end if;
+               Eval_Assign (New_State, N, True);
+            end if;
 
-         if Result_String'Length > 0 then
-            Eval_Cmd (S => New_State,
-                      T => T,
-                      Command => Cmd,
-                      Arguments => Args,
-                      Redirections => N.Redirections);
-            for J in Result_String'Range loop
-               Free (Result_String (J));
-            end loop;
-         end if;
+            if Is_Xtrace_Enabled (S.all) then
+               Ada.Text_IO.Put_Line
+                 (Ada.Text_IO.Standard_Error,
+                  "(pos " & Image (N.Pos) & ")");
+            end if;
 
-         if Is_Xtrace_Enabled (S.all) then
-            Ada.Text_IO.Put_Line
-              (Ada.Text_IO.Standard_Error,
-               "(return " & Get_Last_Exit_Status (New_State.all)'Img & ")");
-         end if;
+            if Result_String'Length > 0 then
+               Eval_Cmd (S => New_State,
+                         T => T,
+                         Command => Cmd,
+                         Arguments => Args,
+                         Redirections => N.Redirections);
+               for J in Result_String'Range loop
+                  Free (Result_String (J));
+               end loop;
+            end if;
 
-         if Length (N.Cmd_Assign_List) > 0 and not Is_Special_Builtin then
-            Leave_Scope (New_State.all, S.all, True);
-         end if;
+            if Is_Xtrace_Enabled (S.all) then
+               Ada.Text_IO.Put_Line
+                 (Ada.Text_IO.Standard_Error,
+                  "(return " & Get_Last_Exit_Status (New_State.all)'Img & ")");
+            end if;
+
+            if Length (N.Cmd_Assign_List) > 0 and not Is_Special_Builtin then
+               Leave_Scope (New_State.all, S.all, True);
+            end if;
+         end;
       end;
 
       exception
