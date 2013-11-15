@@ -1,9 +1,34 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                             Posix_Shell.Opts                             --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2013, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Ada.Command_Line; use Ada.Command_Line;
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Strings.Unbounded;
 with GNAT.OS_Lib;
 with GNAT.Strings; use GNAT.Strings;
-with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 
 package body Posix_Shell.Opts is
@@ -36,6 +61,7 @@ package body Posix_Shell.Opts is
       --  when true gshrc will be sourced
 
       GSHRC_Status : Integer := 0;
+      pragma Unreferenced (GSHRC_Status);
    begin
       Is_Interactive := False;
       Status := 0;
@@ -55,7 +81,6 @@ package body Posix_Shell.Opts is
             --  at each exit point of this loop in addition to after
             --  having processed the switch.
             Arg_Number := Arg_Number + 1;
-
 
             if Arg = "-n" then
                Do_Script_Evaluation := False;
