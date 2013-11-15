@@ -37,6 +37,13 @@ package Posix_Shell.Utils is
    --  return its value in "V", and set Valid to True. Otherwise, set
    --  "Valid" to False (in which case, the value of V is undefined).
 
+   procedure To_LongLong (S : String;
+                          V : out Long_Long_Integer;
+                          Valid : out Boolean);
+   --  If the string "S" is a valid decimal representation of a number,
+   --  return its value in "V", and set Valid to True. Otherwise, set
+   --  "Valid" to False (in which case, the value of V is undefined).
+
    function Is_Natural (S : String) return Boolean;
 
    function To_Integer (B : Boolean) return Integer;

@@ -1,3 +1,29 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                          Posix_Shell.Builtins.Test                       --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2013, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 
@@ -31,7 +57,8 @@ package body Posix_Shell.Builtins.Test is
       IS_WFILE_OP            --  -w
      );
 
-   type Binop_Access is access function (Left, Right : Integer) return Boolean;
+   type Binop_Access is access function
+     (Left, Right : Long_Long_Integer) return Boolean;
 
    function Eval_Binop (S : Shell_State_Access;
                         Left, Right : String_Access;
@@ -43,27 +70,27 @@ package body Posix_Shell.Builtins.Test is
    --  If either of Left or Right were not valid images of decimal integers,
    --  then report a descriptive error message, and return 2.
 
-   function Equal (Left, Right : Integer) return Boolean;
+   function Equal (Left, Right : Long_Long_Integer) return Boolean;
    --  A wrapper around "=". The purpose of this function is to be
    --  able to take its 'Address.
 
-   function Not_Equal (Left, Right : Integer) return Boolean;
+   function Not_Equal (Left, Right : Long_Long_Integer) return Boolean;
    --  A wrapper around "/=". The purpose of this function is to be
    --  able to take its 'Address.
 
-   function Greater_Than (Left, Right : Integer) return Boolean;
+   function Greater_Than (Left, Right : Long_Long_Integer) return Boolean;
    --  A wrapper around ">". The purpose of this function is to be
    --  able to take its 'Address.
 
-   function Greater_Equal (Left, Right : Integer) return Boolean;
+   function Greater_Equal (Left, Right : Long_Long_Integer) return Boolean;
    --  A wrapper around ">=". The purpose of this function is to be
    --  able to take its 'Address.
 
-   function Less_Than (Left, Right : Integer) return Boolean;
+   function Less_Than (Left, Right : Long_Long_Integer) return Boolean;
    --  A wrapper around "<". The purpose of this function is to be
    --  able to take its 'Address.
 
-   function Less_Equal (Left, Right : Integer) return Boolean;
+   function Less_Equal (Left, Right : Long_Long_Integer) return Boolean;
    --  A wrapper around "<=". The purpose of this function is to be
    --  able to take its 'Address.
 
@@ -71,7 +98,7 @@ package body Posix_Shell.Builtins.Test is
    -- Equal --
    -----------
 
-   function Equal (Left, Right : Integer) return Boolean is
+   function Equal (Left, Right : Long_Long_Integer) return Boolean is
    begin
       return Left = Right;
    end Equal;
@@ -84,16 +111,16 @@ package body Posix_Shell.Builtins.Test is
                         Left, Right : String_Access;
                         Binop : Binop_Access) return Integer
    is
-      Left_V, Right_V : Integer;
+      Left_V, Right_V : Long_Long_Integer;
       Success : Boolean;
    begin
-      To_Integer (Left.all, Left_V, Success);
+      To_LongLong (Left.all, Left_V, Success);
       if not Success then
          Error (S.all, "test: " & Left.all & ": integer expression expected");
          return 2;
       end if;
 
-      To_Integer (Right.all, Right_V, Success);
+      To_LongLong (Right.all, Right_V, Success);
       if not Success then
          Error (S.all, "test: " & Right.all & ": integer expression expected");
          return 2;
@@ -110,7 +137,7 @@ package body Posix_Shell.Builtins.Test is
    -- Greater_Equal --
    -------------------
 
-   function Greater_Equal (Left, Right : Integer) return Boolean is
+   function Greater_Equal (Left, Right : Long_Long_Integer) return Boolean is
    begin
       return Left >= Right;
    end Greater_Equal;
@@ -119,7 +146,7 @@ package body Posix_Shell.Builtins.Test is
    -- Greater_Than --
    ------------------
 
-   function Greater_Than (Left, Right : Integer) return Boolean is
+   function Greater_Than (Left, Right : Long_Long_Integer) return Boolean is
    begin
       return Left > Right;
    end Greater_Than;
@@ -128,7 +155,7 @@ package body Posix_Shell.Builtins.Test is
    -- Less_Equal --
    ----------------
 
-   function Less_Equal (Left, Right : Integer) return Boolean is
+   function Less_Equal (Left, Right : Long_Long_Integer) return Boolean is
    begin
       return Left <= Right;
    end Less_Equal;
@@ -137,7 +164,7 @@ package body Posix_Shell.Builtins.Test is
    -- Less_Than --
    ---------------
 
-   function Less_Than (Left, Right : Integer) return Boolean is
+   function Less_Than (Left, Right : Long_Long_Integer) return Boolean is
    begin
       return Left < Right;
    end Less_Than;
@@ -146,7 +173,7 @@ package body Posix_Shell.Builtins.Test is
    -- Not_Equal --
    ---------------
 
-   function Not_Equal (Left, Right : Integer) return Boolean is
+   function Not_Equal (Left, Right : Long_Long_Integer) return Boolean is
    begin
       return Left /= Right;
    end Not_Equal;

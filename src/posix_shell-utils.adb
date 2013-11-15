@@ -255,6 +255,23 @@ package body Posix_Shell.Utils is
       end if;
    end To_Integer;
 
+   -------------
+   -- To_Long --
+   -------------
+
+   procedure To_LongLong (S : String; V : out Long_Long_Integer;
+                          Valid : out Boolean) is
+   begin
+      --  Try the conversion. If no exception gets raised as a result,
+      --  then the representation was correct.
+      V := Long_Long_Integer'Value (S);
+      Valid := True;
+
+   exception
+      when others =>
+         Valid := False;
+   end To_LongLong;
+
    ---------------
    -- To_String --
    ---------------
