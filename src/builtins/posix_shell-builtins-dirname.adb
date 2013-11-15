@@ -33,32 +33,40 @@ package body Posix_Shell.Builtins.Dirname is
    ----------------------
 
    function Dirname_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer is
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+      First : Integer := 0;
    begin
       if Args'Length = 0 then
          Error (S.all, "dirname: need at least one operand");
          return 1;
       end if;
 
-      if Args'Length > 1 then
+      if Args (Args'First).all = "--" then
+         First := Args'First + 1;
+      else
+         First := Args'First;
+      end if;
+
+      if Args'Last - First + 1 > 1 then
          Error (S.all, "dirname: does not accept more than one operand");
          return 1;
       end if;
 
-      if Args (Args'First).all = "" then
+      if Args (First).all = "" then
          Put (S.all, 1, "." & ASCII.LF);
          return 0;
       end if;
 
       --  Step 1. If string is "//" just preserved the // which has special
       --  meaning on windows.
-      if Args (Args'First).all = "//" or else Args (Args'First).all = "\\" then
-         Put (S.all, 1, Args (Args'First).all & ASCII.LF);
+      if Args (First).all = "//" or else Args (First).all = "\\" then
+         Put (S.all, 1, Args (First).all & ASCII.LF);
          return 0;
       end if;
 
       declare
-         Path : constant String := Args (Args'First).all;
+         Path : constant String := Args (First).all;
          Filename_End : Integer := Path'Last;
       begin
          --  Remove trailing slashes (step 2 and 3)

@@ -33,30 +33,38 @@ package body Posix_Shell.Builtins.Basename is
    ----------------------
 
    function Basename_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer is
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+      First : Integer := 0;
    begin
       if Args'Length = 0 then
          Error (S.all, "basename: need at least one operand");
          return 1;
       end if;
 
-      if Args'Length > 2 then
+      if Args (Args'First).all = "--" then
+         First := Args'First + 1;
+      else
+         First := Args'First;
+      end if;
+
+      if Args'Last - First + 1 > 2 then
          Error (S.all, "basename: does not accept more than two operands");
          return 1;
       end if;
 
-      if Args (Args'First).all = "" then
+      if Args (First).all = "" then
          Put (S.all, 1, "" & ASCII.LF);
          return 0;
       end if;
 
-      if Args (Args'First).all = "//" or else Args (Args'First).all = "\\" then
-         Put (S.all, 1, Args (Args'First).all & ASCII.LF);
+      if Args (First).all = "//" or else Args (First).all = "\\" then
+         Put (S.all, 1, Args (First).all & ASCII.LF);
          return 0;
       end if;
 
       declare
-         Path : constant String := Args (Args'First).all;
+         Path : constant String := Args (First).all;
          Filename_Start : Integer := Path'First;
          Filename_End : Integer := Path'Last;
       begin
@@ -76,9 +84,9 @@ package body Posix_Shell.Builtins.Basename is
             end if;
          end loop;
 
-         if Args'Length = 2 then
+         if Args'Last - First + 1 = 2 then
             declare
-               Ext : constant String := Args (Args'First + 1).all;
+               Ext : constant String := Args (First + 1).all;
             begin
                if Filename_End - Filename_Start + 1 >= Ext'Length and then
                  Path (Filename_End - Ext'Length + 1 .. Filename_End) = Ext

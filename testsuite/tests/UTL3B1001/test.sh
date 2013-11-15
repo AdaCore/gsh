@@ -7,3 +7,4 @@ basename \\
 basename //
 basename \\\\
 basename /toto\\tata.txt a.txt
+basename -- /toto\\tata.txt a.txt

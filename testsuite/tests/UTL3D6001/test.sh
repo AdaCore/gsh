@@ -13,3 +13,4 @@ dirname ////
 dirname ////toto//
 echo B`dirname "/tata "/toto`B
 dirname /toto\\tata.txt
+dirname -- /toto\\tata.txt
