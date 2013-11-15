@@ -1,0 +1,14 @@
+[error] dirname: need at least one operand
+[error] dirname: does not accept more than one operand
+.
+.
+/
+/
+//
+\\
+.
+//
+/
+/
+B/tata B
+/toto
