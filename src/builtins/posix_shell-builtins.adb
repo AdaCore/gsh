@@ -29,6 +29,8 @@ with Posix_Shell.Builtins_Expr; use Posix_Shell.Builtins_Expr;
 with Posix_Shell.Builtins.Test; use Posix_Shell.Builtins.Test;
 with Posix_Shell.Builtins.Tail; use Posix_Shell.Builtins.Tail;
 with Posix_Shell.Builtins.Head; use Posix_Shell.Builtins.Head;
+with Posix_Shell.Builtins.Basename; use Posix_Shell.Builtins.Basename;
+with Posix_Shell.Builtins.Dirname; use Posix_Shell.Builtins.Dirname;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Parser; use Posix_Shell.Parser;
@@ -409,28 +411,96 @@ package body Posix_Shell.Builtins is
       return Integer
    is
       Enable_Newline : Boolean := True;
+      Enable_Backslash : Boolean := False;
       In_Options : Boolean := True;
+
+      function Transform_Backslashes (Input : String) return String;
+
+      function Transform_Backslashes (Input : String) return String
+      is
+         Result : String (1 .. Input'Length);
+         Index : Integer := Input'First;
+         Result_Last : Integer := 0;
+      begin
+         while Index <= Input'Last loop
+            case Input (Index) is
+               when '\' =>
+                  Index := Index + 1;
+                  if Index > Input'Last then
+                     Result_Last := Result_Last + 1;
+                     Result (Result_Last) := '\';
+                     exit;
+                  end if;
+                  case Input (Index) is
+                     when '\' =>
+                        Result_Last := Result_Last + 1;
+                        Result (Result_Last) := '\';
+                     when 'a' =>
+                        Result_Last := Result_Last + 1;
+                        Result (Result_Last) := ASCII.BEL;
+                     when 'b' =>
+                        Result_Last := Result_Last + 1;
+                        Result (Result_Last) := ASCII.DEL;
+                     when 'e' =>
+                        Result_Last := Result_Last + 1;
+                        Result (Result_Last) := ASCII.ESC;
+                     when 'f' =>
+                        Result_Last := Result_Last + 1;
+                        Result (Result_Last) := ASCII.FF;
+                     when 'n' =>
+                        Result_Last := Result_Last + 1;
+                        Result (Result_Last) := ASCII.LF;
+                     when 'r' =>
+                        Result_Last := Result_Last + 1;
+                        Result (Result_Last) := ASCII.CR;
+                     when 't' =>
+                        Result_Last := Result_Last + 1;
+                        Result (Result_Last) := ASCII.HT;
+                     when others =>
+                        Result_Last := Result_Last + 2;
+                        Result (Result_Last - 1) := Input (Index - 1);
+                        Result (Result_Last) := Input (Index);
+                  end case;
+               when others =>
+                  Result_Last := Result_Last + 1;
+                  Result (Result_Last) := Input (Index);
+            end case;
+            Index := Index + 1;
+         end loop;
+         return Result (1 .. Result_Last);
+      end Transform_Backslashes;
+
    begin
       for I in Args'Range loop
          if Args (I).all /= "" then
 
             case Args (I).all (Args (I)'First) is
-            when '-' =>
-               if Args (I).all = "-n" and In_Options then
-                  Enable_Newline := False;
-               else
+               when '-' =>
+                  if Args (I).all = "-n" and In_Options then
+                     Enable_Newline := False;
+                  elsif Args (I).all = "-e" and In_Options then
+                     Enable_Backslash := True;
+                  else
+                     In_Options := False;
+                     if Enable_Backslash then
+                        Put (S.all, 1, Transform_Backslashes (Args (I).all));
+                     else
+                        Put (S.all, 1, Args (I).all);
+                     end if;
+                     if I < Args'Last then
+                        Put (S.all, 1, " ");
+                     end if;
+                  end if;
+               when others =>
                   In_Options := False;
-                  Put (S.all, 1, Args (I).all);
+                  if Enable_Backslash then
+                     Put (S.all, 1, Transform_Backslashes (Args (I).all));
+                  else
+                     Put (S.all, 1, Args (I).all);
+                  end if;
                   if I < Args'Last then
                      Put (S.all, 1, " ");
                   end if;
-               end if;
-            when others =>
-               In_Options := False;
-               Put (S.all, 1, Args (I).all);
-               if I < Args'Last then
-                  Put (S.all, 1, " ");
-               end if;
             end case;
          end if;
       end loop;
@@ -749,11 +819,12 @@ package body Posix_Shell.Builtins is
 
       if GNAT.Directory_Operations.Dir_Separator = '\' then
          --  No need to include these builtins on non-windows machines
-
          Include (Builtin_Map, "tail",          Tail_Builtin'Access);
          Include (Builtin_Map, "head",          Head_Builtin'Access);
          Include (Builtin_Map, "rm",            Rm_Builtin'Access);
          Include (Builtin_Map, "type",          Type_Builtin'Access);
+         Include (Builtin_Map, "basename",      Basename_Builtin'Access);
+         Include (Builtin_Map, "dirname",       Dirname_Builtin'Access);
       end if;
    end Register_Default_Builtins;
 
