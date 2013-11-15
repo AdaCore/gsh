@@ -1,3 +1,29 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                            Posix_Shell.Parser                            --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2013, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell.Variables.Output;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
@@ -593,7 +619,6 @@ package body Posix_Shell.Parser is
             Syntax_Error (Read_Token (B), Context_Image (C));
          end if;
       end Context_Syntax_Error;
-      pragma Inline (Context_Syntax_Error);
 
    begin
       case Lookahead_Command (B) is
@@ -1001,6 +1026,7 @@ package body Posix_Shell.Parser is
             when others =>
                declare
                   T : constant Token := Read_Token (B);
+                  pragma Unreferenced (T);
                begin
                   raise Shell_Syntax_Error;
                end;
