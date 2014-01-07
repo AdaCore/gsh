@@ -4,7 +4,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *                      Copyright (C) 2011-2012, AdaCore                    *
+ *                      Copyright (C) 2011-2014, AdaCore                    *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -138,8 +138,6 @@ move_away(HANDLE h, UNICODE_STRING filename)
    rename_information->FileNameLength = dest.Length;
    memcpy(rename_information->FileName, dest.Buffer, dest.Length);
 
-   printf ("try to rename from %ls to %ls\n", filename.Buffer, dest.Buffer);
-
    /* Do the renaming */
    status = NtSetInformationFile(h, &io, rename_information, rename_information_size, FileRenameInformation);
    if (!NT_SUCCESS(status))
@@ -243,7 +241,7 @@ safe_unlink (UNICODE_STRING name)
 
    /* The file is read-only so first attempt to remove that flag. Otherwise
       we will be able to delete the file only by moving it away which takes
-      far more long time.  */ 
+      far more long time.  */
    if (FILE_ATTRIBUTE_READONLY & file_basic_information.FileAttributes)
      {
        /* Open the file in write mode */
