@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2013, AdaCore                   --
+--                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -996,15 +996,10 @@ package body Posix_Shell.Builtins is
       end if;
 
       --  Iterate other the files
-      for Index in Args'Range loop
-         if GNAT.OS_Lib.Is_Absolute_Path (Args (Index).all) then
-            Rm_Tree (GNAT.OS_Lib.Normalize_Pathname
-                     (Args (Index).all, Resolve_Links => False));
-         else
-            Rm_Tree (GNAT.OS_Lib.Normalize_Pathname
-                     (Get_Current_Dir (S.all) & "\" & Args (Index).all,
+      for Index in File_List_Start .. Args'Last loop
+         Rm_Tree (GNAT.OS_Lib.Normalize_Pathname
+                  (Resolve_Path (S.all, Args (Index).all),
                      Resolve_Links => False));
-         end if;
       end loop;
       if Got_Errors then
          return 1;
