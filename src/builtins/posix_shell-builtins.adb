@@ -140,6 +140,9 @@ package body Posix_Shell.Builtins is
    function Limit_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
 
+   function Mkdir_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
+
    function Exit_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
 
@@ -685,6 +688,99 @@ package body Posix_Shell.Builtins is
       return 0;
    end Limit_Builtin;
 
+   -------------------
+   -- Mkdir_Builtin --
+   -------------------
+
+   function Mkdir_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+      File_List_Start : Integer := Args'First;
+      Create_Intermediates : Boolean := False;
+      Got_Errors : Boolean := False;
+
+      procedure Recursive_Make_Dir (Dir : String);
+
+      procedure Recursive_Make_Dir (Dir : String) is
+      begin
+         if Is_Directory (Dir) then
+            return;
+         else
+            declare
+               PD : constant String :=
+                 GNAT.Directory_Operations.Dir_Name (Dir);
+               PD_Last : Integer := PD'Last;
+            begin
+               if not Is_Directory (PD) then
+                  if PD (PD'Last) = '\' then
+                     PD_Last := PD_Last - 1;
+                  end if;
+
+                  if PD_Last >= PD'First then
+                     Recursive_Make_Dir (PD (PD'First .. PD_Last));
+                  end if;
+               end if;
+            end;
+            GNAT.Directory_Operations.Make_Dir (Dir);
+         end if;
+      end Recursive_Make_Dir;
+
+   begin
+         --  Parse options
+      for Index in Args'Range loop
+         if Args (Index) (Args (Index)'First) = '-' then
+            if Args (Index).all = "--" then
+               File_List_Start := Index + 1;
+               exit;
+            end if;
+
+            for C in Args (Index).all'First + 1 .. Args (Index).all'Last loop
+               case Args (Index).all (C) is
+                  when 'p' => Create_Intermediates := True;
+                  when others =>
+                     Error (S.all, "mkdir: unknown option: " &
+                            Args (Index).all);
+                     return 1;
+               end case;
+            end loop;
+         else
+            File_List_Start := Index;
+            exit;
+         end if;
+      end loop;
+
+      --  Check for operands presence.
+      if File_List_Start > Args'Last then
+         Error (S.all, "mkdir: too few arguments");
+         return 1;
+      end if;
+
+      --  Iterate other the files
+      for Index in File_List_Start .. Args'Last loop
+         declare
+            CP : constant String := GNAT.OS_Lib.Normalize_Pathname
+              (Resolve_Path (S.all, Args (Index).all),
+               Resolve_Links => False);
+         begin
+            if Create_Intermediates then
+               Recursive_Make_Dir (CP);
+            else
+               GNAT.Directory_Operations.Make_Dir (CP);
+            end if;
+         exception
+            when others =>
+               Put (S.all, 2, "cannot create " & CP & ASCII.LF);
+               Got_Errors := True;
+         end;
+      end loop;
+
+      if Got_Errors then
+         return 1;
+      else
+         return 0;
+      end if;
+   end Mkdir_Builtin;
+
    -----------------
    -- Pwd_Builtin --
    -----------------
@@ -825,6 +921,7 @@ package body Posix_Shell.Builtins is
          Include (Builtin_Map, "type",          Type_Builtin'Access);
          Include (Builtin_Map, "basename",      Basename_Builtin'Access);
          Include (Builtin_Map, "dirname",       Dirname_Builtin'Access);
+         Include (Builtin_Map, "mkdir",         Mkdir_Builtin'Access);
       end if;
    end Register_Default_Builtins;
 
