@@ -8,7 +8,7 @@ DDK_DIR:=$(shell echo `dirname $(GCC_BIN)`/i686-pc-mingw32/include/ddk)
 
 # Check if we are on unix or windows system
 SYS:=$(strip $(shell if test -d $(DDK_DIR); then echo 'windows'; else echo 'unix'; fi))
-EXTEXT:=$(strip $(shell if test "$(SYS)" = "windows"; then echo ".exe"; fi))
+EXEEXT:=$(strip $(shell if test "$(SYS)" = "windows"; then echo ".exe"; fi))
 
 UNAME:=$(strip $(shell uname))
 ifeq ($(UNAME),Darwin)
@@ -46,7 +46,7 @@ readline/Makefile:
 
 # Launch the testsuite
 check:
-	@(PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && export PATH && cd testsuite && python ./testsuite.py)
+	@(PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && export PATH && cd testsuite && python ./testsuite.py -t tmp)
 
 .PHONY: install
 install:
@@ -54,10 +54,10 @@ install:
 	mkdir -p $(PREFIX)/etc
 	if [ "$(SYS)" = "windows" ]; then cp -p -r gnutools/* $(PREFIX)/; fi
 	cp -r etc/* $(PREFIX)/etc
-	cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/gsh$(EXEXT)
+	cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/gsh$(EXEEXT)
 	if [ "$(SYS)" = "windows" ]; then \
 	  cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/sh$(EXEEXT) && \
-	  cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/bash$(EXEXT); \
+	  cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/bash$(EXEEXT); \
 	fi
 
 clean:
