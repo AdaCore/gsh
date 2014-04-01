@@ -1,2 +1,8 @@
 #!/bin/sh
-echo "$2"
+for j in "$@"; do
+   case "$j" in
+      -*) shift 1;;
+       *) break;;
+   esac
+done
+echo "$1"
