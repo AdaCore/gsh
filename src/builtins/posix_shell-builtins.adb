@@ -173,6 +173,9 @@ package body Posix_Shell.Builtins is
    function Type_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
 
+   function Uname_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer;
+
    -------------------
    -- Break_Builtin --
    -------------------
@@ -240,7 +243,7 @@ package body Posix_Shell.Builtins is
          return 0;
       end if;
 
-      Buffer := new String (1 .. 1024 *1024);
+      Buffer := new String (1 .. 1024 * 1024);
 
       for J in Args'Range loop
          --  '-' means that we need to dump stdin otherwise the argument is
@@ -922,6 +925,7 @@ package body Posix_Shell.Builtins is
          Include (Builtin_Map, "basename",      Basename_Builtin'Access);
          Include (Builtin_Map, "dirname",       Dirname_Builtin'Access);
          Include (Builtin_Map, "mkdir",         Mkdir_Builtin'Access);
+         Include (Builtin_Map, "uname",         Uname_Builtin'Access);
       end if;
    end Register_Default_Builtins;
 
@@ -1213,7 +1217,7 @@ package body Posix_Shell.Builtins is
       end if;
 
       begin
-         T := Parse_File (Args (Args'First).all);
+         T := Parse_File (Resolve_Path (S.all, Args (Args'First).all));
       exception
          when Buffer_Read_Error =>
             return 1;
@@ -1337,6 +1341,141 @@ package body Posix_Shell.Builtins is
       end loop;
       return Exit_Status;
    end Type_Builtin;
+
+   -------------------
+   -- Uname_Builtin --
+   -------------------
+
+   function Uname_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+      Kernel_Name       : Boolean := False;
+      Node_Name         : Boolean := False;
+      Kernel_Release    : Boolean := False;
+      Kernel_Version    : Boolean := False;
+      Machine           : Boolean := False;
+      Processor         : Boolean := False;
+      Hardware_Platform : Boolean := False;
+      Operating_System  : Boolean := False;
+      Add_Space         : Boolean := False;
+
+   begin
+      if Args'Length = 0 then
+         Kernel_Name := True;
+
+      else
+         for Index in Args'Range loop
+            declare
+               Arg : constant String := Args (Index).all;
+            begin
+               case Arg (Arg'First) is
+                  when '-' =>
+                     if Arg = "--help" then
+                        Put (S.all, 1, "usage: uname [OPTIONS]" & ASCII.LF);
+                        return 0;
+
+                     elsif Arg = "--" then
+                        if Index /= Args'Last then
+                           Put (S.all, 2, "uname: extra operand" & ASCII.LF);
+                           return 1;
+                        end if;
+
+                     else
+                        for Index2 in Arg'First + 1 .. Arg'Last loop
+                           case Arg (Index2) is
+                              when 'a' =>
+                                 Kernel_Name := True;
+                                 Node_Name := True;
+                                 Kernel_Release := True;
+                                 Kernel_Version := True;
+                                 Machine := True;
+                                 Operating_System := True;
+                              when 's' => Kernel_Name := True;
+                              when 'n' => Node_Name := True;
+                              when 'r' => Kernel_Release := True;
+                              when 'v' => Kernel_Version := True;
+                              when 'm' => Machine := True;
+                              when 'p' => Processor := True;
+                              when 'i' => Hardware_Platform := True;
+                              when 'o' => Operating_System := True;
+                              when others =>
+                                 Put (S.all, 2,
+                                      "uname: unknown option" & ASCII.LF);
+                                 return 1;
+                           end case;
+                        end loop;
+                     end if;
+
+                  when others =>
+                     Put (S.all, 2, "uname: extra operand" & ASCII.LF);
+                     return 1;
+               end case;
+            end;
+         end loop;
+      end if;
+
+      if Kernel_Name then
+         Put (S.all, 1, "CYGWIN_NT-6.0-WOW64");
+         Add_Space := True;
+      end if;
+
+      if Node_Name then
+         if Add_Space then
+            Put (S.all, 1, " ");
+         end if;
+         Put (S.all, 1, "machine");
+         Add_Space := True;
+      end if;
+
+      if Kernel_Release then
+         if Add_Space then
+            Put (S.all, 1, " ");
+         end if;
+         Put (S.all, 1, "1.7.0(0.212/5/3)");
+         Add_Space := True;
+      end if;
+
+      if Kernel_Version then
+         if Add_Space then
+            Put (S.all, 1, " ");
+         end if;
+         Put (S.all, 1, "2009-09-11 01:25");
+         Add_Space := True;
+      end if;
+
+      if Machine then
+         if Add_Space then
+            Put (S.all, 1, " ");
+         end if;
+         Put (S.all, 1, "i686");
+         Add_Space := True;
+      end if;
+
+      if Processor then
+         if Add_Space then
+            Put (S.all, 1, " ");
+         end if;
+         Put (S.all, 1, "unknown");
+         Add_Space := True;
+      end if;
+
+      if Hardware_Platform then
+         if Add_Space then
+            Put (S.all, 1, " ");
+         end if;
+         Put (S.all, 1, "unknown");
+         Add_Space := True;
+      end if;
+
+      if Operating_System then
+         if Add_Space then
+            Put (S.all, 1, " ");
+         end if;
+         Put (S.all, 1, "Cygwin");
+      end if;
+
+      return 0;
+   end Uname_Builtin;
 
    -------------------
    -- Unset_Builtin --
