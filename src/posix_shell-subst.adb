@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2013, AdaCore                   --
+--                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -630,7 +630,9 @@ package body Posix_Shell.Subst is
                Current_Char : constant Character := Str (Result) (I);
             begin
 
-               if Get_Annotation (Result, I) /= NULL_STRING then
+               if Get_Annotation (Result, I) /= NULL_STRING and then
+                 Get_Annotation (Result, I) /= QUOTED_NULL_STRING
+               then
                   if Get_Annotation (Result, I) = UNSPLITABLE and then
                     Case_Pattern
                   then
@@ -861,7 +863,8 @@ package body Posix_Shell.Subst is
                        (SS.all, Set (I).all & D);
                   begin
                      if GNAT.OS_Lib.Is_Regular_File (Tmp) or else
-                       GNAT.OS_Lib.Is_Directory (Tmp) then
+                       GNAT.OS_Lib.Is_Directory (Tmp)
+                     then
                         Buffer_Last := Buffer_Last + 1;
                         Buffer (Buffer_Last) := new String'(Set (I).all & D);
                      end if;
