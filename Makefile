@@ -46,7 +46,7 @@ readline/Makefile:
 
 # Launch the testsuite
 check:
-	@(PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && export PATH && cd testsuite && python ./testsuite.py -t tmp)
+	@(PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && export PATH && cd testsuite && python ./testsuite.py -t tmp -j0)
 
 .PHONY: install
 install:
@@ -54,10 +54,10 @@ install:
 	mkdir -p $(PREFIX)/etc
 	if [ "$(SYS)" = "windows" ]; then cp -p -r gnutools/* $(PREFIX)/; fi
 	cp -r etc/* $(PREFIX)/etc
-	cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/gsh$(EXEEXT)
+	cp -p obj/$(BUILD)/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/gsh$(EXEEXT)
 	if [ "$(SYS)" = "windows" ]; then \
-	  cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/sh$(EXEEXT) && \
-	  cp -p obj/prod/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/bash$(EXEEXT); \
+	  cp -p obj/$(BUILD)/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/sh$(EXEEXT) && \
+	  cp -p obj/$(BUILD)/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/bash$(EXEEXT); \
 	fi
 
 clean:
