@@ -58,7 +58,7 @@ package body Posix_Shell.Tree.Evals is
    procedure Eval_Subshell (S : Shell_State_Access; T : Shell_Tree; N : Node);
    procedure Eval_Function (S : Shell_State_Access; N : Node);
    procedure Eval_Brace (S : Shell_State_Access; T : Shell_Tree; N : Node);
-   procedure Eval_Null_Cmd (S : Shell_State_Access; T : Shell_Tree; N : Node);
+   procedure Eval_Null_Cmd (S : Shell_State_Access; N : Node);
 
    procedure Eval_Cmd (S            : Shell_State_Access;
                        Command      : String;
@@ -180,7 +180,7 @@ package body Posix_Shell.Tree.Evals is
          when FUNCTION_NODE    => Eval_Function (S, N);
          when ASSIGN_NODE      => Eval_Assign (S, N);
          when CMD_NODE         => Eval_Cmd (S, N);
-         when NULL_CMD_NODE    => Eval_Null_Cmd (S, T, N);
+         when NULL_CMD_NODE    => Eval_Null_Cmd (S, N);
          when others           => raise Program_Error;
       end case;
       return;
@@ -547,7 +547,7 @@ package body Posix_Shell.Tree.Evals is
    -- Eval_Null_Cmd --
    -------------------
 
-   procedure Eval_Null_Cmd (S : Shell_State_Access; T : Shell_Tree; N : Node)
+   procedure Eval_Null_Cmd (S : Shell_State_Access; N : Node)
    is
       Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
    begin
