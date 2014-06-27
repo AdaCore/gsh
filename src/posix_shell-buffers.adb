@@ -20,21 +20,9 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Unchecked_Deallocation;
 with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
 
 package body Posix_Shell.Buffers is
-
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Object : in out Buffer) is
-   begin
-      if Object.S /= null then
-         Object.Ref_Counter.all := Object.Ref_Counter.all + 1;
-      end if;
-   end Adjust;
 
    -------------
    -- Current --
@@ -66,15 +54,6 @@ package body Posix_Shell.Buffers is
       return B.S (B.Pos.Pos .. B.Pos.Pos + Size - 1);
    end Current;
 
-   ----------------------
-   -- Current_Columnno --
-   ----------------------
-
-   function Current_Columnno (B : Buffer) return Natural is
-   begin
-      return B.Pos.Column;
-   end Current_Columnno;
-
    --------------------
    -- Current_Lineno --
    --------------------
@@ -102,59 +81,22 @@ package body Posix_Shell.Buffers is
       return B.Pos.Pos;
    end Current_Pos;
 
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Object : in out Buffer) is
-      procedure Deallocate is
-        new Ada.Unchecked_Deallocation
-          (Natural_Array,
-           Natural_Array_Access);
-   begin
-      if Object.S /= null then
-         if Object.Ref_Counter.all = 1 then
-            Free (Object.S);
-            Deallocate (Object.Lines);
-            Object.S := null;
-            Object.Lines := null;
-            Object.Pos := (0, 0, 0);
-         else
-            Object.Ref_Counter.all := Object.Ref_Counter.all - 1;
-         end if;
-      end if;
-   end Finalize;
-
    -------------
    -- Forward --
    -------------
 
    procedure Forward (B : in out Buffer; Step : Positive := 1) is
-      Tmp : Natural := B.Pos.Pos;
    begin
       for J in 1 .. Step loop
-         exit when Tmp > B.S'Last;
-         if B.S (Tmp) = ASCII.LF then
+
+         if B.Pos.Pos < B.S'Last and then B.S (B.Pos.Pos) = ASCII.LF then
             B.Pos.Line := B.Pos.Line + 1;
          end if;
-         Tmp := Tmp + 1;
+
+         B.Pos.Pos := B.Pos.Pos + 1;
       end loop;
-      B.Pos.Pos := B.Pos.Pos + Step;
-      if B.Pos.Pos > B.S'Last then
-         B.Pos.Column := 1;
-      else
-         B.Pos.Column := B.Pos.Pos - B.Lines (B.Pos.Line) + 1;
-      end if;
+
    end Forward;
-
-   -----------------
-   -- Get_Columno --
-   -----------------
-
-   function Get_Columno (T : Text_Position) return Natural is
-   begin
-      return T.Column;
-   end Get_Columno;
 
    ----------------
    -- Get_Lineno --
@@ -180,44 +122,20 @@ package body Posix_Shell.Buffers is
 
    function Image (T : Text_Position) return String is
    begin
-      return To_String (T.Line) & ":" & To_String (T.Column);
+      return To_String (T.Line);
    end Image;
-
-   ----------------
-   -- Initialize --
-   ----------------
-
-   procedure Initialize (Object : in out Buffer) is
-   begin
-      Object.S := null;
-      Object.Pos := (0, 0, 0);
-      Object.Lines := null;
-      Object.Ref_Counter := null;
-   end Initialize;
 
    ----------------
    -- New_Buffer --
    ----------------
 
    function New_Buffer (Str : String) return Buffer is
-      Result : Buffer;
+      Result     : Buffer;
       Buffer_Str : constant String := Strip_CR (Str);
-      Current_Line : Positive := 1;
-      Lines : Natural_Array (1 .. Str'Length + 1);
+
    begin
       Result.S := new String'(Buffer_Str);
-      Result.Pos := (1, 1, 1);
-      Lines (1) := 1;
-      for J in Buffer_Str'Range loop
-         if Buffer_Str (J) = ASCII.LF then
-            if J < Buffer_Str'Last then
-               Current_Line := Current_Line + 1;
-               Lines (Current_Line) := J + 1;
-            end if;
-         end if;
-      end loop;
-      Result.Lines := new Natural_Array'(Lines (1 .. Current_Line));
-      Result.Ref_Counter := new Natural'(1);
+      Result.Pos := (1, 1);
       return Result;
    end New_Buffer;
 
@@ -259,7 +177,7 @@ package body Posix_Shell.Buffers is
    procedure Rewind (B : in out Buffer; Step : Positive := 1) is
    begin
       if B.Pos.Pos - Step < 1 then
-         B.Pos := (1, 1, 1);
+         B.Pos := (1, 1);
          return;
       end if;
 
@@ -271,11 +189,6 @@ package body Posix_Shell.Buffers is
          end if;
       end loop;
       B.Pos.Pos := B.Pos.Pos - Step;
-      if B.Pos.Pos > B.S'Last then
-         B.Pos.Column := 1;
-      else
-         B.Pos.Column := B.Pos.Pos - B.Lines (B.Pos.Line) + 1;
-      end if;
    end Rewind;
 
    -------------

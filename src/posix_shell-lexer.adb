@@ -128,9 +128,7 @@ package body Posix_Shell.Lexer is
    procedure Lexer_Error (B : in out Token_Buffer; Msg : String) is
    begin
       Raise_Exception
-        (Shell_Lexer_Error'Identity,
-         To_String (Current_Lineno (B.B)) &
-         ":" & To_String (Current_Columnno (B.B)) & ":" & Msg);
+        (Shell_Lexer_Error'Identity, Image (Current_Pos (B.B)) & ":" & Msg);
    end Lexer_Error;
 
    ---------------
@@ -772,10 +770,9 @@ package body Posix_Shell.Lexer is
       -----------------------
 
       procedure Read_Single_Quote is
-         Start_Line   : constant Integer := Current_Lineno (B.B);
-         Start_Column : constant Integer := Current_Columnno (B.B);
-      begin
+         Start_Pos : constant Text_Position := Current_Pos (B.B);
 
+      begin
          Has_Token := True;
 
          loop
@@ -788,8 +785,7 @@ package body Posix_Shell.Lexer is
                   Lexer_Error
                     (B,
                      "unexpected EOF in single quote starting at " &
-                     To_String (Start_Line) &
-                     ":" & To_String (Start_Column));
+                     Image (Start_Pos));
                when others =>
                   null;
             end case;

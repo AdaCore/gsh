@@ -20,7 +20,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Finalization;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 package Posix_Shell.Buffers is
@@ -35,7 +34,6 @@ package Posix_Shell.Buffers is
    pragma Inline (Get_Pos);
 
    function Get_Lineno (T : Text_Position) return Natural;
-   function Get_Columno (T : Text_Position) return Natural;
    function Image (T : Text_Position) return String;
 
    procedure Rewind  (B : in out Buffer; Step : Positive := 1);
@@ -49,7 +47,6 @@ package Posix_Shell.Buffers is
    function Prev_Pos    (B : Buffer) return Text_Position;
    function Current_Pos (B : Buffer) return Natural;
    function Current_Lineno (B : Buffer) return Natural;
-   function Current_Columnno (B : Buffer) return Natural;
 
    function New_Buffer (Str : String) return Buffer;
    function New_Buffer_From_File (Filename : String) return Buffer;
@@ -58,38 +55,20 @@ private
    pragma Inline (Forward);
    pragma Inline (Rewind);
 
-   use Ada.Finalization;
-
    type Text_Position is record
       Pos    : Natural;
-      Column : Natural;
       Line   : Natural;
    end record;
 
-   Null_Text_Position : constant Text_Position := (0, 0, 0);
-
-   type Natural_Array is array (Positive range <>) of Positive;
-   type Natural_Array_Access is access Natural_Array;
-   type Natural_Access is access Natural;
+   Null_Text_Position : constant Text_Position := (0, 0);
 
    type Buffer is record
-      S           : String_Access;
-      Pos         : Text_Position;
-      Lines       : Natural_Array_Access;
-      Ref_Counter : Natural_Access := null;
+      S   : String_Access;
+      Pos : Text_Position;
    end record;
 
-   --  pragma Finalize_Storage_Only (Buffer);
-
-   procedure Initialize (Object : in out Buffer);
-   procedure Adjust     (Object : in out Buffer);
-   procedure Finalize   (Object : in out Buffer);
-
    Null_Buffer : constant Buffer :=
-     (
-      S => null,
-      Pos => Null_Text_Position,
-      Lines => null,
-      Ref_Counter => null);
+     (S   => null,
+      Pos => Null_Text_Position);
 
 end Posix_Shell.Buffers;
