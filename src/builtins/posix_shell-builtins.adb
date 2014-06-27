@@ -37,6 +37,7 @@ with Posix_Shell.Parser; use Posix_Shell.Parser;
 with Posix_Shell.Tree; use Posix_Shell.Tree;
 with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
+with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
@@ -525,7 +526,7 @@ package body Posix_Shell.Builtins is
      (S : Shell_State_Access; Args : String_List) return Integer
    is
       Str : Ada.Strings.Unbounded.Unbounded_String;
-      T : Shell_Tree_Access := New_Tree;
+      T : Shell_Tree := New_Tree;
       use Ada.Strings.Unbounded;
    begin
       Str := To_Unbounded_String (Args (Args'First).all);
@@ -534,7 +535,7 @@ package body Posix_Shell.Builtins is
       end loop;
 
       T := Parse_String (To_String (Str));
-      Eval (S, T.all);
+      Eval (S, T);
       Free_Node (T);
       return Get_Last_Exit_Status (S.all);
    exception
@@ -715,7 +716,7 @@ package body Posix_Shell.Builtins is
                PD_Last : Integer := PD'Last;
             begin
                if not Is_Directory (PD) then
-                  if PD (PD'Last) = '\' then
+                  if PD (PD'Last) = '\' or else PD (PD'Last) = '/' then
                      PD_Last := PD_Last - 1;
                   end if;
 
@@ -810,7 +811,7 @@ package body Posix_Shell.Builtins is
       --  First read the complete line
       while CC /= ASCII.LF and CC /= ASCII.EOT loop
          if CC /= ASCII.CR then
-            Append (Line, CC, NO_ANNOTATION);
+            Append (Line, CC);
          end if;
          CC := Read (S.all, 0);
       end loop;
@@ -818,7 +819,7 @@ package body Posix_Shell.Builtins is
       if Args'Length > 0 then
          declare
             List : constant String_List := Eval_String
-              (S, Line, Args'Length - 1);
+              (S, Str (Line), Args'Length - 1);
             Index : Integer := List'First;
          begin
 
@@ -916,7 +917,7 @@ package body Posix_Shell.Builtins is
       Include (Builtin_Map, "read",          Read_Builtin'Access);
       Include (Builtin_Map, "wc",            Wc_Builtin'Access);
 
-      if GNAT.Directory_Operations.Dir_Separator = '\' then
+      --  if GNAT.Directory_Operations.Dir_Separator = '\' then
          --  No need to include these builtins on non-windows machines
          Include (Builtin_Map, "tail",          Tail_Builtin'Access);
          Include (Builtin_Map, "head",          Head_Builtin'Access);
@@ -926,7 +927,7 @@ package body Posix_Shell.Builtins is
          Include (Builtin_Map, "dirname",       Dirname_Builtin'Access);
          Include (Builtin_Map, "mkdir",         Mkdir_Builtin'Access);
          Include (Builtin_Map, "uname",         Uname_Builtin'Access);
-      end if;
+      --  end if;
    end Register_Default_Builtins;
 
    --------------------
@@ -1018,7 +1019,8 @@ package body Posix_Shell.Builtins is
                   Base_Name : constant String :=
                     Simple_Name (Dir_Ent);
                   File_Name : constant String :=
-                    Filename & "\" & Base_Name;
+                    Filename & GNAT.Directory_Operations.Dir_Separator &
+                    Base_Name;
                begin
                   if GNAT.OS_Lib.Is_Directory (File_Name) then
                      --  Recurse ignoring '.' and '..' entries
@@ -1207,7 +1209,7 @@ package body Posix_Shell.Builtins is
    function Source_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer
    is
-      T : Shell_Tree_Access;
+      T : Shell_Tree;
       Return_Code : Integer;
       Saved_Pos_Params : Pos_Params_State;
    begin
@@ -1238,7 +1240,7 @@ package body Posix_Shell.Builtins is
       end if;
 
       begin
-         Eval (S, T.all);
+         Eval (S, T);
          Return_Code := Get_Last_Exit_Status (S.all);
          Free_Node (T);
       exception

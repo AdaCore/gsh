@@ -1,5 +1,27 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2014, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Ada.Unchecked_Deallocation;
-with Posix_Shell.Utils; use Posix_Shell.Utils;
+with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
 
 package body Posix_Shell.Buffers is
 
@@ -10,8 +32,7 @@ package body Posix_Shell.Buffers is
    procedure Adjust (Object : in out Buffer) is
    begin
       if Object.S /= null then
-         Object.S := new String'(Object.S.all);
-         Object.Lines := new Natural_Array'(Object.Lines.all);
+         Object.Ref_Counter.all := Object.Ref_Counter.all + 1;
       end if;
    end Adjust;
 
@@ -92,11 +113,15 @@ package body Posix_Shell.Buffers is
            Natural_Array_Access);
    begin
       if Object.S /= null then
-         Free (Object.S);
-         Deallocate (Object.Lines);
-         Object.S := null;
-         Object.Lines := null;
-         Object.Pos := (0, 0, 0);
+         if Object.Ref_Counter.all = 1 then
+            Free (Object.S);
+            Deallocate (Object.Lines);
+            Object.S := null;
+            Object.Lines := null;
+            Object.Pos := (0, 0, 0);
+         else
+            Object.Ref_Counter.all := Object.Ref_Counter.all - 1;
+         end if;
       end if;
    end Finalize;
 
@@ -167,6 +192,7 @@ package body Posix_Shell.Buffers is
       Object.S := null;
       Object.Pos := (0, 0, 0);
       Object.Lines := null;
+      Object.Ref_Counter := null;
    end Initialize;
 
    ----------------
@@ -191,6 +217,7 @@ package body Posix_Shell.Buffers is
          end if;
       end loop;
       Result.Lines := new Natural_Array'(Lines (1 .. Current_Line));
+      Result.Ref_Counter := new Natural'(1);
       return Result;
    end New_Buffer;
 
@@ -260,4 +287,23 @@ package body Posix_Shell.Buffers is
       B.Pos := P;
    end Set_Pos;
 
+   -----------
+   -- Slice --
+   -----------
+
+   function Slice (B : Buffer; First, Last : Text_Position) return String is
+   begin
+      return B.S (First.Pos .. Last.Pos);
+   end Slice;
+
+   --------------
+   -- Prev_Pos --
+   --------------
+
+   function Prev_Pos (B : Buffer) return Text_Position is
+      Buffer_Copy : Buffer := B;
+   begin
+      Rewind (Buffer_Copy);
+      return Current_Pos (Buffer_Copy);
+   end Prev_Pos;
 end Posix_Shell.Buffers;

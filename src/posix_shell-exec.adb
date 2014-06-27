@@ -1,5 +1,28 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2014, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with System;
 with GNAT.Task_Lock;
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 
 package body Posix_Shell.Exec is
 
@@ -68,6 +91,7 @@ package body Posix_Shell.Exec is
       C_Env_Addr : System.Address := System.Null_Address;
       Success : Boolean;
       pragma Warnings (Off, Success);
+
    begin
       GNAT.Task_Lock.Lock;
       Normalize_Arguments (Args, Arg_List);
@@ -102,6 +126,7 @@ package body Posix_Shell.Exec is
       --  This does not return on Unix systems
       declare
          Input, Output, Error : File_Descriptor;
+
       begin
          --  Since Windows does not have a separate fork/exec, we need to
          --  perform the following actions:
@@ -133,18 +158,25 @@ package body Posix_Shell.Exec is
             Dup2 (Stderr_Fd, GNAT.OS_Lib.Standerr);
          end if;
 
-         Set_Close_On_Exec (GNAT.OS_Lib.Standin, False, Success);
-         Set_Close_On_Exec (GNAT.OS_Lib.Standout, False, Success);
-         Set_Close_On_Exec (GNAT.OS_Lib.Standerr, False, Success);
+         Posix_Shell.Variables.Output.Set_Close_On_Exec
+           (GNAT.OS_Lib.Standin, False, Success);
+         Posix_Shell.Variables.Output.Set_Close_On_Exec
+           (GNAT.OS_Lib.Standout, False, Success);
+         Posix_Shell.Variables.Output.Set_Close_On_Exec
+           (GNAT.OS_Lib.Standerr, False, Success);
+
          Result := Portable_Execvp
            (C_Arg_List'Address, C_Cwd_Addr, C_Env_Addr);
          for K in Arg_List'Range loop
             Free (Arg_List (K));
          end loop;
 
-         Set_Close_On_Exec (GNAT.OS_Lib.Standin, True, Success);
-         Set_Close_On_Exec (GNAT.OS_Lib.Standout, True, Success);
-         Set_Close_On_Exec (GNAT.OS_Lib.Standerr, True, Success);
+         Posix_Shell.Variables.Output.Set_Close_On_Exec
+           (GNAT.OS_Lib.Standin, True, Success);
+         Posix_Shell.Variables.Output.Set_Close_On_Exec
+           (GNAT.OS_Lib.Standout, True, Success);
+         Posix_Shell.Variables.Output.Set_Close_On_Exec
+           (GNAT.OS_Lib.Standerr, True, Success);
          --  Restore the old descriptors
 
          if Stdin_Fd /= 0 then

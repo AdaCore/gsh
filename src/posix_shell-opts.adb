@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2013, AdaCore                   --
+--                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -30,6 +30,7 @@ with Ada.Strings.Unbounded;
 with GNAT.OS_Lib;
 with GNAT.Strings; use GNAT.Strings;
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
+with Posix_Shell.Traces; use Posix_Shell.Traces;
 
 package body Posix_Shell.Opts is
 
@@ -87,6 +88,8 @@ package body Posix_Shell.Opts is
                Dump_Node_Table := True;
             elsif Arg = "--debug-lexer" then
                Debug_Lexer := True;
+            elsif Arg = "--enable-traces" then
+               Enable_Traces := True;
             elsif Arg = "-x" then
                Set_Xtrace (State.all, True);
             elsif Arg = "-e" then

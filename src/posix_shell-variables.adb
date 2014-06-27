@@ -24,15 +24,15 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Environment_Variables; use Ada.Environment_Variables;
-with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Interfaces.C; use Interfaces.C;
 with Ada.Strings.Maps.Constants; use Ada.Strings.Maps.Constants;
 with Dyn_String_Lists; use Dyn_String_Lists;
 with Ada.Unchecked_Deallocation;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
+with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
+with Ada.Text_IO;
 
 pragma Elaborate_All (Dyn_String_Lists);
 
@@ -200,8 +200,8 @@ package body Posix_Shell.Variables is
    function Get_Var_Value
      (State           : Shell_State;
       Name            : String;
-      Context         : Annotation;
-      Check_Existence : Boolean    := True)
+      Is_Splitable    : Boolean := True;
+      Check_Existence : Boolean := True)
       return Annotated_String
    is
       function Path_Transform
@@ -268,8 +268,7 @@ package body Posix_Shell.Variables is
          begin
             Append (Result,
                     State.Pos_Params.Table
-                    (Index + Shift).all,
-                    Context);
+                    (Index + Shift).all);
             return Result;
          end;
       end if;
@@ -280,12 +279,11 @@ package body Posix_Shell.Variables is
             when '?' =>
                Append
                  (Result,
-                  To_String (Get_Last_Exit_Status (State)), Context);
+                  To_String (Get_Last_Exit_Status (State)));
                return Result;
             when '$' =>
                Append (Result,
-                       Trim (long'Image (Portable_Getpid), Ada.Strings.Both),
-                       Context);
+                       Trim (long'Image (Portable_Getpid), Ada.Strings.Both));
                return Result;
                --  We didn't use To_String to perform the translation,
                --  because the PID could be larger than Integer'Last on
@@ -300,16 +298,16 @@ package body Posix_Shell.Variables is
                begin
                   for J in PP.Table'First + PP.Shift .. PP.Table'Last loop
                      Has_Parameter := True;
-                     Append (Result, PP.Table (J).all, Context);
+                     Append (Result, PP.Table (J).all);
 
                      --  Add a 'forced' field separator which is not influenced
                      --  by IFS variable value
                      if J < PP.Table'Last then
-                           Append (Result, ' ', FIELD_SEP);
+                        Append (Result, FIELD_SEP);
                      end if;
                   end loop;
 
-                  if not Has_Parameter and Context = UNSPLITABLE then
+                  if not Has_Parameter and not Is_Splitable then
                      --  There is no parameter so we will return a null string.
                      --  But for @ variable, even if we are inside a quote
                      --  construct, we should not at the end return '' but
@@ -319,7 +317,7 @@ package body Posix_Shell.Variables is
                      --  for d in "$@"; do echo "hello2"; done
                      --
                      --  should output "hello" :-)
-                     return To_Annotated_String ("N", QUOTED_NULL_STRING);
+                     Append (Result, QUOTED_NULL_STRING);
                   end if;
                   return Result;
                end;
@@ -353,20 +351,20 @@ package body Posix_Shell.Variables is
                   end if;
 
                   for J in PP.Table'First + PP.Shift .. PP.Table'Last loop
-                     Append (Result, PP.Table (J).all, Context);
+                     Append (Result, PP.Table (J).all);
                      if J < PP.Table'Last then
-                        if Context = NO_ANNOTATION and then not Have_Sep then
-                           Append (Result, ' ', FIELD_SEP);
+                        if Is_Splitable and then not Have_Sep then
+                           Append (Result, FIELD_SEP);
                         elsif Have_Sep then
-                           Append (Result, Sep, Context);
+                           Append (Result, Sep);
                         end if;
                      end if;
                   end loop;
 
                   return Result;
                end;
-            when '!' => return To_Annotated_String ("", Context);
-            when '-' => return To_Annotated_String ("", Context);
+            when '!' => return Result;
+            when '-' => return Result;
             when '#' =>
                declare
                   Real_Size : constant Integer :=
@@ -374,11 +372,11 @@ package body Posix_Shell.Variables is
                   Shift : constant Integer :=
                     State.Pos_Params.Shift;
                begin
-                  Append (Result, To_String (Real_Size - Shift), Context);
+                  Append (Result, To_String (Real_Size - Shift));
                   return Result;
                end;
             when '0' =>
-               Append (Result, State.Script_Name.all, Context);
+               Append (Result, State.Script_Name.all);
                return Result;
             when others => null;
          end case;
@@ -388,8 +386,7 @@ package body Posix_Shell.Variables is
          Append
            (Result,
             Path_Transform (Element
-              (State.Var_Table, Name).Val.all, Name),
-            Context);
+              (State.Var_Table, Name).Val.all, Name));
       elsif Contains (State.Var_Table, Upper_Name) then
          declare
             Tmp : constant Var_Value := Element
@@ -398,8 +395,7 @@ package body Posix_Shell.Variables is
             if Tmp.Env_Val /= null then
                Append
                  (Result,
-                  Path_Transform (Tmp.Env_Val.all, Upper_Name),
-                  Context);
+                  Path_Transform (Tmp.Env_Val.all, Upper_Name));
             end if;
          end;
       end if;
@@ -412,8 +408,7 @@ package body Posix_Shell.Variables is
 
    function Get_Var_Value (State : Shell_State; Name : String) return String
    is
-      Value : constant Annotated_String := Get_Var_Value
-        (State, Name, NO_ANNOTATION);
+      Value : constant Annotated_String := Get_Var_Value (State, Name);
    begin
       return Str (Value);
    end Get_Var_Value;
@@ -505,43 +500,6 @@ package body Posix_Shell.Variables is
 
       return True;
    end Is_Positional_Parameter;
-
-   ----------------------------
-   -- Is_Valid_Variable_Name --
-   ----------------------------
-
-   function Is_Valid_Variable_Name (Name : String) return Boolean is
-   begin
-      --  For the definition of valid names, see: the Base Definitions
-      --  volume of IEEE Std 1003.1-2001, Section 3.230, Name.
-      --  ??? brobecker/2007-04-28: Double-check the implementation below
-      --  ??? against the document above. I haven't been able to do so
-      --  ??? at the time I implemented this, because I don't have access
-      --  ??? to internet right now.
-
-      --  Name must be at least one character long
-
-      if Name'Length = 0 then
-         return False;
-      end if;
-
-      --  The first character must be alphabetic
-
-      if not Is_Letter (Name (Name'First)) and Name (Name'First) /= '_' then
-         return False;
-      end if;
-
-      --  The remaining characters must be either alpha-numeric
-      --  or an underscore.
-
-      for J in Name'First + 1 .. Name'Last loop
-         if not Is_Alphanumeric (Name (J)) and then Name (J) /= '_' then
-            return False;
-         end if;
-      end loop;
-
-      return True;
-   end Is_Valid_Variable_Name;
 
    ----------------
    -- Is_Var_Set --

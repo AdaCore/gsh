@@ -1,14 +1,36 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2014, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Ada.Unchecked_Deallocation;
 --  with Ada.Text_IO;
 
 package body Posix_Shell.Tree is
 
    function Add_Node
-     (Tree : access Shell_Tree;
+     (Tree : in out Shell_Tree;
       N    : Node_Access)
       return Node_Id;
 
-   procedure Free_Node (Tree : Shell_Tree_Access; N : in out Node_Access);
+   procedure Free_Node (Tree : in out Shell_Tree; N : in out Node_Access);
 
    procedure Deallocate is
         new Ada.Unchecked_Deallocation
@@ -20,7 +42,7 @@ package body Posix_Shell.Tree is
    -----------------------
 
    function Add_And_Or_List_Node
-     (Tree   : Shell_Tree_Access;
+     (Tree   : in out Shell_Tree;
       Childs : And_Or_Node_Id_Array)
       return Node_Id
    is
@@ -40,7 +62,7 @@ package body Posix_Shell.Tree is
    --------------------
 
    function Add_Brace_Node
-     (Tree       : Shell_Tree_Access;
+     (Tree       : in out Shell_Tree;
       Brace_Code : Node_Id)
       return Node_Id
    is
@@ -58,8 +80,8 @@ package body Posix_Shell.Tree is
    ------------------------
 
    function Add_Case_List_Node
-     (Tree   : Shell_Tree_Access;
-      Pattern        : Annotated_String_List;
+     (Tree   : in out Shell_Tree;
+      Pattern        : Token_List;
       Case_Code      : Node_Id;
       Next_Case_Code : Node_Id)
       return Node_Id
@@ -79,8 +101,8 @@ package body Posix_Shell.Tree is
    -------------------
 
    function Add_Case_Node
-     (Tree   : Shell_Tree_Access;
-      Case_Value     : Annotated_String;
+     (Tree           : in out Shell_Tree;
+      Case_Value     : Token;
       Case_List_Code : Node_Id)
       return Node_Id
    is
@@ -98,20 +120,23 @@ package body Posix_Shell.Tree is
    ------------------
 
    function Add_For_Node
-     (Tree   : Shell_Tree_Access;
-      Variable_Name : Annotated_String;
-      Value_List    : Annotated_String_List;
-      Loop_Code     : Node_Id)
+     (Tree               : in out Shell_Tree;
+      Variable_Name      : Token;
+      Value_List         : Token_List;
+      Loop_Code          : Node_Id;
+      Default_Value_List : Boolean)
       return Node_Id
    is
    begin
       return Add_Node
-        (Tree, new Node'(Kind => FOR_NODE,
-                   Redirections => Empty_Redirection_Op_Stack,
-                   Pos => Null_Text_Position,
-                   Loop_Var => Variable_Name,
-                   Loop_Var_Values => Value_List,
-                   Loop_Code => Loop_Code));
+        (Tree,
+         new Node'(Kind                => FOR_NODE,
+                   Redirections        => Empty_Redirection_Op_Stack,
+                   Pos                 => Null_Text_Position,
+                   Loop_Var            => Variable_Name,
+                   Loop_Var_Values     => Value_List,
+                   Loop_Code           => Loop_Code,
+                   Loop_Default_Values => Default_Value_List));
    end Add_For_Node;
 
    -----------------
@@ -119,7 +144,7 @@ package body Posix_Shell.Tree is
    -----------------
 
    function Add_If_Node
-     (Tree   : Shell_Tree_Access;
+     (Tree                        : in out Shell_Tree;
       Cond, True_Code, False_Code : Node_Id) return Node_Id
    is
    begin
@@ -139,8 +164,10 @@ package body Posix_Shell.Tree is
    -------------------
 
    function Add_List_Node
-     (Tree   : Shell_Tree_Access;
-      Childs : Node_Id_Array) return Node_Id is
+     (Tree   : in out Shell_Tree;
+      Childs : Node_Id_Array)
+      return Node_Id
+   is
       Child_List : constant Node_Id_Array_Access := new Node_Id_Array'(Childs);
    begin
       return Add_Node
@@ -155,19 +182,21 @@ package body Posix_Shell.Tree is
    --------------
 
    function Add_Node
-     (Tree   : access Shell_Tree;
-      N      : Node_Access) return Node_Id is
+     (Tree   : in out Shell_Tree;
+      N      : Node_Access)
+      return Node_Id
+   is
    begin
-      Set_Item (Tree.all.Node_Table, Tree.all.Next_Node, N);
-      Tree.all.Next_Node := Tree.all.Next_Node + 1;
-      return Tree.all.Next_Node - 1;
+      Set_Item (Tree.Node_Table, Tree.Next_Node, N);
+      Tree.Next_Node := Tree.Next_Node + 1;
+      return Tree.Next_Node - 1;
    end Add_Node;
 
    -------------------
    -- Add_Null_Node --
    -------------------
 
-   function Add_Null_Node (Tree : Shell_Tree_Access) return Node_Id is
+   function Add_Null_Node (Tree : in out Shell_Tree) return Node_Id is
    begin
       return Add_Node
         (Tree, new Node'(Kind => NULL_CMD_NODE,
@@ -180,8 +209,9 @@ package body Posix_Shell.Tree is
    -------------------
 
    function Add_Pipe_Node
-     (Tree   : Shell_Tree_Access;
-      Childs : Node_Id_Array; Pipe_Negation : Boolean)
+     (Tree          : in out Shell_Tree;
+      Childs        : Node_Id_Array;
+      Pipe_Negation : Boolean)
       return Node_Id
    is
       Child_List : constant Node_Id_Array_Access := new Node_Id_Array'(Childs);
@@ -199,8 +229,9 @@ package body Posix_Shell.Tree is
    -----------------------
 
    function Add_Subshell_Node
-     (Tree   : Shell_Tree_Access;
-      Subshell_Code : Node_Id) return Node_Id
+     (Tree          : in out Shell_Tree;
+      Subshell_Code : Node_Id)
+      return Node_Id
    is
    begin
       return Add_Node
@@ -215,7 +246,7 @@ package body Posix_Shell.Tree is
    --------------------
 
    function Add_Until_Node
-     (Tree   : Shell_Tree_Access;
+     (Tree   : in out Shell_Tree;
       Cond, Loop_Code : Node_Id) return Node_Id is
    begin
       return Add_Node
@@ -231,7 +262,7 @@ package body Posix_Shell.Tree is
    --------------------
 
    function Add_While_Node
-     (Tree   : Shell_Tree_Access;
+     (Tree   : in out Shell_Tree;
       Cond, Loop_Code : Node_Id) return Node_Id is
    begin
       return Add_Node
@@ -249,7 +280,7 @@ package body Posix_Shell.Tree is
    procedure Append_Arg
      (Tree : Shell_Tree;
       N    : Node_Id;
-      S    : Annotated_String)
+      S    : Token)
    is
       Current : constant Node_Access := Tree.Node_Table.Table (N);
    begin
@@ -261,12 +292,13 @@ package body Posix_Shell.Tree is
    ------------------------
 
    procedure Append_Assignement
-     (Tree   : Shell_Tree_Access;
+     (Tree   : in out Shell_Tree;
       N      : Node_Id;
-      S      : Annotated_String)
+      S      : Token)
    is
-      Current : Node_Access := Tree.all.Node_Table.Table (N);
-      Assign_List : Annotated_String_List;
+      Current     : Node_Access := Tree.Node_Table.Table (N);
+      Assign_List : Token_List;
+
    begin
       if Current.Kind /= NULL_CMD_NODE then
          Assign_List := Current.Assign_List;
@@ -275,15 +307,15 @@ package body Posix_Shell.Tree is
                       Redirections => Current.Redirections,
                       Assign_List => Assign_List,
                            Pos => Current.Pos);
-      Deallocate (Tree.all.Node_Table.Table (N));
-      Tree.all.Node_Table.Table (N) := Current;
+      Deallocate (Tree.Node_Table.Table (N));
+      Tree.Node_Table.Table (N) := Current;
       Append (Current.Assign_List, S);
    end Append_Assignement;
 
-   function New_Tree return Shell_Tree_Access is
-      T : constant Shell_Tree_Access := new Shell_Tree;
+   function New_Tree return Shell_Tree is
+      T : Shell_Tree;
    begin
-      Init (T.all.Node_Table);
+      Init (T.Node_Table);
       return T;
    end New_Tree;
 
@@ -303,12 +335,12 @@ package body Posix_Shell.Tree is
    ------------------
 
    procedure Set_Cmd_Node
-     (Tree        : Shell_Tree_Access;
+     (Tree        : in out Shell_Tree;
       N           : Node_Id;
-      Cmd         : Annotated_String)
+      Cmd         : Token)
    is
-      Current : Node_Access := Tree.all.Node_Table.Table (N);
-      Assign_List : Annotated_String_List;
+      Current : Node_Access := Tree.Node_Table.Table (N);
+      Assign_List : Token_List;
    begin
       if Current.Kind = ASSIGN_NODE then
          Assign_List := Current.Assign_List;
@@ -316,19 +348,19 @@ package body Posix_Shell.Tree is
 
       Current := new Node'(CMD_NODE,
                       Redirections    => Current.Redirections,
-                      Arguments       => Null_Annotated_String_List,
+                      Arguments       => Null_Token_List,
                       Cmd             => Cmd,
                       Cmd_Assign_List => Assign_List,
                       Pos             => Current.Pos);
-      Deallocate (Tree.all.Node_Table.Table (N));
-      Tree.all.Node_Table.Table (N) := Current;
+      Deallocate (Tree.Node_Table.Table (N));
+      Tree.Node_Table.Table (N) := Current;
    end Set_Cmd_Node;
 
    ---------------
    -- Free_Node --
    ---------------
 
-   procedure Free_Node (Tree : Shell_Tree_Access; N : in out Node_Access) is
+   procedure Free_Node (Tree : in out Shell_Tree; N : in out Node_Access) is
    begin
       if N = null then
          return;
@@ -380,19 +412,19 @@ package body Posix_Shell.Tree is
    ---------------
 
    procedure Free_Node
-     (Tree   : Shell_Tree_Access) is
+     (Tree   : in out Shell_Tree) is
    begin
       Free_Node (Tree, Tree.Toplevel_Node);
-      Free (Tree.all.Node_Table);
+      Free (Tree.Node_Table);
    end Free_Node;
 
-   procedure Free_Node (Tree : Shell_Tree_Access; N : Node_Id) is
+   procedure Free_Node (Tree : in out Shell_Tree; N : Node_Id) is
    begin
       if N = Null_Node then
          return;
       end if;
-      Free_Node (Tree, Tree.all.Node_Table.Table (N));
-      Set_Item (Tree.all.Node_Table, N, null);
+      Free_Node (Tree, Tree.Node_Table.Table (N));
+      Set_Item (Tree.Node_Table, N, null);
    end Free_Node;
 
    -----------------------
@@ -400,20 +432,20 @@ package body Posix_Shell.Tree is
    -----------------------
 
    procedure Set_Function_Node
-     (Tree   : Shell_Tree_Access;
-      N    : Node_Id;
-      Name : Annotated_String;
-      Function_Code : Shell_Tree_Access)
+     (Tree          : in out Shell_Tree;
+      N             : Node_Id;
+      Name          : Token;
+      Function_Code : in out Shell_Tree)
    is
-      Current : Node_Access := Tree.all.Node_Table.Table (N);
+      Current : Node_Access := Tree.Node_Table.Table (N);
    begin
       Current := new Node'(FUNCTION_NODE,
                            Redirections => Current.Redirections,
                            Pos => Current.Pos,
                            Function_Name => Name,
                            Function_Code => Function_Code);
-      Deallocate (Tree.all.Node_Table.Table (N));
-      Tree.all.Node_Table.Table (N) := Current;
+      Deallocate (Tree.Node_Table.Table (N));
+      Tree.Node_Table.Table (N) := Current;
    end Set_Function_Node;
 
    ------------------
@@ -438,24 +470,26 @@ package body Posix_Shell.Tree is
      (Tree      : Shell_Tree;
       N         : Node_Id;
       Target_FD : Natural;
-      Filename  : Annotated_String;
+      Filename  : Token;
       Source_FD : Natural;
-      Cmd       : Redir_Cmd)
+      Cmd       : Redir_Cmd;
+      Eval      : Boolean)
    is
       Tmp     : constant Node_Access := Tree.Node_Table.Table (N);
       New_Top : constant Natural := Tmp.Redirections.Top + 1;
    begin
       Tmp.Redirections.Top := New_Top;
-      Tmp.Redirections.Ops (New_Top) := (Target_FD, Cmd, Source_FD, Filename);
+      Tmp.Redirections.Ops (New_Top) := (Target_FD, Cmd,
+                                         Source_FD, Filename, Eval);
    end Set_Node_Redirection;
 
    -----------------------
    -- Set_Tree_Toplevel --
    -----------------------
 
-   procedure Set_Tree_Toplevel (Tree : Shell_Tree_Access; N : Node_Id) is
+   procedure Set_Tree_Toplevel (Tree : in out Shell_Tree; N : Node_Id) is
    begin
-      Tree.all.Toplevel_Node := N;
+      Tree.Toplevel_Node := N;
    end Set_Tree_Toplevel;
 
 end Posix_Shell.Tree;

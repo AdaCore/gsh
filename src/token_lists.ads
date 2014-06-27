@@ -20,36 +20,46 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with System;
+with Ada.Finalization;
+with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 
-package body Posix_Shell.GNULib is
+package Token_Lists is
 
-   function C_Fnmatch
-     (Pattern : System.Address; Str : System.Address)
-      return Integer;
-   pragma Import (C, C_Fnmatch, "gsh_fnmatch");
+   type Token_List is private;
+   Null_Token_List : constant Token_List;
 
-   -------------
-   -- Fnmatch --
-   -------------
+   procedure Append
+     (Source : in out Token_List; Item : Token);
 
-   function Fnmatch (Pattern : String; Str : String) return Boolean is
-      C_Pattern : aliased String (1 .. Pattern'Length + 1);
-      C_Str : aliased String (1 .. Str'Length + 1);
-      Result : Integer;
-   begin
-      C_Pattern (1 .. Pattern'Length) := Pattern;
-      C_Pattern (C_Pattern'Last) := ASCII.NUL;
-      C_Str (1 .. Str'Length) := Str;
-      C_Str (C_Str'Last) := ASCII.NUL;
+   procedure Append
+     (Source : in out Token_List; Item : Token_List);
 
-      Result := C_Fnmatch (C_Pattern'Address, C_Str'Address);
-      if Result = 0 then
-         return True;
-      else
-         return False;
-      end if;
+   function "&" (Left : Token;
+                 Right : Token_List)
+                 return Token_List;
 
-   end Fnmatch;
+   function Length (Source : Token_List) return Integer;
 
-end Posix_Shell.GNULib;
+   function Element
+     (Source : Token_List;
+      Index : Natural)
+      return Token;
+
+private
+   type Node;
+   type Node_Access is access Node;
+
+   type Node is record
+      T      : Token;
+      Next   : Node_Access := null;
+   end record;
+
+   type Token_List is record
+      First  : Node_Access := null;
+      Last   : Node_Access := null;
+      Length : Natural := 0;
+   end record;
+
+   Null_Token_List : constant Token_List := (null, null, 0);
+
+end Token_Lists;

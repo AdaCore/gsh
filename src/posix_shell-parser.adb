@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2013, AdaCore                   --
+--                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -26,12 +26,12 @@
 
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell.Variables.Output;
-with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
-with Annotated_String_Lists; use Annotated_String_Lists;
+with Token_Lists; use Token_Lists;
+with Posix_Shell.Traces; use Posix_Shell.Traces;
 
 package body Posix_Shell.Parser is
 
-   type Context is
+   type Parser_Context is
      (NULL_CONTEXT,
       IF_COND_CONTEXT,
       IF_THEN_CONTEXT,
@@ -45,7 +45,7 @@ package body Posix_Shell.Parser is
    pragma Warnings (Off);
    type IO_Here_Context is record
       N         : Node_Id;
-      Marker    : Annotated_String := Null_Annotated_String;
+      Marker    : Token;
       Target_Fd : Integer;
    end record;
    pragma Warnings (On);
@@ -54,7 +54,11 @@ package body Posix_Shell.Parser is
    Pending_IO_Heres      : IO_Here_Context_Array;
    Pending_IO_Heres_Last : Natural := 0;
 
-   function Parse (B : Buffer_Access; T : Shell_Tree_Access) return Node_Id;
+   function Parse
+     (B           : in out Token_Buffer;
+      T           : in out Shell_Tree;
+      Until_Token : Token_Type := T_NULL)
+      return Node_Id;
    --  Parse content of buffer B and return the toplevel Node
 
    --  name             : NAME                     /* Apply rule 5 */
@@ -92,18 +96,20 @@ package body Posix_Shell.Parser is
    --                   ;
 
    function Parse_List
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B           : in out Token_Buffer;
+      Tree        : in out Shell_Tree;
+      Context     : Parser_Context;
+      Until_Token : Token_Type := T_NULL)
       return Node_Id;
    --  list : list separator_op and_or
    --       |                   and_or
    --       ;
 
    function Parse_And_Or
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B           : in out Token_Buffer;
+      T           : in out Shell_Tree;
+      C           : Parser_Context;
+      Until_Token : Token_Type := T_NULL)
       return Node_Id;
    --  and_or :                         pipeline
    --         | and_or AND_IF linebreak pipeline
@@ -111,27 +117,31 @@ package body Posix_Shell.Parser is
    --         ;
 
    function Parse_Pipeline
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
+      Until_Token : Token_Type := T_NULL)
       return Node_Id;
    --  pipeline :      pipe_sequence
    --           | Bang pipe_sequence
    --           ;
 
    function Parse_Pipe_Sequence
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context;
-      Pipe_Negation : Boolean) return Node_Id;
+     (B             : in out Token_Buffer;
+      T             : in out Shell_Tree;
+      C             : Parser_Context;
+      Pipe_Negation : Boolean;
+      Until_Token : Token_Type := T_NULL)
+      return Node_Id;
    --  pipe_sequence :                             command
    --                | pipe_sequence '|' linebreak command
    --                ;
 
    function Parse_Command
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
+      Until_Token : Token_Type := T_NULL)
       return Node_Id;
    --  command          : simple_command
    --                   | compound_command
@@ -140,9 +150,9 @@ package body Posix_Shell.Parser is
    --                   ;
 
    function Parse_Compound_Command
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  compound_command : brace_group
    --                   | subshell
@@ -154,17 +164,17 @@ package body Posix_Shell.Parser is
    --                   ;
 
    function Parse_Subshell
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  subshell         : '(' compound_list ')'
    --                   ;
 
    function Parse_Compound_List
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  compound_list    :              term
    --                   | newline_list term
@@ -173,18 +183,18 @@ package body Posix_Shell.Parser is
    --                   ;
 
    function Parse_Term
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  term             : term separator and_or
    --                   |                and_or
    --                   ;
 
    function Parse_For_Clause
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  for_clause      : For name linebreak                            do_group
    --                  | For name linebreak in          sequential_sep do_group
@@ -192,26 +202,27 @@ package body Posix_Shell.Parser is
    --                  ;
 
    function Parse_Word_List
-     (B : Buffer_Access;
-      C : Context)
-      return Annotated_String_List;
+     (B : in out Token_Buffer;
+      C : Parser_Context)
+      return Token_List;
    --  wordlist         : wordlist WORD
    --                   |          WORD
    --                   ;
 
    function Parse_Case_Clause
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context) return Node_Id;
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
+      return Node_Id;
    --  case_clause      : Case WORD linebreak in linebreak case_list    Esac
    --                   | Case WORD linebreak in linebreak case_list_ns Esac
    --                   | Case WORD linebreak in linebreak              Esac
    --                   ;
 
    function Parse_Case_List
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  case_list_ns     : case_list case_item_ns
    --                   |           case_item_ns
@@ -220,16 +231,16 @@ package body Posix_Shell.Parser is
    --                   |           case_item
    --                   ;
 
-   function Parse_Pattern (B : Buffer_Access)
-     return Annotated_String_List;
+   function Parse_Pattern (B : in out Token_Buffer)
+     return Token_List;
    --  pattern          :             WORD         /* Apply rule 4 */
    --                   | pattern '|' WORD         /* Do not apply rule 4 */
    --                   ;
 
    function Parse_If_Clause
-     (B         : Buffer_Access;
-      T : Shell_Tree_Access;
-      C         : Context;
+     (B         : in out Token_Buffer;
+      T         : in out Shell_Tree;
+      C         : Parser_Context;
       Elif_Mode : Boolean := False)
       return Node_Id;
    --  if_clause        : If compound_list Then compound_list else_part Fi
@@ -237,49 +248,50 @@ package body Posix_Shell.Parser is
    --                   ;
 
    function Parse_Else_Part
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  else_part        : Elif compound_list Then else_part
    --                   | Else compound_list
    --                   ;
 
    function Parse_While_Clause
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context) return Node_Id;
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
+      return Node_Id;
    --  while_clause     : While compound_list do_group
    --                   ;
 
    function Parse_Until_Clause
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  until_clause  : Until compound_list do_group
    --                ;
 
    function Parse_Brace_Group
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  brace_group      : Lbrace compound_list Rbrace
    --                   ;
 
    function Parse_Do_Group
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  do_group         : Do compound_list Done           /* Apply rule 6 */
    --                   ;
 
    function Parse_Simple_Command
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id;
    --  simple_command   : cmd_prefix cmd_word cmd_suffix
    --                   | cmd_prefix cmd_word
@@ -295,17 +307,18 @@ package body Posix_Shell.Parser is
    --                   ;
 
    procedure Parse_Redirect_List
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context; N : Node_Id);
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
+      N : Node_Id);
    --  redirect_list    :               io_redirect
    --                   | redirect_list io_redirect
    --                   ;
 
    procedure Parse_IO_Redirect
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context;
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
       N : Node_Id);
    --  io_redirect      :           io_file
    --                   | IO_NUMBER io_file
@@ -314,9 +327,9 @@ package body Posix_Shell.Parser is
    --                   ;
 
    procedure Parse_Linebreak
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context);
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context);
    pragma Inline (Parse_Linebreak);
    --  newline_list     :              NEWLINE
    --                   | newline_list NEWLINE
@@ -326,9 +339,9 @@ package body Posix_Shell.Parser is
    --                   ;
 
    procedure Parse_Separator
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context);
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context);
    pragma Inline (Parse_Separator);
    --  separator_op     : '&'
    --                   | ';'
@@ -338,9 +351,9 @@ package body Posix_Shell.Parser is
    --                   ;
 
    procedure Parse_Sequential_Sep
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context);
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context);
 
    pragma Inline (Parse_Sequential_Sep);
    --  sequential_sep   : ';' linebreak
@@ -348,10 +361,10 @@ package body Posix_Shell.Parser is
    --                   ;
 
    procedure Parse_IO_File
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context;
-      N : Node_Id;
+     (B         : in out Token_Buffer;
+      T         : in out Shell_Tree;
+      C         : Parser_Context;
+      N         : Node_Id;
       IO_Number : Integer);
    --  io_file          : '<'       filename
    --                   | LESSAND   filename
@@ -407,12 +420,17 @@ package body Posix_Shell.Parser is
    -- Parse --
    -----------
 
-   function Parse (B : Buffer_Access; T : Shell_Tree_Access) return Node_Id is
+   function Parse
+     (B           : in out Token_Buffer;
+      T           : in out Shell_Tree;
+      Until_Token : Token_Type := T_NULL)
+      return Node_Id
+   is
    begin
       while Lookahead (B) = T_NEWLINE loop
          Skip_Token (B);
       end loop;
-      return Parse_List (B, T, NULL_CONTEXT);
+      return Parse_List (B, T, NULL_CONTEXT, Until_Token => Until_Token);
    end Parse;
 
    ------------------
@@ -420,9 +438,10 @@ package body Posix_Shell.Parser is
    ------------------
 
    function Parse_And_Or
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
+      Until_Token : Token_Type := T_NULL)
       return Node_Id
    is
 
@@ -436,7 +455,7 @@ package body Posix_Shell.Parser is
    begin
       Init (Childs);
 
-      Current := Parse_Pipeline (B, T, C);
+      Current := Parse_Pipeline (B, T, C, Until_Token => Until_Token);
       Set_Item (Childs, Child_Index, (Current, AND_LIST));
       Child_Index := Child_Index + 1;
 
@@ -447,7 +466,7 @@ package body Posix_Shell.Parser is
                Skip_Token (B);
                Parse_Linebreak (B, T, C);
 
-               Current := Parse_Pipeline (B, T, C);
+               Current := Parse_Pipeline (B, T, C, Until_Token => Until_Token);
                if Current = 0 then
                   exit;
                end if;
@@ -479,9 +498,9 @@ package body Posix_Shell.Parser is
    -----------------------
 
    function Parse_Brace_Group
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
       pragma Unreferenced (C);
@@ -498,11 +517,15 @@ package body Posix_Shell.Parser is
    -- Parse_Buffer --
    ------------------
 
-   function Parse_Buffer (B : Buffer_Access) return Shell_Tree_Access is
-      T : constant Shell_Tree_Access := New_Tree;
+   function Parse_Buffer
+     (B           : in out Token_Buffer;
+      Until_Token : Token_Type := T_NULL)
+      return Shell_Tree
+   is
+      T : Shell_Tree := New_Tree;
       N : Node_Id := 0;
    begin
-      N := Parse (B, T);
+      N := Parse (B, T, Until_Token => Until_Token);
       Set_Tree_Toplevel (T, N);
       return T;
    end Parse_Buffer;
@@ -512,12 +535,12 @@ package body Posix_Shell.Parser is
    -----------------------
 
    function Parse_Case_Clause
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
-      Case_Value : Annotated_String;
+      Case_Value : Token;
       Case_List_Code : Node_Id := Null_Node;
    begin
       pragma Assert (Lookahead_Command (B) = T_CASE);
@@ -537,12 +560,12 @@ package body Posix_Shell.Parser is
    ---------------------
 
    function Parse_Case_List
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
-      Pattern        : Annotated_String_List;
+      Pattern        : Token_List;
       Case_Code      : Node_Id;
       Next_Case_Code : Node_Id;
    begin
@@ -579,22 +602,23 @@ package body Posix_Shell.Parser is
    -------------------
 
    function Parse_Command
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
+      Until_Token : Token_Type := T_NULL)
       return Node_Id
    is
       Result : Node_Id := 0;
 
-      procedure Context_Syntax_Error (Expected : Context);
+      function Context_Syntax_Error (Expected : Parser_Context) return Boolean;
 
-      function Context_Image (C : Context) return String;
+      function Context_Image (C : Parser_Context) return String;
 
       -------------------
       -- Context_Image --
       -------------------
 
-      function Context_Image (C : Context) return String is
+      function Context_Image (C : Parser_Context) return String is
       begin
          case C is
             when NULL_CONTEXT       => return "";
@@ -613,11 +637,16 @@ package body Posix_Shell.Parser is
       -- Context_Syntax_Error --
       --------------------------
 
-      procedure Context_Syntax_Error (Expected : Context) is
+      function Context_Syntax_Error (Expected : Parser_Context) return Boolean
+      is
       begin
          if C /= Expected then
+            if Until_Token = Lookahead (B) then
+               return True;
+            end if;
             Syntax_Error (Read_Token (B), Context_Image (C));
          end if;
+         return False;
       end Context_Syntax_Error;
 
    begin
@@ -628,13 +657,36 @@ package body Posix_Shell.Parser is
               T_CLOBBER | T_LESS | T_LESSAND | T_LESSGREAT | T_DLESS |
               T_IO_NUMBER =>
             Result := Parse_Simple_Command (B, T, C);
-         when T_THEN   => Context_Syntax_Error (IF_COND_CONTEXT);
-         when T_DONE   => Context_Syntax_Error (DO_GROUP_CONTEXT);
-         when T_DO     => Context_Syntax_Error (LOOP_COND_CONTEXT);
-         when T_RPAR   => Context_Syntax_Error (SUBSHELL_CONTEXT);
-         when T_DSEMI  => Context_Syntax_Error (CASE_ITEM_CONTEXT);
-         when T_ESAC   => Context_Syntax_Error (CASE_ITEM_CONTEXT);
-         when T_RBRACE => Context_Syntax_Error (BRACEGROUP_CONTEXT);
+         when T_THEN   =>
+            if Context_Syntax_Error (IF_COND_CONTEXT) then
+               return 0;
+            end if;
+         when T_DONE   =>
+            if Context_Syntax_Error (DO_GROUP_CONTEXT) then
+               return 0;
+            end if;
+         when T_DO     =>
+            if Context_Syntax_Error (LOOP_COND_CONTEXT) then
+               return 0;
+            end if;
+         when T_RPAR   =>
+            if Context_Syntax_Error (SUBSHELL_CONTEXT) then
+               return 0;
+            end if;
+
+         when T_DSEMI  =>
+            if Context_Syntax_Error (CASE_ITEM_CONTEXT) then
+               return 0;
+            end if;
+
+         when T_ESAC   =>
+            if Context_Syntax_Error (CASE_ITEM_CONTEXT) then
+               return 0;
+            end if;
+         when T_RBRACE =>
+            if Context_Syntax_Error (BRACEGROUP_CONTEXT) then
+               return 0;
+            end if;
          when T_ELSE | T_ELIF | T_FI =>
             if C /= IF_ELSE_CONTEXT and C /= IF_THEN_CONTEXT then
                Syntax_Error (Read_Token (B), "non expected 'else'");
@@ -651,9 +703,9 @@ package body Posix_Shell.Parser is
    ----------------------------
 
    function Parse_Compound_Command
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
       Result : Node_Id := 0;
@@ -682,9 +734,9 @@ package body Posix_Shell.Parser is
    -------------------------
 
    function Parse_Compound_List
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
       N : Node_Id;
@@ -706,9 +758,9 @@ package body Posix_Shell.Parser is
    --------------------
 
    function Parse_Do_Group
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
       pragma Unreferenced (C);
@@ -725,9 +777,9 @@ package body Posix_Shell.Parser is
    ---------------------
 
    function Parse_Else_Part
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
       Result : Node_Id;
@@ -750,13 +802,12 @@ package body Posix_Shell.Parser is
    -- Parse_File --
    ----------------
 
-   function Parse_File (Filename : String) return Shell_Tree_Access is
-      B : Buffer_Access;
+   function Parse_File (Filename : String) return Shell_Tree is
+      B : Token_Buffer;
       N : Node_Id := 0;
-      T : constant Shell_Tree_Access := New_Tree;
+      T : Shell_Tree := New_Tree;
    begin
-      B := new Token_Buffer;
-      B.all := New_Buffer_From_File (Filename);
+      B := New_Buffer_From_File (Filename);
       N := Parse (B, T);
       --  XXX deallocate buffer and tree
       Set_Tree_Toplevel (T, N);
@@ -768,15 +819,16 @@ package body Posix_Shell.Parser is
    ----------------------
 
    function Parse_For_Clause
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
-      Current       : constant Token := Read_Command_Token (B);
-      Variable_Name : Annotated_String;
-      Value_List    : Annotated_String_List := Null_Annotated_String_List;
-      Loop_Code     : Node_Id            := Null_Node;
+      Current            : constant Token := Read_Command_Token (B);
+      Variable_Name      : Token;
+      Value_List         : Token_List := Null_Token_List;
+      Loop_Code          : Node_Id := Null_Node;
+      Default_Value_List : Boolean := False;
    begin
       pragma Assert (Get_Token_Type (Current) = T_FOR);
 
@@ -796,27 +848,23 @@ package body Posix_Shell.Parser is
          end case;
          Parse_Sequential_Sep (B, T, C);
       else
-         declare
-            Tmp : Annotated_String;
-         begin
-            Append (Tmp, '"', DOUBLE_QUOTE_BEGIN);
-            Append (Tmp, '$', PARAM_EVAL_BEGIN);
-            Append (Tmp, '@', PARAM_EVAL_END);
-            Append (Tmp, '"', DOUBLE_QUOTE_END);
+         Default_Value_List := True;
+         case Lookahead (B) is
+            when T_SEMI | T_NEWLINE => Parse_Sequential_Sep (B, T, C);
+            when others => null;
+         end case;
 
-            Append (Value_List, Tmp);
-
-            case Lookahead (B) is
-               when T_SEMI | T_NEWLINE => Parse_Sequential_Sep (B, T, C);
-               when others => null;
-            end case;
-         end;
       end if;
 
       --  get the loop commands
       Loop_Code := Parse_Do_Group (B, T, C);
 
-      return Add_For_Node (T, Variable_Name, Value_List, Loop_Code);
+      return Add_For_Node
+        (T,
+         Variable_Name,
+         Value_List,
+         Loop_Code,
+         Default_Value_List);
    end Parse_For_Clause;
 
    ---------------------
@@ -824,9 +872,9 @@ package body Posix_Shell.Parser is
    ---------------------
 
    function Parse_If_Clause
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context;
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
       Elif_Mode : Boolean := False)
       return Node_Id
    is
@@ -871,9 +919,9 @@ package body Posix_Shell.Parser is
    -------------------
 
    procedure Parse_IO_File
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context;
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
       N : Node_Id;
       IO_Number : Integer)
    is
@@ -881,7 +929,7 @@ package body Posix_Shell.Parser is
       use Posix_Shell.Variables.Output;
       Target_FD : Integer := IO_Number;
       IO_Mode   : constant Token_Type := Read_Token (B);
-      Filename  : Annotated_String;
+      Filename  : Token;
    begin
       pragma Assert (IO_Mode in Redirection_Ops'Range);
 
@@ -899,25 +947,26 @@ package body Posix_Shell.Parser is
       case IO_Mode is
          when T_LESS =>
             Set_Node_Redirection
-              (T.all, N, Target_FD, Filename, 0, OPEN_READ);
+              (T, N, Target_FD, Filename, 0, OPEN_READ, True);
          when T_GREAT =>
             Set_Node_Redirection
-              (T.all, N, Target_FD, Filename, 0, OPEN_WRITE);
+              (T, N, Target_FD, Filename, 0, OPEN_WRITE, True);
          when T_DGREAT =>
             Set_Node_Redirection
-              (T.all, N, Target_FD, Filename, 0, OPEN_APPEND);
+              (T, N, Target_FD, Filename, 0, OPEN_APPEND, True);
          when T_GREATAND =>
             declare
                Source_FD : Integer := 0;
                Is_Valid  : Boolean := False;
             begin
-               To_Integer (Str (Filename), Source_FD, Is_Valid);
+               To_Integer (Get_Token_String (Filename), Source_FD, Is_Valid);
                if Is_Valid then
                   Set_Node_Redirection
-                    (T.all, N, Target_FD, Filename, Source_FD, DUPLICATE);
+                    (T, N, Target_FD, Filename, Source_FD,
+                     DUPLICATE, True);
                else
                   Set_Node_Redirection
-                    (T.all, N, Target_FD, Filename, 0, OPEN_WRITE);
+                    (T, N, Target_FD, Filename, 0, OPEN_WRITE, True);
                end if;
             end;
          when T_DLESS =>
@@ -942,15 +991,15 @@ package body Posix_Shell.Parser is
    -----------------------
 
    procedure Parse_IO_Redirect
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context;
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
       N : Node_Id)
    is
       IO_Number : Integer := -1;
    begin
       if Lookahead (B) = T_IO_NUMBER then
-         IO_Number := Integer'Value (Str (Read_Token (B)));
+         IO_Number := Integer'Value (Get_Token_String (Read_Token (B)));
       end if;
 
       Parse_IO_File (B, T, C, N, IO_Number);
@@ -961,22 +1010,29 @@ package body Posix_Shell.Parser is
    ---------------------
 
    procedure Parse_Linebreak
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
    is
       pragma Unreferenced (C);
    begin
       if Lookahead (B) = T_NEWLINE then
          for Index in 1 .. Pending_IO_Heres_Last loop
-            Set_Node_Redirection
-              (T.all,
-               Pending_IO_Heres (Index).N,
-               Pending_IO_Heres (Index).Target_Fd,
-               Read_IOHere (B, Pending_IO_Heres (Index).Marker),
-               0,
-               Posix_Shell.Variables.Output.IOHERE);
-            B.Valid_Cache := False;
+            declare
+               Eval : Boolean;
+               IOHere_Token : constant Token :=
+                 Read_IOHere (B, Pending_IO_Heres (Index).Marker, Eval);
+            begin
+               Set_Node_Redirection
+                 (T,
+                  Pending_IO_Heres (Index).N,
+                  Pending_IO_Heres (Index).Target_Fd,
+                  IOHere_Token,
+                  0,
+                  Posix_Shell.Variables.Output.IOHERE,
+                  Eval);
+               B.Valid_Cache := False;
+            end;
          end loop;
          Pending_IO_Heres_Last := 0;
       end if;
@@ -991,9 +1047,10 @@ package body Posix_Shell.Parser is
    ----------------
 
    function Parse_List
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B           : in out Token_Buffer;
+      Tree        : in out Shell_Tree;
+      Context     : Parser_Context;
+      Until_Token : Token_Type := T_NULL)
       return Node_Id
    is
       use Node_Id_Tables;
@@ -1005,25 +1062,34 @@ package body Posix_Shell.Parser is
    begin
       Init (Childs);
 
-      Current := Parse_And_Or (B, T, C);
+      Current := Parse_And_Or (B, Tree, Context, Until_Token => Until_Token);
       Set_Item (Childs, Child_Index, Current);
       Child_Index := Child_Index + 1;
 
       loop
          case Lookahead (B) is
             when T_SEMI | T_AND | T_NEWLINE =>
-               Parse_Separator (B, T, C);
+               Parse_Separator (B, Tree, Context);
+
                exit when Lookahead (B) = T_EOF;
-               Current := Parse_And_Or (B, T, C);
+
+               Current := Parse_And_Or
+                 (B, Tree, Context, Until_Token => Until_Token);
                if Current = 0 then
                   exit;
                end if;
+
                Set_Item (Childs, Child_Index, Current);
                Child_Index := Child_Index + 1;
                pragma Assert (Current /= Null_Node);
             when T_EOF =>
                exit;
             when others =>
+               if Until_Token /= T_NULL and then
+                 Until_Token = Lookahead (B)
+               then
+                  exit;
+               end if;
                declare
                   T : constant Token := Read_Token (B);
                   pragma Unreferenced (T);
@@ -1037,7 +1103,7 @@ package body Posix_Shell.Parser is
          Result := Childs.Table (1);
       else
          Result := Add_List_Node
-           (T, Node_Id_Array (Childs.Table (1 .. Last (Childs))));
+           (Tree, Node_Id_Array (Childs.Table (1 .. Last (Childs))));
       end if;
 
       Free (Childs);
@@ -1049,11 +1115,11 @@ package body Posix_Shell.Parser is
    -- Parse_Pattern --
    -------------------
 
-   function Parse_Pattern (B : Buffer_Access)
-     return Annotated_String_List
+   function Parse_Pattern (B : in out Token_Buffer)
+     return Token_List
    is
-      S  : Annotated_String := Read_Word_Token (B);
-      Result : Annotated_String_List := Null_Annotated_String_List;
+      S      : Token := Read_Word_Token (B);
+      Result : Token_List := Null_Token_List;
    begin
       loop
          Append (Result, S);
@@ -1071,10 +1137,11 @@ package body Posix_Shell.Parser is
    -------------------------
 
    function Parse_Pipe_Sequence
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context;
-      Pipe_Negation : Boolean)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
+      Pipe_Negation : Boolean;
+      Until_Token : Token_Type := T_NULL)
       return Node_Id
    is
       --  Left, Right : Node_Id := Null_Node;
@@ -1087,7 +1154,7 @@ package body Posix_Shell.Parser is
    begin
       Init (Childs);
 
-      Current := Parse_Command (B, T, C);
+      Current := Parse_Command (B, T, C, Until_Token => Until_Token);
       Set_Item (Childs, Child_Index, Current);
       Child_Index := Child_Index + 1;
 
@@ -1097,7 +1164,7 @@ package body Posix_Shell.Parser is
                Skip_Token (B);
                Parse_Linebreak (B, T, C);
 
-               Current := Parse_Command (B, T, C);
+               Current := Parse_Command (B, T, C, Until_Token => Until_Token);
 
                if Current = 0 then
                   exit;
@@ -1142,9 +1209,10 @@ package body Posix_Shell.Parser is
    --------------------
 
    function Parse_Pipeline
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
+      Until_Token : Token_Type := T_NULL)
       return Node_Id
    is
       Pipe_Negation : Boolean := False;
@@ -1156,7 +1224,8 @@ package body Posix_Shell.Parser is
          when others => null;
       end case;
 
-      return  Parse_Pipe_Sequence (B, T, C, Pipe_Negation);
+      return  Parse_Pipe_Sequence (B, T, C, Pipe_Negation,
+                                   Until_Token => Until_Token);
    end Parse_Pipeline;
 
    -------------------------
@@ -1164,9 +1233,10 @@ package body Posix_Shell.Parser is
    -------------------------
 
    procedure Parse_Redirect_List
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context; N : Node_Id)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context;
+      N : Node_Id)
    is
       Current : Token_Type;
    begin
@@ -1185,9 +1255,9 @@ package body Posix_Shell.Parser is
    ---------------------
 
    procedure Parse_Separator
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context) is
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context) is
       Current : constant Token_Type := Lookahead (B);
    begin
       pragma Assert (Current = T_SEMI
@@ -1204,9 +1274,9 @@ package body Posix_Shell.Parser is
    --------------------------
 
    procedure Parse_Sequential_Sep
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
    is
       Cur : constant Token_Type := Lookahead (B);
    begin
@@ -1222,32 +1292,36 @@ package body Posix_Shell.Parser is
    --------------------------
 
    function Parse_Simple_Command
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
      return Node_Id
    is
       --  Assign_List : Annotated_String_List_Access := null;
-      Cmd         : Annotated_String;
-      Cmd_Id      : constant Node_Id := Add_Null_Node (T);
-      Cur           : Token;
-      CurT          : Token_Type;
-      Is_Pos_Set  : Boolean := False;
+      Cmd        : Token;
+      Cmd_Id     : constant Node_Id := Add_Null_Node (T);
+      Cur        : Token;
+      CurT       : Token_Type;
+      Is_Pos_Set : Boolean := False;
    begin
+      pragma Debug (Log ("parse_simple_command", ""));
       pragma Assert (Lookahead_Command (B) = T_ASSIGNEMENT or else
                      Lookahead_Command (B) = T_WORD or else
                      Is_Redirection_Op (Lookahead_Command (B), True));
 
       --  cmd_prefix
+
       CurT := Lookahead_Command (B);
+      pragma Debug (Log ("parse_simple_command", CurT'Img));
       while CurT = T_ASSIGNEMENT or else Is_Redirection_Op (CurT, True) loop
          if CurT = T_ASSIGNEMENT then
             Cur := Read_Command_Token (B);
             if not Is_Pos_Set then
-               Set_Node_Pos (T.all, Cmd_Id, Get_Token_Pos (Cur));
+               Set_Node_Pos (T, Cmd_Id, Get_Token_Pos (Cur));
                Is_Pos_Set := True;
             end if;
-            Append_Assignement (T, Cmd_Id, Get_Token_String (Cur));
+            pragma Debug (Log ("append_assignment", Get_Token_String (Cur)));
+            Append_Assignement (T, Cmd_Id, Cur);
          else
             Parse_IO_Redirect (B, T, C, Cmd_Id);
          end if;
@@ -1256,12 +1330,13 @@ package body Posix_Shell.Parser is
 
       if Lookahead (B) = T_WORD then
          Cur := Read_Token (B);
+         pragma Debug (Log ("parse_cmd", Get_Token_String (Cur)));
          if not Is_Pos_Set then
-            Set_Node_Pos (T.all, Cmd_Id, Get_Token_Pos (Cur));
+            Set_Node_Pos (T, Cmd_Id, Get_Token_Pos (Cur));
             Is_Pos_Set := True;
          end if;
 
-         Cmd := Get_Token_String (Cur);
+         Cmd := Cur;
 
          --  This is a kind of hack for functions
          if Lookahead (B) = T_LPAR then
@@ -1270,7 +1345,7 @@ package body Posix_Shell.Parser is
             Expect_Token (B, T_RPAR);
             Parse_Linebreak (B, T, C);
             declare
-               Function_Tree : constant Shell_Tree_Access := New_Tree;
+               Function_Tree : Shell_Tree := New_Tree;
                N : constant Node_Id := Parse_Compound_Command
                  (B, Function_Tree, C);
             begin
@@ -1283,10 +1358,12 @@ package body Posix_Shell.Parser is
 
             --  cmd_suffix
             CurT := Lookahead (B);
+
             while CurT = T_WORD or else Is_Redirection_Op (CurT, True) loop
 
                if CurT = T_WORD then
-                  Append_Arg (T.all, Cmd_Id, Read_Word_Token (B));
+                  pragma Debug (Log ("append_arg", ""));
+                  Append_Arg (T, Cmd_Id, Read_Word_Token (B));
                else
                   Parse_IO_Redirect (B, T, C, Cmd_Id);
                end if;
@@ -1302,16 +1379,17 @@ package body Posix_Shell.Parser is
    -- Parse_String --
    ------------------
 
-   function Parse_String (S : String) return Shell_Tree_Access is
-      B : Buffer_Access;
-      T : constant Shell_Tree_Access := New_Tree;
+   function Parse_String
+     (S : String)
+      return Shell_Tree
+   is
+      B : Token_Buffer;
+      T : Shell_Tree := New_Tree;
       N : Node_Id := 0;
    begin
-      B := new Token_Buffer;
-      B.all := New_Buffer (S);
+      B := New_Buffer (S);
       N := Parse (B, T);
       Set_Tree_Toplevel (T, N);
-      Deallocate (B);
       return T;
       --  XXX missing deallocation of buffer.
    end Parse_String;
@@ -1321,9 +1399,9 @@ package body Posix_Shell.Parser is
    --------------------
 
    function Parse_Subshell
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
       pragma Unreferenced (C);
@@ -1341,9 +1419,9 @@ package body Posix_Shell.Parser is
    ----------------
 
    function Parse_Term
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
       use Node_Id_Tables;
@@ -1391,9 +1469,9 @@ package body Posix_Shell.Parser is
    ------------------------
 
    function Parse_Until_Clause
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
       Cond, Loop_Code : Node_Id := Null_Node;
@@ -1409,9 +1487,9 @@ package body Posix_Shell.Parser is
    ------------------------
 
    function Parse_While_Clause
-     (B : Buffer_Access;
-      T : Shell_Tree_Access;
-      C : Context)
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree;
+      C : Parser_Context)
       return Node_Id
    is
       Cond, Loop_Code : Node_Id := Null_Node;
@@ -1427,12 +1505,12 @@ package body Posix_Shell.Parser is
    ---------------------
 
    function Parse_Word_List
-     (B : Buffer_Access;
-      C : Context)
-      return Annotated_String_List
+     (B : in out Token_Buffer;
+      C : Parser_Context)
+      return Token_List
    is
-      Result : Annotated_String_List := Null_Annotated_String_List;
-      Value : Annotated_String := Read_Word_Token (B);
+      Result : Token_List := Null_Token_List;
+      Value  : Token := Read_Word_Token (B);
    begin
       loop
          case Lookahead (B) is

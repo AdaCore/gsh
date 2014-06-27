@@ -1,4 +1,65 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2014, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
+with Ada.Characters.Handling; use Ada.Characters.Handling;
+
 package body Posix_Shell.String_Utils is
+
+   ----------------------------
+   -- Is_Valid_Variable_Name --
+   ----------------------------
+
+   function Is_Valid_Variable_Name (Name : String) return Boolean is
+   begin
+      --  For the definition of valid names, see: the Base Definitions
+      --  volume of IEEE Std 1003.1-2001, Section 3.230, Name.
+      --  ??? brobecker/2007-04-28: Double-check the implementation below
+      --  ??? against the document above. I haven't been able to do so
+      --  ??? at the time I implemented this, because I don't have access
+      --  ??? to internet right now.
+
+      --  Name must be at least one character long
+
+      if Name'Length = 0 then
+         return False;
+      end if;
+
+      --  The first character must be alphabetic
+
+      if not Is_Letter (Name (Name'First)) and Name (Name'First) /= '_' then
+         return False;
+      end if;
+
+      --  The remaining characters must be either alpha-numeric
+      --  or an underscore.
+
+      for J in Name'First + 1 .. Name'Last loop
+         if not Is_Alphanumeric (Name (J)) and then Name (J) /= '_' then
+            return False;
+         end if;
+      end loop;
+
+      return True;
+   end Is_Valid_Variable_Name;
 
    -----------------
    -- Starts_With --
@@ -70,6 +131,24 @@ package body Posix_Shell.String_Utils is
       return S (Pos .. S'Last);
    end From_Line;
 
+   ----------------
+   -- Is_Natural --
+   ----------------
+
+   function Is_Natural (S : String) return Boolean is
+   begin
+      if S = "" then
+         return False;
+      end if;
+
+      for J in S'Range loop
+         if S (J) not in '0' .. '9' then
+            return False;
+         end if;
+      end loop;
+      return True;
+   end Is_Natural;
+
    -------------
    -- To_Line --
    -------------
@@ -94,4 +173,46 @@ package body Posix_Shell.String_Utils is
 
       return S (S'First .. Pos - 1);
    end To_Line;
+
+   ---------------
+   -- To_String --
+   ---------------
+
+   function To_String (I : Integer) return String is
+      Str : constant String := Integer'Image (I);
+   begin
+      if I < 0 then
+         return Str;
+      else
+         return Str (Str'First + 1 .. Str'Last);
+      end if;
+   end To_String;
+
+   --------------
+   -- Strip_CR --
+   --------------
+
+   function Strip_CR (Str : String) return String is
+      Result : String (1 .. Str'Length);
+      Last : Integer := 0;
+   begin
+      for J in Str'Range loop
+         case Str (J) is
+            when ASCII.CR =>
+               if J /= Str'Last and then Str (J + 1) /= ASCII.LF then
+                  Last := Last + 1;
+                  Result (Last) := Str (J);
+               end if;
+            when others   =>
+               Last := Last + 1;
+               Result (Last) := Str (J);
+         end case;
+      end loop;
+      if Last = 0 then
+         return "";
+      else
+         return Result (1 .. Last);
+      end if;
+   end Strip_CR;
+
 end Posix_Shell.String_Utils;

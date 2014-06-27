@@ -31,6 +31,7 @@ with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Utils; use  Posix_Shell.Utils;
 with Posix_Shell.GNULib; use Posix_Shell.GNULib;
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
+with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
 with Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
@@ -60,7 +61,6 @@ package body Posix_Shell.Tree.Evals is
    procedure Eval_Null_Cmd (S : Shell_State_Access; T : Shell_Tree; N : Node);
 
    procedure Eval_Cmd (S            : Shell_State_Access;
-                       T            : Shell_Tree;
                        Command      : String;
                        Arguments    : String_List;
                        Redirections : Redirection_Op_Stack);
@@ -68,7 +68,7 @@ package body Posix_Shell.Tree.Evals is
    --  This function takes care of setting and the restoring the redirections
    --  as well.
 
-   procedure Eval_Cmd (S : Shell_State_Access; T : Shell_Tree; N : Node);
+   procedure Eval_Cmd (S : Shell_State_Access; N : Node);
    --  Evaluate the given node as a command, after having expanded
    --  the command name and its arguments.
 
@@ -179,7 +179,7 @@ package body Posix_Shell.Tree.Evals is
          when SUBSHELL_NODE    => Eval_Subshell (S, T, N);
          when FUNCTION_NODE    => Eval_Function (S, N);
          when ASSIGN_NODE      => Eval_Assign (S, N);
-         when CMD_NODE         => Eval_Cmd (S, T, N);
+         when CMD_NODE         => Eval_Cmd (S, N);
          when NULL_CMD_NODE    => Eval_Null_Cmd (S, T, N);
          when others           => raise Program_Error;
       end case;
@@ -219,7 +219,7 @@ package body Posix_Shell.Tree.Evals is
       N : Node;
       Do_Export : Boolean := False)
    is
-      Tmp : Annotated_String_List;
+      Tmp : Token_List;
    begin
       Set_Var_Value (S.all, "LINENO", To_String (Get_Lineno (N.Pos)));
       if N.Kind = CMD_NODE then
@@ -230,9 +230,9 @@ package body Posix_Shell.Tree.Evals is
 
       for A in 1 .. Length (Tmp) loop
          declare
-            Assign : constant String := Str (Element (Tmp, A));
+            Assign : constant String := Get_Token_String (Element (Tmp, A));
          begin
-            for I in 1 .. Assign'Last loop
+            for I in Assign'First .. Assign'Last loop
                if Assign (I) = '=' then
                   if I = Assign'Last then
                      Set_Var_Value (S.all, Assign (Assign'First .. I - 1),
@@ -242,9 +242,8 @@ package body Posix_Shell.Tree.Evals is
                      Set_Var_Value
                        (S.all, Assign (Assign'First .. I - 1),
                         Eval_String_Unsplit
-                          (S, Slice (Element (Tmp, A),
-                           I + 1, Assign'Last)),
-                        Do_Export);
+                          (S, Assign (I + 1 .. Assign'Last)),
+                           Do_Export);
                   end if;
                   exit;
                end if;
@@ -276,7 +275,8 @@ package body Posix_Shell.Tree.Evals is
    ---------------
 
    procedure Eval_Case (S : Shell_State_Access; T : Shell_Tree; N : Node) is
-      Case_Value : constant String := Eval_String_Unsplit (S, N.Case_Word);
+      Case_Value : constant String :=
+        Eval_String_Unsplit (S, Get_Token_String (N.Case_Word));
       Current_Case : Node_Access := Get_Node (T, N.First_Case);
       Pattern_Found : Boolean := False;
       Current_Redirs : constant Redirection_States :=
@@ -287,7 +287,8 @@ package body Posix_Shell.Tree.Evals is
          for I in 1 .. Length (Current_Case.Pattern_List) loop
             declare
                Str : constant String := Eval_String_Unsplit
-                 (S, Element (Current_Case.Pattern_List, I), True);
+                 (S, Get_Token_String (Element (Current_Case.Pattern_List, I)),
+                  True);
             begin
                if Fnmatch (Str, Case_Value) then
                   if Current_Case.Match_Code /= Null_Node then
@@ -322,7 +323,6 @@ package body Posix_Shell.Tree.Evals is
    --------------
 
    procedure Eval_Cmd (S            : Shell_State_Access;
-                       T            : Shell_Tree;
                        Command      : String;
                        Arguments    : String_List;
                        Redirections : Redirection_Op_Stack)
@@ -363,7 +363,7 @@ package body Posix_Shell.Tree.Evals is
    -- Eval_Cmd --
    --------------
 
-   procedure Eval_Cmd (S : Shell_State_Access; T : Shell_Tree; N : Node) is
+   procedure Eval_Cmd (S : Shell_State_Access; N : Node) is
    begin
       declare
          Result_String : String_List :=
@@ -412,7 +412,6 @@ package body Posix_Shell.Tree.Evals is
 
             if Result_String'Length > 0 then
                Eval_Cmd (S => New_State,
-                         T => T,
                          Command => Cmd,
                          Arguments => Args,
                          Redirections => N.Redirections);
@@ -448,12 +447,15 @@ package body Posix_Shell.Tree.Evals is
    --------------
 
    procedure Eval_For (S : Shell_State_Access; T : Shell_Tree; N : Node) is
-      Loop_Var  : constant String := Str (N.Loop_Var);
-      Loop_Var_Values : String_List := Eval_String_List (S, N.Loop_Var_Values);
-      Is_Valid : Boolean;
-      Break_Number : Integer;
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
-
+      Loop_Var        : constant String := Get_Token_String (N.Loop_Var);
+      Loop_Var_Values : String_List :=
+        (if not N.Loop_Default_Values then
+         Eval_String_List (S, N.Loop_Var_Values) else
+         Eval_String (S, """$@"""));
+      Is_Valid        : Boolean;
+      Break_Number    : Integer;
+      Current_Redirs  : constant Redirection_States :=
+        Get_Redirections (S.all);
       My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S.all) + 1;
    begin
       Set_Redirections (S, N.Redirections);
@@ -500,7 +502,7 @@ package body Posix_Shell.Tree.Evals is
      (S : Shell_State_Access; N : Node)
    is
    begin
-      Register_Function (Str (N.Function_Name), N.Function_Code);
+      Register_Function (Get_Token_String (N.Function_Name), N.Function_Code);
       Save_Last_Exit_Status (S.all, 0);
    end Eval_Function;
 

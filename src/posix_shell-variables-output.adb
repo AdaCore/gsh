@@ -1,6 +1,29 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2014, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Ada.Strings.Unbounded;
+with System.CRTL;
 with GNAT.Task_Lock;
 
 package body Posix_Shell.Variables.Output is
@@ -137,7 +160,7 @@ package body Posix_Shell.Variables.Output is
       --  return True if the filename correspond the name of the null file
       --  (for example "dev/null" on Unix systems).
 
-      function Resolve_Filename (A : Annotated_String) return String;
+      function Resolve_Filename (A : Token) return String;
 
       ------------------
       -- Is_Null_File --
@@ -158,10 +181,10 @@ package body Posix_Shell.Variables.Output is
 
       end Is_Null_File;
 
-      function Resolve_Filename (A : Annotated_String) return String
+      function Resolve_Filename (A : Token) return String
       is
          Eval_Result : constant String := Resolve_Path
-           (S.all, Eval_String_Unsplit (S, A));
+           (S.all, Eval_String_Unsplit (S, Get_Token_String (A)));
       begin
          if On_Windows and then Eval_Result = "/dev/null" then
             return "NUL";
@@ -246,7 +269,10 @@ package body Posix_Shell.Variables.Output is
                      Result : Integer;
                      pragma Warnings (Off, Result);
                      Result_String : aliased String :=
-                       Eval_String_Unsplit (S, C.Filename);
+                       (if C.Eval
+                        then Eval_String_Unsplit
+                          (S, Get_Token_String (C.Filename), IOHere => True)
+                        else Get_Token_String (C.Filename));
                   begin
                      GNAT.Task_Lock.Lock;
                      Create_Temp_File (Fd, Name);
@@ -367,6 +393,23 @@ package body Posix_Shell.Variables.Output is
       GNAT.Task_Lock.Unlock;
       return To_String (Result_Str);
    end Read_Pipe_And_Close;
+
+   -----------------------
+   -- Set_Close_On_Exec --
+   -----------------------
+
+   procedure Set_Close_On_Exec
+     (FD            : File_Descriptor;
+      Close_On_Exec : Boolean;
+      Status        : out Boolean)
+   is
+      function C_Set_Close_On_Exec
+        (FD : File_Descriptor; Close_On_Exec : System.CRTL.int)
+         return System.CRTL.int;
+      pragma Import (C, C_Set_Close_On_Exec, "__gsh_set_close_on_exec");
+   begin
+      Status := C_Set_Close_On_Exec (FD, Boolean'Pos (Close_On_Exec)) = 0;
+   end Set_Close_On_Exec;
 
    -----------------
    -- Set_Pipe_In --

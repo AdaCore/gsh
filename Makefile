@@ -10,18 +10,6 @@ DDK_DIR:=$(shell echo `dirname $(GCC_BIN)`/i686-pc-mingw32/include/ddk)
 SYS:=$(strip $(shell if test -d $(DDK_DIR); then echo 'windows'; else echo 'unix'; fi))
 EXEEXT:=$(strip $(shell if test "$(SYS)" = "windows"; then echo ".exe"; fi))
 
-UNAME:=$(strip $(shell uname))
-ifeq ($(UNAME),Darwin)
-   LUA_TARGET:=macosx
-else
-   ifeq ($(UNAME),Linux)
-      LUA_TARGET:=linux
-   else
-      # Default on windows
-      LUA_TARGET:=mingw
-   endif
-endif
-
 # Variables that control compilation flags, debuggging mode, ...
 BUILD=prod
 COVERAGE=false
@@ -31,11 +19,6 @@ all:
 	@echo "building gsh for $(SYS)"
 	gprbuild -p -P posix_shell -XBUILD=$(BUILD) -XCOVERAGE=$(COVERAGE) \
 		 -XDDK_DIR=$(DDK_DIR) -XSYS=$(SYS)
-
-lua/install/liblua.a:
-	@echo "building lua for $(LUA_TARGET)"
-	(cd lua && make $(LUA_TARGET))
-	(cd lua && make install INSTALL_TOP=`pwd`/install)
 
 # Use this if you need to recompile libreadline (Windows only)
 readline/libreadline.a: readline/Makefile

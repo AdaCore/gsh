@@ -1,4 +1,27 @@
+------------------------------------------------------------------------------
+--                                                                          --
+--                                  G S H                                   --
+--                                                                          --
+--                                                                          --
+--                       Copyright (C) 2010-2014, AdaCore                   --
+--                                                                          --
+-- GSH is free software;  you can  redistribute it  and/or modify it under  --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 2,  or (at your option) any later ver- --
+-- sion.  GSH is distributed in the hope that it will be useful, but WITH-  --
+-- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
+-- for  more details.  You should have  received  a copy of the GNU General --
+-- Public License  distributed with GNAT;  see file COPYING.  If not, write --
+-- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
+-- Boston, MA 02110-1301, USA.                                              --
+--                                                                          --
+-- GSH is maintained by AdaCore (http://www.adacore.com)                    --
+--                                                                          --
+------------------------------------------------------------------------------
+
 with Posix_Shell.Variables; use Posix_Shell.Variables;
+with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 
 package Posix_Shell.Variables.Output is
 
@@ -13,7 +36,8 @@ package Posix_Shell.Variables.Output is
       Target_FD : Natural;
       Cmd       : Redir_Cmd;
       Source_FD : Natural;
-      Filename  : Annotated_String := Null_Annotated_String;
+      Filename  : Token;
+      Eval      : Boolean;
    end record;
    --  Redirection directive. F is the name of the file. If Append is True
    --  then F will be opened in append mode (relevant only for Stdin and
@@ -27,7 +51,7 @@ package Posix_Shell.Variables.Output is
    --  Redirection directives for Stdin, Stdout and Stderr.
 
    Empty_Redirection_Op_Stack : Redirection_Op_Stack :=
-     (0, (others => (0, NULL_REDIR, 0, Null_Annotated_String)));
+     (0, (others => (0, NULL_REDIR, 0, Null_Token, True)));
 
    procedure Set_Redirections
      (S : Shell_State_Access;
@@ -79,5 +103,10 @@ package Posix_Shell.Variables.Output is
 
    procedure Warning (S : Shell_State; Msg : String);
    --  Print a warning message on standard error.
+
+   procedure Set_Close_On_Exec
+     (FD            : File_Descriptor;
+      Close_On_Exec : Boolean;
+      Status        : out Boolean);
 
 end Posix_Shell.Variables.Output;

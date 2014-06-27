@@ -20,36 +20,93 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with System;
+package body Token_Lists is
 
-package body Posix_Shell.GNULib is
+   -------
+   -- & --
+   -------
 
-   function C_Fnmatch
-     (Pattern : System.Address; Str : System.Address)
-      return Integer;
-   pragma Import (C, C_Fnmatch, "gsh_fnmatch");
-
-   -------------
-   -- Fnmatch --
-   -------------
-
-   function Fnmatch (Pattern : String; Str : String) return Boolean is
-      C_Pattern : aliased String (1 .. Pattern'Length + 1);
-      C_Str : aliased String (1 .. Str'Length + 1);
-      Result : Integer;
+   function "&"
+     (Left  : Token;
+      Right : Token_List)
+      return Token_List
+   is
+      Result : Token_List := Null_Token_List;
    begin
-      C_Pattern (1 .. Pattern'Length) := Pattern;
-      C_Pattern (C_Pattern'Last) := ASCII.NUL;
-      C_Str (1 .. Str'Length) := Str;
-      C_Str (C_Str'Last) := ASCII.NUL;
+      Append (Result, Left);
+      Append (Result, Right);
+      return Result;
+   end "&";
 
-      Result := C_Fnmatch (C_Pattern'Address, C_Str'Address);
-      if Result = 0 then
-         return True;
+   ------------
+   -- Append --
+   ------------
+
+   procedure Append
+     (Source : in out Token_List; Item : Token)
+   is
+      N : constant Node_Access := new Node'(Item, null);
+   begin
+      Source.Length := Source.Length + 1;
+      if Source.First /= null then
+         Source.Last.Next := N;
+         Source.Last := N;
       else
-         return False;
+         Source.First := N;
+         Source.Last := N;
       end if;
+   end Append;
 
-   end Fnmatch;
+   ------------
+   -- Append --
+   ------------
 
-end Posix_Shell.GNULib;
+   procedure Append
+     (Source : in out Token_List;
+      Item   : Token_List)
+   is
+   begin
+      if Item.Length > 0 then
+         Source.Length := Source.Length + Item.Length;
+         if Source.First /= null then
+            Source.Last.Next := Item.First;
+            Source.Last := Item.Last;
+         else
+            Source.First := Item.First;
+            Source.Last := Item.Last;
+         end if;
+      end if;
+   end Append;
+
+   -------------
+   -- Element --
+   -------------
+
+   function Element
+     (Source : Token_List;
+      Index  : Natural)
+      return Token
+   is
+      N : Node_Access := Source.First;
+   begin
+      if Index = 1 then
+         return N.T;
+      else
+         for J in 1 .. Index - 1 loop
+            N := N.Next;
+         end loop;
+         return N.T;
+      end if;
+   end Element;
+
+   ------------
+   -- Length --
+   ------------
+
+   function Length (Source : Token_List) return Integer
+   is
+   begin
+      return Source.Length;
+   end Length;
+
+end Token_Lists;

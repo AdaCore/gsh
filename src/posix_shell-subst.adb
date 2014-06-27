@@ -24,50 +24,32 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Exec;       use Posix_Shell.Exec;
 with Posix_Shell.Variables.Output;     use Posix_Shell.Variables.Output;
 with Posix_Shell.Parser;     use Posix_Shell.Parser;
 with Posix_Shell.Tree;       use Posix_Shell.Tree;
-with Posix_Shell.Utils;      use Posix_Shell.Utils;
 with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
-with Posix_Shell.GNULib;     use Posix_Shell.GNULib;
-
+with Posix_Shell.String_Utils;      use Posix_Shell.String_Utils;
 with Ada.Strings.Unbounded;
 with Ada.Directories;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Dyn_String_Lists;
+with Posix_Shell.Lexer; use Posix_Shell.Lexer;
+with Posix_Shell.Traces; use Posix_Shell.Traces;
+with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
+with Posix_Shell.Buffers; use Posix_Shell.Buffers;
+with Posix_Shell.Exec; use Posix_Shell.Exec;
 
 package body Posix_Shell.Subst is
 
    function Eval_String_Aux
-     (SS           : Shell_State_Access;
-      S            : Annotated_String;
-      Case_Pattern : Boolean := False;
-      Quote_Removal_Only : Boolean := False;
-      Context : Annotation := NO_ANNOTATION)
+     (SS              : Shell_State_Access;
+      S               : String;
+      Characters_Read : out Integer;
+      Case_Pattern    : Boolean := False;
+      IOHere          : Boolean := False;
+      Is_Splitable    : Boolean := True;
+      Is_Param_Subst  : Boolean := False)
       return Annotated_String;
-
-   function Expanded_Parameter (SS : Shell_State_Access;
-                                Param_Name : String;
-                                Word : Annotated_String;
-                                Modifier : Character;
-                                Treat_Null_As_Unset : Boolean;
-                                Largest : Boolean;
-                                Note : Annotation)
-     return Annotated_String;
-   --  Perform the expansion of the given parameter and word following
-   --  the given Modifier. Normally, the expansion treats a null parameter
-   --  as a set parameter.  However, if Treat_Null_As_Unset is true, then
-   --  a null parameter will be treated as if it was unset.
-
-   function Eval_Param_Expression (State : Shell_State_Access;
-                                   Expr : Annotated_String;
-                                   Do_Expansion : Boolean;
-                                   Note : Annotation)
-     return Annotated_String;
-   --  Evaluate the given parameter expression into its actual value.
-   --  If Do_Expansion is True, then parameter expansion modifiers
-   --  (such as "-", or ":=", ":+", "?", etc) will be taken into account.
 
    function Simple_Filename_Expansion
      (SS        : Shell_State_Access;
@@ -91,110 +73,22 @@ package body Posix_Shell.Subst is
    function Strip (S : String) return String;
    --  Strip any CR in the string and also all trailing LF.
 
-   ---------------------------
-   -- Eval_Param_Expression --
-   ---------------------------
-
-   function Eval_Param_Expression (State : Shell_State_Access;
-                                   Expr : Annotated_String;
-                                   Do_Expansion : Boolean;
-                                   Note : Annotation)
-     return Annotated_String
-   is
-      E : constant String := Str (Expr);
-      Modifier : Character := ASCII.NUL;
-      Parameter_Last : Integer;
-      Word_First : Integer;
-      Treat_Null_As_Unset : Boolean := False;
-      Largest : Boolean := False;
-   begin
-      --  If no expansion is needed, then the expression is actually
-      --  a variable name. Return its value.
-      if not Do_Expansion then
-         return Get_Var_Value (State.all, E, Note);
-      end if;
-
-      --  If the variable name starts with a '#', then parameter
-      --  is a variable.  We need to evaluate it and return its length.
-      if E (E'First) = '#' and then E'Length > 1 then
-         declare
-            Param : String renames E (E'First + 1 .. E'Last);
-            Value : constant String := Get_Var_Value (State.all, Param);
-         begin
-            if Is_Valid_Variable_Name (Param) then
-               return To_Annotated_String (To_String (Value'Length), Note);
-            end if;
-         end;
-      end if;
-
-      --  Search for any expansion modifier.
-      --  We only search from the second character, because we need
-      --  at least one character for the parameter name. On the other
-      --  hand, a null word is allowed.
-      for J in E'First + 1 .. E'Last loop
-         if E (J) = '-' or else E (J) = '=' or else E (J) = '?'
-           or else E (J) = '+' or else E (J) = '%' or else E (J) = '#'
-         then
-            Modifier := E (J);
-            Parameter_Last := J - 1;
-            Word_First := J + 1;
-            exit;
-         end if;
-      end loop;
-
-      --  No modifier, no expansion.
-      if Modifier = ASCII.NUL then
-         return Get_Var_Value (State.all, E, Note);
-      end if;
-
-      --  If the modifier is preceded by a colon, then it means we should
-      --  treat null variables as unset.
-      if E (Parameter_Last) = ':' then
-         Treat_Null_As_Unset := True;
-         Parameter_Last := Parameter_Last - 1;
-      end if;
-
-      --  check for suffix/prefix removal if this the largest or the smallest
-      if Modifier = '%' and Word_First <= E'Last and E (Word_First) = '%' then
-         Largest := True;
-         Word_First := Word_First + 1;
-      end if;
-
-      if Modifier = '#' and Word_First <= E'Last and E (Word_First) = '#' then
-         Largest := True;
-         Word_First := Word_First + 1;
-      end if;
-
-      --  Return the expanded result...
-      declare
-         Word : constant Annotated_String := Slice (Expr, Word_First, E'Last);
-         Result : constant Annotated_String :=
-           Expanded_Parameter (State,
-                               Param_Name => E (E'First .. Parameter_Last),
-                               Word => Word,
-                               Modifier => Modifier,
-                               Treat_Null_As_Unset => Treat_Null_As_Unset,
-                               Largest => Largest,
-                               Note => Note);
-      begin
-         return Result;
-      end;
-   end Eval_Param_Expression;
-
    -----------------
    -- Eval_String --
    -----------------
 
    function Eval_String
-     (SS : Shell_State_Access;
-      S : Annotated_String;
+     (SS        : Shell_State_Access;
+      S         : String;
       Max_Split : Integer := -1)
       return String_List
    is
       use Ada.Strings.Unbounded;
       use Dyn_String_Lists;
 
-      Result : constant Annotated_String := Eval_String_Aux (SS, S);
+      Characters_Read : Integer := 0;
+      Result          : constant Annotated_String := Eval_String_Aux
+        (SS, S, Characters_Read);
       Result_List : Dyn_String_List;
 
       type State is
@@ -204,11 +98,11 @@ package body Posix_Shell.Subst is
          QUOTED_WORD_FIELD,
          WORD_FIELD);
 
-      Current_State : State := EMPTY_FIELD;
-
-      Buffer       : Unbounded_String := To_Unbounded_String ("");
-      Split_Count  : Integer := 0;
+      Current_State     : State := EMPTY_FIELD;
+      Buffer            : Unbounded_String := To_Unbounded_String ("");
+      Split_Count       : Integer := 0;
       --  Number of fields encountered so far
+      Unsplitable_Level : Integer := 0;
 
       procedure Delimit_Word;
       --  A new word has been found. Append it to the Result_List buffer
@@ -244,6 +138,10 @@ package body Posix_Shell.Subst is
             Current_State := EMPTY_FIELD;
             Split_Count := Split_Count + 1;
             Buffer := To_Unbounded_String ("");
+         end if;
+
+         if Unsplitable_Level > 0 then
+            Current_State := NULL_WORD_FIELD;
          end if;
 
       end Delimit_Word;
@@ -284,40 +182,51 @@ package body Posix_Shell.Subst is
    begin
 
       --  Perform field splitting
-      for I in Str (Result)'Range loop
+      for I in 1 .. Length (Result) loop
 
          declare
-            CC : constant Character := Get_Character (Result, I);
-            CA : constant Annotation := Get_Annotation (Result, I);
+            El : constant Str_Element := Get_Element (Result, I);
          begin
-            case CA is
-               when FIELD_SEP =>
-                  --  Force a field splitting even there is no character from
-                  --  IFS. This is used to handle special expansion of $@ and
-                  --  $*
-                  Delimit_Word;
-               when NULL_STRING =>
-                  --  We have a null string character. If we are inside a word
-                  --  then ignore it, otherwise the current field is currently
-                  --  a null word that should not be ignored.
-                  if Current_State = EMPTY_FIELD then
-                     Current_State := NULL_WORD_FIELD;
-                  end if;
-               when QUOTED_NULL_STRING =>
-                  --  In that case no empty word should be generated if the
-                  --  word contains only QUOTED_NULL_STRING and NULL_STRING.
-                  if Current_State = EMPTY_FIELD or else
-                    Current_State = NULL_WORD_FIELD
-                  then
-                     Current_State := FORCED_EMPTY_FIELD;
-                  end if;
-               when UNSPLITABLE =>
-                  --  The character is marked as unsplitable so don't check for
-                  --  field splitting
-                  Current_State := QUOTED_WORD_FIELD;
-                  Buffer       := Buffer & CC;
-               when others =>
-                  if In_IFS (CC) and then
+            case El.Kind is
+               when E_CTRL =>
+                  case El.Ctrl is
+                     when FIELD_SEP =>
+                        --  Force a field splitting even there is no character
+                        --  from IFS. This is used to handle special expansion
+                        --- of $@ and $*
+                        Delimit_Word;
+                     when NULL_STRING =>
+                        --  We have a null string character. If we are inside
+                        --  a word then ignore it, otherwise the current field
+                        --  is currently a null word that should not be
+                        --  ignored.
+                        if Current_State = EMPTY_FIELD then
+                           Current_State := NULL_WORD_FIELD;
+                        end if;
+                     when QUOTED_NULL_STRING =>
+                        --  In that case no empty word should be generated if
+                        --  the word contains only QUOTED_NULL_STRING and
+                        --  NULL_STRING.
+                        if Current_State = EMPTY_FIELD or else
+                          Current_State = NULL_WORD_FIELD
+                        then
+                           Current_State := FORCED_EMPTY_FIELD;
+                        end if;
+                     when UNSPLITABLE_BEGIN =>
+                        --  The character is marked as unsplitable so don't
+                        --  check for field splitting
+                        --  Current_State := QUOTED_WORD_FIELD;
+                        Unsplitable_Level := Unsplitable_Level + 1;
+                        if Current_State = EMPTY_FIELD then
+                           Current_State := NULL_WORD_FIELD;
+                        end if;
+                     when UNSPLITABLE_END =>
+                        Unsplitable_Level := Unsplitable_Level - 1;
+                     when others =>
+                        null;
+                  end case;
+               when E_CHAR =>
+                  if In_IFS (El.Char) and then Unsplitable_Level = 0 and then
                     (Max_Split = -1 or else Split_Count < Max_Split)
                   then
                      Delimit_Word;
@@ -325,8 +234,14 @@ package body Posix_Shell.Subst is
                      if Current_State /= QUOTED_WORD_FIELD then
                         Current_State := WORD_FIELD;
                      end if;
-                     Buffer := Buffer & CC;
+
+                     if Unsplitable_Level > 0 then
+                        Current_State := QUOTED_WORD_FIELD;
+                     end if;
+                     Buffer := Buffer & El.Char;
                   end if;
+               when E_NULL =>
+                  raise Program_Error;
             end case;
          end;
       end loop;
@@ -347,58 +262,124 @@ package body Posix_Shell.Subst is
    ---------------------
 
    function Eval_String_Aux
-     (SS : Shell_State_Access;
-      S : Annotated_String;
-      Case_Pattern : Boolean := False;
-      Quote_Removal_Only : Boolean := False;
-      Context : Annotation := NO_ANNOTATION)
+     (SS              : Shell_State_Access;
+      S               : String;
+      Characters_Read : out Integer;
+      Case_Pattern    : Boolean := False;
+      IOHere          : Boolean := False;
+      Is_Splitable    : Boolean := True;
+      Is_Param_Subst  : Boolean := False)
       return Annotated_String
    is
 
       Buffer : Annotated_String;
 
-      Index : Integer := 1;
+      Index : Integer := S'First;
 
       procedure Eval_Single_Quote;
       --  Eval a single quoted string (i.e of form 'xxxxx')
 
-      procedure Eval_Param_Subst (A : Annotation);
+      procedure Eval_Param_Subst (Is_Splitable : Boolean);
       --  Eval a parameter substitution construction
 
-      procedure Eval_Command_Subst (A : Annotation);
+      procedure Eval_Backquoted_Command_Subst (In_Double_Quote : Boolean);
+      --  Eval a command substitution starting with a backquote
+
+      procedure Eval_Command_Subst;
       --  Eval a command substitution construction
 
       procedure Eval_Double_Quote;
       --  Eval a double quoted string
 
+      procedure Eval_Escape_Sequence (In_Double_Quote : Boolean);
+      --  Eval an escape sequence
+
+      function Read_Parameter
+        (Is_Brace_Expansion : Boolean)
+         return String;
+
+      procedure Apply_Substitution_Op
+        (Parameter    : String;
+         Operator     : String;
+         Is_Splitable : Boolean);
+
+      -----------------------------------
+      -- Eval_Backquoted_Command_Subst --
+      -----------------------------------
+
+      procedure Eval_Backquoted_Command_Subst (In_Double_Quote : Boolean) is
+         Start_Index  : Integer;
+         Command      : String (1 .. S'Last - Index);
+         Command_Last : Integer := 0;
+
+      begin
+         Index := Index + 1; -- skip backquote
+         Start_Index := Index;
+
+         loop
+            case S (Index) is
+               when '\' =>
+                  Index := Index + 1;
+                  case S (Index) is
+                     when '$' | '`' | '\' =>
+                        Command_Last := Command_Last + 1;
+                        Command (Command_Last) := S (Index);
+                     when '"' =>
+                        if not In_Double_Quote then
+                           Command_Last := Command_Last + 1;
+                           Command (Command_Last) := '\';
+                        end if;
+                        Command_Last := Command_Last + 1;
+                        Command (Command_Last) := '"';
+                     when others =>
+                        Command_Last := Command_Last + 1;
+                        Command (Command_Last) := '\';
+                        Index := Index - 1;
+                  end case;
+               when '`' =>
+                  exit;
+               when others =>
+                  Command_Last := Command_Last + 1;
+                  Command (Command_Last) := S (Index);
+            end case;
+            Index := Index + 1;
+         end loop;
+
+         if Start_Index <= Index - 1 then
+            declare
+               T : Shell_Tree;
+               Str : constant String := Command (1 .. Command_Last);
+            begin
+               pragma Debug (Log ("command subst", Str));
+               T := Parse_String (Str);
+               Append (Buffer, Strip (Eval (SS, T)));
+               Free_Node (T);
+            end;
+         end if;
+      end Eval_Backquoted_Command_Subst;
+
       ------------------------
       -- Eval_Command_Subst --
       ------------------------
 
-      procedure Eval_Command_Subst (A : Annotation) is
-         Saved_Index : Integer;
+      procedure Eval_Command_Subst is
       begin
-         if Str (S) (Index) = '$' then
-            Index := Index + 2;
-         else
-            Index := Index + 1;
-         end if;
+         Index := Index + 1;
+         --  skip the initial parenthesis. dollar has already been skipped
 
-         Saved_Index := Index;
-         loop
-            exit when Get_Annotation (S, Index) = COMMAND_SUBST_END;
-            Index := Index + 1;
-         end loop;
+         declare
+            Str : constant String := S (Index .. S'Last);
+            Buf : Token_Buffer := New_Buffer (Str);
+            T   : Shell_Tree;
+         begin
+            T := Parse_Buffer (Buf, Until_Token => T_RPAR);
+            Append (Buffer, Strip (Eval (SS, T)));
+            Free_Node (T);
+            Index := Index + Get_Pos (Buf.Previous_Token_Pos) - 1;
+            pragma Debug (Log ("command subst",
+                               "'" & S (Index .. S'Last) & "'"));
+         end;
 
-         if Index > Saved_Index then
-            declare
-               T : Shell_Tree_Access;
-            begin
-               T := Parse_String (Str (S) (Saved_Index .. Index - 1));
-               Append (Buffer, Strip (Eval (SS, T.all)), A);
-               Free_Node (T);
-            end;
-         end if;
       end Eval_Command_Subst;
 
       -----------------------
@@ -407,98 +388,260 @@ package body Posix_Shell.Subst is
 
       procedure Eval_Double_Quote is
          Saved_Buffer_Length : constant Integer := Length (Buffer);
+         CC                  : Character;
       begin
-         Index := Index + 1;
-
+         Index := Index + 1; -- skip the first double quote
+         Append (Buffer, UNSPLITABLE_BEGIN);
          loop
-            if Get_Annotation (S, Index) = DOUBLE_QUOTE_END then
-               if Length (Buffer) = Saved_Buffer_Length then
-                  Append (Buffer, 'N', NULL_STRING);
-               end if;
-               exit;
-            end if;
+            CC := S (Index);
 
-            case Get_Annotation (S, Index) is
-               when COMMAND_SUBST_BEGIN =>
-                  if Quote_Removal_Only then
-                     Append (Buffer, Str (S) (Index), UNSPLITABLE);
-                  else
-                     Eval_Command_Subst (UNSPLITABLE);
+            case CC is
+               when '`' =>
+                  Eval_Backquoted_Command_Subst (True);
+               when '$' =>
+                  Eval_Param_Subst (Is_Splitable => False);
+               when '\' =>
+                  Eval_Escape_Sequence (In_Double_Quote => True);
+               when '"' =>
+                  if Length (Buffer) = Saved_Buffer_Length then
+                     Append (Buffer, NULL_STRING);
                   end if;
-               when PARAM_EVAL_BEGIN =>
-                  if Quote_Removal_Only then
-                     Append (Buffer, Str (S) (Index), UNSPLITABLE);
-                  else
-                     Eval_Param_Subst (UNSPLITABLE);
-                  end if;
-               when ESCAPE_SEQUENCE =>
-                  Append (Buffer, Str (S) (Index), UNSPLITABLE);
-               when QUOTED_NULL_STRING =>
-                  --  We got the result of $@ with no positional parameters set
-                  --  We should give that information to the part of the code
-                  --  in charge of field splitting.
-                  Append (Buffer, Str (S) (Index), QUOTED_NULL_STRING);
+                  exit;
                when others =>
-                  Append (Buffer, Str (S) (Index), UNSPLITABLE);
+                  Append (Buffer, CC);
             end case;
+
             Index := Index + 1;
          end loop;
+         Append (Buffer, UNSPLITABLE_END);
+
       end Eval_Double_Quote;
+
+       --------------------
+       -- Read_Parameter --
+       --------------------
+
+      function Read_Parameter
+        (Is_Brace_Expansion : Boolean)
+         return String
+      is
+         Param_First : constant Integer := Index;
+
+      begin
+            if S (Index) = '@'  --  Special parameter
+              or else S (Index) = '*'  --  Special parameter
+              or else S (Index) = '#'  --  Special parameter
+              or else S (Index) = '?'  --  Special parameter
+              or else S (Index) = '-'  --  Special parameter
+              or else S (Index) = '$'  --  Special parameter
+              or else S (Index) = '!'  --  Special parameter
+            then
+               --  Is this special parameter? In such case,
+               --  the token ends at the first character.
+               return "" & S (Index);
+
+            elsif not Is_Brace_Expansion and then S (Index) in '0' .. '9' then
+               return "" & S (Index);
+
+            else
+               --  This is neither a brace parameter expansion, neither a
+               --  special parameter. This remaining case is for $PARAMETER
+               --  where parameter is a valid variable name.
+
+               loop
+
+                  case S (Index) is
+                     when 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' =>
+                        null;
+                     when others =>
+                        Index := Index - 1;
+                        exit;
+                  end case;
+                  exit when Index >= S'Last;
+
+                  Index := Index + 1;
+               end loop;
+               pragma Debug (Log ("read_parameter", S (Param_First .. Index)));
+               return S (Param_First .. Index);
+            end if;
+      end Read_Parameter;
+
+      procedure Apply_Substitution_Op
+        (Parameter    : String;
+         Operator     : String;
+         Is_Splitable : Boolean)
+      is
+         Param_Value   : constant Annotated_String :=
+           Get_Var_Value (SS.all, Parameter, Is_Splitable);
+         Is_Null       : constant Boolean := Str (Param_Value)'Length = 0;
+         Is_Set        : Boolean := Is_Var_Set (SS.all, Parameter);
+         Word          : Annotated_String;
+         Read          : Integer := 0;
+
+      begin
+         if Operator (Operator'First) = ':' and then Is_Null then
+            Is_Set := False;
+         end if;
+
+         --  First eval the word that follow the operator
+         Append (Word,
+                 Eval_String_Aux (SS,
+                   S (Index .. S'Last),
+                   Read,
+                   Is_Splitable => Is_Splitable,
+                   Is_Param_Subst => True));
+         Index := Index + Read - 1;
+
+         --  Then decide what to do depending on the parameter value and the
+         --  operator
+         if Operator (Operator'Last) = '-' then
+            if not Is_Set then
+               Append (Buffer, Word);
+            elsif not Is_Null then
+               Append (Buffer, Param_Value);
+            end if;
+         elsif Operator (Operator'Last) = '=' then
+            if not Is_Set then
+               Set_Var_Value (SS.all,
+                              Name => Parameter,
+                              Value => Str (Word));
+               Append (Buffer, Word);
+            else
+               Append (Buffer, Param_Value);
+            end if;
+         elsif Operator (Operator'Last) = '+' then
+            if Is_Set then
+               Append (Buffer, Word);
+            end if;
+         elsif Operator (Operator'Last) = '?' then
+            if not Is_Set then
+               declare
+                  Message : constant String := Str (Word);
+               begin
+                  if Message'Length > 0 then
+                     Error (SS.all, Parameter & ": " & Message);
+                  else
+                     Error (SS.all, Parameter & ": parameter null or not set");
+                  end if;
+               end;
+               Shell_Exit (SS.all, 1);
+            end if;
+         end if;
+      end Apply_Substitution_Op;
 
       ----------------------
       -- Eval_Param_Subst --
       ----------------------
 
-      procedure Eval_Param_Subst (A : Annotation) is
-         Param_First : Integer;
-         Param_Last : Integer;
-
-         Do_Expansion : Boolean := False;
+      procedure Eval_Param_Subst (Is_Splitable : Boolean) is
+         Param_First           : Integer;
+         Is_Brace_Expansion    : Boolean := False;
          --  By default, we do not need to do parameter expansion.
          --  We do the expansion when we have "${expression}".
-         Nesting_Counter : Integer := 0;
+         CC                    : Character;
+
       begin
          --  Skip the initial '$'...
          Index := Index + 1;
 
-         if Str (S) (Index) = '{' then
-            Do_Expansion := True;
+         --  Check if the kind of expansion (with braces or not). Using braces
+         --  allows the use of more complex patterns for the substitution.
+         if S (Index) = '{' then
+            Is_Brace_Expansion := True;
             Index := Index + 1;
+         elsif S (Index) = '(' then
+            --  This is a command substitution not a parameter one.
+            Eval_Command_Subst;
+            return;
          end if;
+
+         --  All parameters expansions do start with a parameter.
          Param_First := Index;
+         CC := S (Param_First);
 
-         loop
-            if Get_Annotation (S, Index) = PARAM_EVAL_BEGIN then
-               Nesting_Counter := Nesting_Counter + 1;
+         pragma Debug (Log ("paremeter_subst", Is_Brace_Expansion'Img));
 
-            elsif Get_Annotation (S, Index) = PARAM_EVAL_END then
-               if Nesting_Counter = 0 then
-                  exit;
-               else
-                  Nesting_Counter := Nesting_Counter - 1;
-               end if;
+         if Is_Brace_Expansion then
+            --  This is most complex type of exansion
+            if CC = '#' and then
+              (S (Index + 1) = '_' or else
+               S (Index + 1) in 'a' .. 'z' or else
+               S (Index + 1) in 'A' .. 'Z')
+            then
+               --  We should compute the length of the upcoming parameter
+               Index := Index + 1;
+               declare
+                  Parameter : constant String :=
+                    Read_Parameter (Is_Brace_Expansion);
+                  Length    : constant String :=
+                    To_String
+                      (Str
+                         (Get_Var_Value
+                            (SS.all, Parameter, Is_Splitable))'Length);
+               begin
+                  Index := Index + 1;
+                  if S (Index) /= '}' then
+                     Error (SS.all, "bad substitution");
+                     raise Variable_Name_Error;
+                  end if;
+                  --  The previous test ensure that there is a parameter.
+                  Append (Buffer, Length);
+               end;
+            else
+               --  In all other cases we should first find a parameter
+               declare
+                  Parameter : constant String :=
+                    Read_Parameter (Is_Brace_Expansion);
+               begin
+                  Index := Index + 1;
+
+                  case S (Index) is
+                     when '}' =>
+                        Append
+                          (Buffer,
+                           Get_Var_Value (SS.all, Parameter, Is_Splitable));
+                        return;
+                     when '-' | '=' | '?' | '+' =>
+                        Index := Index + 1;
+                        Apply_Substitution_Op (Parameter,
+                                               S (Index - 1 .. Index - 1),
+                                               Is_Splitable);
+                     when ':' =>
+                        Index := Index + 1;
+                        case S (Index) is
+                           when '-' | '=' | '?' | '+' =>
+                              Index := Index + 1;
+                              Apply_Substitution_Op
+                                (Parameter,
+                                 S (Index - 2 .. Index - 1),
+                                 Is_Splitable);
+                           when others =>
+                              Error (SS.all, "bad substitution");
+                              raise Variable_Name_Error;
+                        end case;
+                     when others =>
+                        Error (SS.all, "bad substitution");
+                        raise Variable_Name_Error;
+                  end case;
+               end;
             end if;
-
-            Index := Index + 1;
-         end loop;
-         Param_Last := Index;
-
-         if Str (S) (Param_Last) = '}' then
-            Param_Last := Param_Last - 1;
-         end if;
-
-         if Param_Last >= Param_First then
+         else
             declare
-               Expr : constant Annotated_String :=
-                 Slice (S, Param_First, Param_Last);
+               Parameter : constant String := Read_Parameter
+                 (Is_Brace_Expansion);
             begin
-               Append
-                 (Buffer, Eval_Param_Expression (SS, Expr, Do_Expansion, A));
+               if Parameter'Length = 0 then
+                  Append (Buffer, '$');
+               else
+                  Append
+                    (Buffer,
+                     Get_Var_Value (SS.all, Parameter, Is_Splitable));
+               end if;
             end;
          end if;
       exception
          when Variable_Name_Error =>
-            Error (SS.all, Str (S) & ": bad substitution");
+            Error (SS.all, "bad substitution");
             raise;
       end Eval_Param_Subst;
 
@@ -508,63 +651,107 @@ package body Posix_Shell.Subst is
 
       procedure Eval_Single_Quote is
          Saved_Buffer_Length : constant Integer := Length (Buffer);
+         CC                  : Character;
       begin
-         Index := Index + 1;
+         Index := Index + 1; --  skip the opening single quote
+         Append (Buffer, UNSPLITABLE_BEGIN);
          loop
-            if Get_Annotation (S, Index) = SINGLE_QUOTE_END then
-               if Length (Buffer) = Saved_Buffer_Length then
-                  Append (Buffer, 'N', NULL_STRING);
-               end if;
-               exit;
-            end if;
-            Append (Buffer, Str (S) (Index), UNSPLITABLE);
+            CC := S (Index);
+            case CC is
+               when ''' =>
+                  if Length (Buffer) = Saved_Buffer_Length then
+                     Append (Buffer, NULL_STRING);
+                  end if;
+                  exit;
+
+               when others =>
+                  Append (Buffer, CC);
+            end case;
             Index := Index + 1;
          end loop;
+         Append (Buffer, UNSPLITABLE_END);
       end Eval_Single_Quote;
 
-   begin
-      while Index <= Length (S) loop
-         case Get_Annotation (S, Index) is
-            when SINGLE_QUOTE_BEGIN => Eval_Single_Quote;
-            when DOUBLE_QUOTE_BEGIN => Eval_Double_Quote;
-            when COMMAND_SUBST_BEGIN =>
-               if Quote_Removal_Only then
-                  Append (Buffer, Str (S) (Index), Context);
-               else
-                  Eval_Command_Subst (Context);
-               end if;
-            when PARAM_EVAL_BEGIN =>
-               if Quote_Removal_Only then
-                  Append (Buffer, Str (S) (Index), Context);
-               else
-                  Eval_Param_Subst (Context);
-               end if;
-            when ESCAPE_SEQUENCE =>
+      --------------------------
+      -- Eval_Escape_Sequence --
+      --------------------------
+
+      procedure Eval_Escape_Sequence (In_Double_Quote : Boolean) is
+         CC : Character;
+      begin
+         Index := Index + 1;
+         CC := S (Index);
+
+         if CC /= ASCII.LF then
+            --  This also refer implicitely to Section 2.3 Rule 11
+
+            if not In_Double_Quote or else
+              (CC = '"' and not IOHere) or else
+              CC = '`' or else
+              CC = '$' or else
+              CC = '\'
+            then
                if not Case_Pattern then
-                  Append (Buffer, Str (S) (Index), UNSPLITABLE);
+                  Append (Buffer, UNSPLITABLE_BEGIN);
+                  Append (Buffer, CC);
+                  Append (Buffer, UNSPLITABLE_END);
                else
-                  case Str (S) (Index) is
+                  case CC is
                      when '[' | ']' | '*' | '?' =>
-                        Append (Buffer, '\', Context);
-                        Append (Buffer, Str (S) (Index), Context);
+                        Append (Buffer, '\');
+                        Append (Buffer, CC);
                      when others =>
-                        Append (Buffer, Str (S) (Index), Context);
+                        Append (Buffer, CC);
                   end case;
                end if;
-            when NO_ANNOTATION =>
-               Append (Buffer, Str (S) (Index), Context);
-            when PARAM_EVAL_END | COMMAND_SUBST_END =>
-               if Quote_Removal_Only then
-                  Append (Buffer, Str (S) (Index), Context);
+            else
+               Append (Buffer, '\');
+               Index := Index - 1;
+            end if;
+         end if;
+      end Eval_Escape_Sequence;
+
+      CC : Character;
+   begin
+      pragma Debug (Log ("eval_string_aux_begin", S));
+      while Index <= S'Last loop
+         CC := S (Index);
+
+         case CC is
+            when ''' =>
+               if IOHere then
+                  Append (Buffer, CC);
                else
-                  raise Program_Error;
+                  Eval_Single_Quote;
                end if;
+            when '"' =>
+               if IOHere then
+                  Append (Buffer, CC);
+               else
+                  Eval_Double_Quote;
+               end if;
+
+            when '`' =>
+               Eval_Backquoted_Command_Subst (False);
+
+            when '$' =>
+               Eval_Param_Subst (Is_Splitable);
+
+            when '\' =>
+               Eval_Escape_Sequence (IOHere);
             when others =>
-               raise Program_Error;
+               if Is_Param_Subst and then CC = '}' then
+                  Index := Index + 1;
+                  exit;
+               end if;
+               Append (Buffer, CC);
+
          end case;
          Index := Index + 1;
       end loop;
 
+      pragma Debug (Log ("eval_string_aux", Image (Buffer)));
+      Characters_Read := Index - S'First;
       return Buffer;
    end Eval_String_Aux;
 
@@ -573,12 +760,12 @@ package body Posix_Shell.Subst is
    ----------------------
 
    function Eval_String_List
-     (SS : Shell_State_Access; S : Annotated_String_List) return String_List
+     (SS : Shell_State_Access; S : Token_List) return String_List
    is
 
    begin
       if Length (S) = 1 then
-         return Eval_String (SS, Element (S, 1));
+         return Eval_String (SS, Get_Token_String (Element (S, 1)));
       end if;
 
       declare
@@ -586,14 +773,14 @@ package body Posix_Shell.Subst is
          Result : Dyn_String_List;
 
       begin
-         if S = Null_Annotated_String_List then
+         if S = Null_Token_List then
             return Null_String_List;
          end if;
 
          for I in 1 .. Length (S) loop
             declare
                Elem_Eval : constant String_List :=
-                 Eval_String (SS, Element (S, I));
+                 Eval_String (SS, Get_Token_String (Element (S, I)));
             begin
 
                for J in Elem_Eval'Range loop
@@ -611,32 +798,34 @@ package body Posix_Shell.Subst is
    -------------------------
 
    function Eval_String_Unsplit
-     (SS : Shell_State_Access;
-      S : Annotated_String;
-      Case_Pattern : Boolean := False;
-      Quote_Removal_Only : Boolean := False)
+     (SS                 : Shell_State_Access;
+      S                  : String;
+      Case_Pattern       : Boolean := False;
+      IOHere             : Boolean := False)
       return String
    is
-      Result : constant Annotated_String := Eval_String_Aux
-        (SS, S, Case_Pattern, Quote_Removal_Only);
+      Characters_Read   : Integer := 0;
+      Result            : constant Annotated_String := Eval_String_Aux
+        (SS, S, Characters_Read, Case_Pattern, IOHere);
       --  we create a buffer or twice the size as some characters might be
       --  excaped in case construct context
-      Result_String : String (1 .. Length (Result) * 2);
-      Result_Index  : Integer := 1;
+      Result_String     : String (1 .. Length (Result) * 2);
+      Result_Index      : Integer := 1;
+      Unsplitable_Level : Integer := 0;
    begin
-      if Has_Null_String (Result) or else Case_Pattern then
+      if Case_Pattern then
          for I in 1 .. Length (Result) loop
             declare
-               Current_Char : constant Character := Str (Result) (I);
+               Current_El : constant Str_Element := Get_Element (Result, I);
             begin
+               if Current_El = (E_CTRL, UNSPLITABLE_BEGIN) then
+                  Unsplitable_Level := Unsplitable_Level + 1;
+               elsif Current_El = (E_CTRL, UNSPLITABLE_END) then
+                  Unsplitable_Level := Unsplitable_Level - 1;
+               elsif Current_El.Kind = E_CHAR then
 
-               if Get_Annotation (Result, I) /= NULL_STRING and then
-                 Get_Annotation (Result, I) /= QUOTED_NULL_STRING
-               then
-                  if Get_Annotation (Result, I) = UNSPLITABLE and then
-                    Case_Pattern
-                  then
-                     case Current_Char is
+                  if Unsplitable_Level > 0 then
+                     case Current_El.Char is
                         when '*' | '?' | '[' | ']' =>
                            Result_String (Result_Index) := '\';
                            Result_Index := Result_Index + 1;
@@ -644,7 +833,7 @@ package body Posix_Shell.Subst is
                            null;
                      end case;
                   end if;
-                  Result_String (Result_Index) := Current_Char;
+                  Result_String (Result_Index) := Current_El.Char;
                   Result_Index := Result_Index + 1;
                end if;
             end;
@@ -659,138 +848,6 @@ package body Posix_Shell.Subst is
          return Str (Result);
       end if;
    end Eval_String_Unsplit;
-
-   ------------------------
-   -- Expanded_Parameter --
-   ------------------------
-
-   function Expanded_Parameter (SS : Shell_State_Access;
-                                Param_Name : String;
-                                Word : Annotated_String;
-                                Modifier : Character;
-                                Treat_Null_As_Unset : Boolean;
-                                Largest : Boolean;
-                                Note : Annotation)
-     return Annotated_String
-   is
-      Is_Set : Boolean := Is_Var_Set (SS.all, Param_Name);
-      Parameter_Value : Annotated_String;
-   begin
-      if Is_Set then
-         Parameter_Value := Get_Var_Value (SS.all, Param_Name, Note, False);
-      end if;
-
-      if Treat_Null_As_Unset and then
-        Is_Set and then
-        Length (Parameter_Value) = 0
-      then
-         Is_Set := False;
-      end if;
-
-      case Modifier is
-         when '-' =>
-            if not Is_Set then
-               return Eval_String_Aux (SS, Word, Context => Note);
-            else
-               return Parameter_Value;
-            end if;
-
-         when '=' =>
-            if not Is_Set then
-               declare
-                  Word_Value : constant Annotated_String :=
-                    Eval_String_Aux (SS, Word, Context => Note);
-               begin
-                  Set_Var_Value (SS.all,
-                                 Name => Param_Name,
-                                 Value => Str (Word_Value));
-                  return Word_Value;
-               end;
-            else
-               return Parameter_Value;
-            end if;
-
-         when '?' =>
-            if not Is_Set then
-               declare
-                  Word_Value : constant String :=
-                    Eval_String_Unsplit (SS, Word);
-               begin
-                  if Word_Value /= "" then
-                     Error (SS.all, Param_Name & ": " & Word_Value);
-                  else
-                     Error (SS.all,
-                            Param_Name & ": parameter null or not set");
-                  end if;
-               end;
-               Shell_Exit (SS.all, 1);
-            else
-               return Parameter_Value;
-            end if;
-
-         when '+' =>
-            if Is_Set then
-               return Eval_String_Aux (SS, Word, Context => Note);
-            else
-               return To_Annotated_String ("", Note);
-            end if;
-         when '%' =>
-            --  Implement remove suffix
-            declare
-               Word_Value : constant String :=
-                 Eval_String_Unsplit (SS, Word, Case_Pattern => True);
-
-               P_Value : constant String := Str (Parameter_Value);
-            begin
-               if Largest then
-                  for J in P_Value'Range loop
-                     if Fnmatch (Word_Value, P_Value (J .. P_Value'Last)) then
-                        return Slice (Parameter_Value, 1, J - 1);
-                     end if;
-                  end loop;
-               else
-                  for J in reverse P_Value'Range loop
-                     if Fnmatch (Word_Value, P_Value (J .. P_Value'Last)) then
-                        return Slice (Parameter_Value, 1, J - 1);
-                     end if;
-                  end loop;
-               end if;
-
-               return Parameter_Value;
-            end;
-         when '#' =>
-            --  Implement remove prefix
-            declare
-               Word_Value : constant String :=
-                 Eval_String_Unsplit (SS, Word, Case_Pattern => True);
-
-               P_Value : constant String := Str (Parameter_Value);
-            begin
-               if not Largest then
-                  for J in P_Value'Range loop
-                     if Fnmatch (Word_Value, P_Value (P_Value'First .. J)) then
-                        return Slice (Parameter_Value, J + 1,
-                                      Length (Parameter_Value));
-                     end if;
-                  end loop;
-               else
-                  for J in reverse P_Value'Range loop
-                     if Fnmatch (Word_Value, P_Value (P_Value'First .. J)) then
-                        return Slice (Parameter_Value, J + 1,
-                                     Length (Parameter_Value));
-                     end if;
-                  end loop;
-               end if;
-
-               return Parameter_Value;
-            end;
-
-         when others =>
-            --  Impossible!
-            pragma Assert (False);
-            return To_Annotated_String ("", Note);
-      end case;
-   end Expanded_Parameter;
 
    ------------------------
    -- Filename_Expansion --

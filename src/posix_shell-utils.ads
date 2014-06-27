@@ -29,9 +29,6 @@ with Posix_Shell.Variables; use Posix_Shell.Variables;
 
 package Posix_Shell.Utils is
 
-   function To_String (I : Integer) return String;
-   --  Convert an Integer to a string without leading spaces
-
    procedure To_Integer (S : String; V : out Integer; Valid : out Boolean);
    --  If the string "S" is a valid decimal representation of a number,
    --  return its value in "V", and set Valid to True. Otherwise, set
@@ -43,8 +40,6 @@ package Posix_Shell.Utils is
    --  If the string "S" is a valid decimal representation of a number,
    --  return its value in "V", and set Valid to True. Otherwise, set
    --  "Valid" to False (in which case, the value of V is undefined).
-
-   function Is_Natural (S : String) return Boolean;
 
    function To_Integer (B : Boolean) return Integer;
    --  Return the shell-version of True and False: If B is True, then
@@ -71,9 +66,6 @@ package Posix_Shell.Utils is
    --  difference that it does not replace path components which are links
 
    function Readline (Prompt : String) return String;
-
-   function Strip_CR (Str : String) return String;
-   --  This function removes all CR from a given string STR
 
    --  package Dynamic_String_Lists is new GNAT.Dynamic_Tables
    --  (String_Access,

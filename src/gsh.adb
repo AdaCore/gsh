@@ -2,12 +2,8 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
 --                                                                          --
---                                 B o d y                                  --
---                                                                          --
---                                                                          --
---                       Copyright (C) 2010-2013, AdaCore                   --
+--                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -26,15 +22,12 @@
 
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
-
---  with GNAT.Traceback.Symbolic; use GNAT.Traceback.Symbolic;
-
+with Ada.Directories; use Ada.Directories;
+with GNAT.OS_Lib; use GNAT.OS_Lib;
 with Posix_Shell.Lexer; use Posix_Shell.Lexer;
-
 with Posix_Shell.Parser; use Posix_Shell.Parser;
 with Posix_Shell.Tree; use Posix_Shell.Tree;
 with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
---  with Posix_Shell.Tree.Dumps; use Posix_Shell.Tree.Dumps;
 with Posix_Shell.Variables; use Posix_Shell.Variables;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
@@ -42,30 +35,29 @@ with Posix_Shell.Opts; use Posix_Shell.Opts;
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell; use Posix_Shell;
-with Ada.Directories; use Ada.Directories;
-with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 ---------
 -- GSH --
 ---------
 
 function GSH return Integer is
-   T : Shell_Tree_Access;
-
-   Status : Integer := 0;
-
-   State : constant Shell_State_Access := new Shell_State;
-
+   T             : Shell_Tree;
+   Status        : Integer := 0;
+   State         : constant Shell_State_Access := new Shell_State;
    Script_Buffer : Buffer_Access := null;
 
 begin
+   --  First register all the builtins proovided by gsh
    Register_Default_Builtins;
+
+   --  Import into our state the current process environment
    Import_Environment (State.all);
 
    declare
-      Current_Dir : constant String := Get_Current_Dir (State.all, True);
+      Current_Dir    : constant String := Get_Current_Dir (State.all, True);
       Is_Interactive : Boolean;
-      Should_Exit : Boolean := False;
+      Should_Exit    : Boolean := False;
+
    begin
       --  Reset PWD and OLDPWD in order to avoid inheriting the values
       --  from the parent process.
@@ -73,16 +65,25 @@ begin
       Set_Var_Value (State.all, "OLDPWD", Current_Dir, True);
       Set_Var_Value (State.all, "IFS", " " & ASCII.HT & ASCII.LF);
       Set_Var_Value (State.all, "PATH_SEPARATOR", ":");
-      --  Disable auto expansion of parameters by the cygwin programs
+
+      --  Disable auto expansion of parameters by the cygwin programs. Indeed
+      --  when a cygwin program is called outside a cygwin shell, it will try
+      --  to perform expansions on the parameters such as filename expansion.
+      --  As this is provided by gsh we do not want the parameter to be
+      --  expanded twice
       declare
          Cygwin : constant String := Get_Var_Value (State.all, "CYGWIN");
+
       begin
          if Cygwin = "" then
-            Set_Var_Value (State.all, "CYGWIN", "noglob", True);
+            Set_Var_Value
+              (State.all, "CYGWIN", "noglob", True);
+
          else
-            Set_Var_Value (State.all, "CYGWIN",
-                           Get_Var_Value (State.all, "CYGWIN") & " noglob",
-                           True);
+            Set_Var_Value
+              (State.all, "CYGWIN",
+               Get_Var_Value (State.all, "CYGWIN") & " noglob",
+               True);
          end if;
       end;
 
@@ -91,13 +92,13 @@ begin
       --  for instance).
       Save_Last_Exit_Status (State.all, 0);
 
-      --  Process the command line.
+      --  Process the command line and in case of usage error exit
       Process_Command_Line (State, Script_Buffer, Status, Is_Interactive);
-
       if Status /= 0 then
          return Status;
       end if;
 
+      --  The shell main loop
       loop
          if Is_Interactive then
             Set_Directory (Get_Var_Value (State.all, "PWD"));
@@ -110,16 +111,20 @@ begin
             end;
          end if;
 
-         T := Parse_Buffer (Script_Buffer);
+         T := Parse_Buffer (Script_Buffer.all);
 
+         --  If -n was passed skip evaluation of the script.
          if Do_Script_Evaluation then
+
             begin
-               Eval (State, T.all);
+               Eval (State, T);
                Status := Get_Last_Exit_Status (State.all);
+
             exception
                when Shell_Exit_Exception =>
                   Status := Get_Last_Exit_Status (State.all);
                   Should_Exit := True;
+
                when Shell_Return_Exception =>
                   Put
                     (State.all, 2,
@@ -137,6 +142,7 @@ begin
                     Get_Trap_Action (State.all, 0);
                   Trap_Status : Integer;
                   pragma Warnings (Off, Trap_Status);
+
                begin
 
                   if Exit_Trap_Action /= null and then
@@ -157,12 +163,14 @@ begin
                           "function or sourced script" & ASCII.LF);
                      Save_Last_Exit_Status (State.all, 1);
                      Status := 1;
-
                end;
             end if;
-
          end if;
+
          Free_Node (T);
+
+         --  We should exit if an exit command was emited or when not in
+         --  interactive mode once the scripts execution is complete.
          if not Is_Interactive or Should_Exit then
             exit;
          end if;
@@ -171,13 +179,10 @@ begin
       return Status;
 
    exception
-
       when E : Shell_Syntax_Error | Shell_Non_Implemented |
            Shell_Lexer_Error =>
          Put_Line (Exception_Message (E));
-         --  Put_Line (Symbolic_Traceback (E));
          return 127;
-
    end;
 
 end GSH;

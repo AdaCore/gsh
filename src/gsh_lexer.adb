@@ -2,6 +2,10 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
+--                                   GSH                                    --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
@@ -20,36 +24,24 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with System;
+with Posix_Shell.Lexer; use Posix_Shell.Lexer;
+with Ada.Command_Line; use Ada.Command_Line;
+with Posix_Shell; use Posix_Shell;
 
-package body Posix_Shell.GNULib is
+---------
+-- GSH --
+---------
 
-   function C_Fnmatch
-     (Pattern : System.Address; Str : System.Address)
-      return Integer;
-   pragma Import (C, C_Fnmatch, "gsh_fnmatch");
+function GSH_Lexer return Integer is
+   Status        : constant Integer := 0;
+   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
+   T             : Token;
 
-   -------------
-   -- Fnmatch --
-   -------------
-
-   function Fnmatch (Pattern : String; Str : String) return Boolean is
-      C_Pattern : aliased String (1 .. Pattern'Length + 1);
-      C_Str : aliased String (1 .. Str'Length + 1);
-      Result : Integer;
-   begin
-      C_Pattern (1 .. Pattern'Length) := Pattern;
-      C_Pattern (C_Pattern'Last) := ASCII.NUL;
-      C_Str (1 .. Str'Length) := Str;
-      C_Str (C_Str'Last) := ASCII.NUL;
-
-      Result := C_Fnmatch (C_Pattern'Address, C_Str'Address);
-      if Result = 0 then
-         return True;
-      else
-         return False;
-      end if;
-
-   end Fnmatch;
-
-end Posix_Shell.GNULib;
+begin
+   Debug_Lexer := True;
+   loop
+      T := Read_Token (Script_Buffer);
+      exit when Get_Token_Type (T) = T_EOF;
+   end loop;
+   return Status;
+end GSH_Lexer;

@@ -39,16 +39,6 @@ package Posix_Shell.Variables is
    --  Invalid in this case is meant from a syntactic point of view;
    --  whether the variable exists or not is irrelevant in this case.
 
-   function Is_Valid_Variable_Name (Name : String) return Boolean;
-   --  Return  True if Name is, from a syntactic point of view, a valid
-   --  variable name, False otherwise.
-
-   --  function Get_Var_Value (Name : String) return String_Access;
-   --  If Name is a defined variable name, then return a pointer
-   --  to its current value.  Return null otherwise.
-   --
-   --  The pointer returned should be deallocated after use.
-
    function Get_Var_Value (State : Shell_State; Name : String) return String;
    --  Return the value of a variable. The empty string is returned
    --  when the variable is not defined.
@@ -56,7 +46,7 @@ package Posix_Shell.Variables is
    function Get_Var_Value
      (State           : Shell_State;
       Name            : String;
-      Context         : Annotation;
+      Is_Splitable    : Boolean    := True;
       Check_Existence : Boolean    := True)
       return Annotated_String;
 

@@ -85,20 +85,6 @@ package body Posix_Shell.Utils is
       end if;
    end Integer_Not;
 
-   function Is_Natural (S : String) return Boolean is
-   begin
-      if S = "" then
-         return False;
-      end if;
-
-      for J in S'Range loop
-         if S (J) not in '0' .. '9' then
-            return False;
-         end if;
-      end loop;
-      return True;
-   end Is_Natural;
-
    -----------------
    -- Locate_Exec --
    -----------------
@@ -199,33 +185,6 @@ package body Posix_Shell.Utils is
       return Result_Str;
    end Readline;
 
-   --------------
-   -- Strip_CR --
-   --------------
-
-   function Strip_CR (Str : String) return String is
-      Result : String (1 .. Str'Length);
-      Last : Integer := 0;
-   begin
-      for J in Str'Range loop
-         case Str (J) is
-            when ASCII.CR =>
-               if J /= Str'Last and then Str (J + 1) /= ASCII.LF then
-                  Last := Last + 1;
-                  Result (Last) := Str (J);
-               end if;
-            when others   =>
-               Last := Last + 1;
-               Result (Last) := Str (J);
-         end case;
-      end loop;
-      if Last = 0 then
-         return "";
-      else
-         return Result (1 .. Last);
-      end if;
-   end Strip_CR;
-
    ----------------
    -- To_Integer --
    ----------------
@@ -271,19 +230,5 @@ package body Posix_Shell.Utils is
       when others =>
          Valid := False;
    end To_LongLong;
-
-   ---------------
-   -- To_String --
-   ---------------
-
-   function To_String (I : Integer) return String is
-      Str : constant String := Integer'Image (I);
-   begin
-      if I < 0 then
-         return Str;
-      else
-         return Str (Str'First + 1 .. Str'Last);
-      end if;
-   end To_String;
 
 end Posix_Shell.Utils;

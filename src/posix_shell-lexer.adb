@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2013, AdaCore                   --
+--                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -25,36 +25,32 @@
 ------------------------------------------------------------------------------
 
 with Ada.Exceptions; use Ada.Exceptions;
-with Posix_Shell.Utils; use Posix_Shell.Utils;
-with Posix_Shell.Variables; use Posix_Shell.Variables;
-with Posix_Shell.Subst; use Posix_Shell.Subst;
-with Posix_Shell.Opts; use Posix_Shell.Opts;
+with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
 with Ada.Text_IO;
-
 with Ada.Unchecked_Deallocation;
 
 package body Posix_Shell.Lexer is
 
-   function Get_Char (B : Buffer_Access) return Character;
+   function Get_Char (B : in out Token_Buffer) return Character;
    pragma Inline (Get_Char);
    --  Get the next char from the buffer and update the buffer state.
 
-   procedure Unget_Char (B : Buffer_Access);
+   procedure Unget_Char (B : in out Token_Buffer);
    pragma Inline (Unget_Char);
    --  Undo last Get_Char.
 
-   procedure Pushback (B : Buffer_Access; T : Token);
+   procedure Pushback (B : in out Token_Buffer; T : Token);
    pragma Inline (Pushback);
    --  Cancel effect of last Read_Token call.
 
    function Read_Token_Aux
-     (B : Buffer_Access;
+     (B      : in out Token_Buffer;
       IOHere : Boolean := False)
       return Token;
 
    function Read_Command_Token_Aux (Tk : Token) return Token;
 
-   procedure Lexer_Error (B : Buffer_Access; Msg : String);
+   procedure Lexer_Error (B : in out Token_Buffer; Msg : String);
    --  Report an error.
 
    procedure Deallocate (B : in out Buffer_Access) is
@@ -72,13 +68,13 @@ package body Posix_Shell.Lexer is
    ------------------
 
    procedure Expect_Token
-     (B   : Buffer_Access;
+     (B   : in out Token_Buffer;
       T   : Token_Type;
       Msg : String := "")
    is
       Next : constant Token := Read_Command_Token (B);
    begin
-      if Next.T /= T then
+      if Next.Kind /= T then
          if Msg'Length = 0 then
             Syntax_Error (Next, "expect token '" & Token_Type_Img (T) & "'");
          else
@@ -91,7 +87,7 @@ package body Posix_Shell.Lexer is
    -- Get_Char --
    --------------
 
-   function Get_Char (B : Buffer_Access) return Character is
+   function Get_Char (B : in out Token_Buffer) return Character is
       Tmp : constant Character := Current (B.B);
    begin
       Forward (B.B);
@@ -104,16 +100,16 @@ package body Posix_Shell.Lexer is
 
    function Get_Token_Type (T : Token) return Token_Type is
    begin
-      return T.T;
+      return T.Kind;
    end Get_Token_Type;
 
    ----------------------
    -- Get_Token_String --
    ----------------------
 
-   function Get_Token_String (T : Token) return Annotated_String is
+   function Get_Token_String (T : Token) return String is
    begin
-      return T.S;
+      return Slice (T.Content, T.First, T.Last);
    end Get_Token_String;
 
    -------------------
@@ -122,14 +118,14 @@ package body Posix_Shell.Lexer is
 
    function Get_Token_Pos (T : Token) return Text_Position is
    begin
-      return T.Pos;
+      return T.First;
    end Get_Token_Pos;
 
    ------------------
    -- Lexer_Error --
    ------------------
 
-   procedure Lexer_Error (B : Buffer_Access; Msg : String) is
+   procedure Lexer_Error (B : in out Token_Buffer; Msg : String) is
    begin
       Raise_Exception
         (Shell_Lexer_Error'Identity,
@@ -141,23 +137,24 @@ package body Posix_Shell.Lexer is
    -- Lookahead --
    ---------------
 
-   function Lookahead (B : Buffer_Access) return Token_Type is
+   function Lookahead (B : in out Token_Buffer) return Token_Type is
       T : constant Token := Read_Token (B);
    begin
       Pushback (B, T);
-      return T.T;
+      return T.Kind;
    end Lookahead;
 
    -----------------------
    -- Lookahead_Command --
    -----------------------
 
-   function Lookahead_Command (B : Buffer_Access) return Token_Type is
-      --  T : constant Token := Read_Command_Token (B);
-      T : constant Token := Read_Command_Token_Aux (Read_Token (B));
+   function Lookahead_Command (B : in out Token_Buffer) return Token_Type is
+   --  T : constant Token := Read_Command_Token (B);
+      T      : constant Token := Read_Token (B);
+      Result : constant Token := Read_Command_Token_Aux (T);
    begin
       Pushback (B, T);
-      return T.T;
+      return Result.Kind;
    end Lookahead_Command;
 
    ----------------
@@ -192,7 +189,7 @@ package body Posix_Shell.Lexer is
    -- Pushback --
    --------------
 
-   procedure Pushback (B : Buffer_Access; T : Token) is
+   procedure Pushback (B : in out Token_Buffer; T : Token) is
    begin
       B.Next_Token_Pos := Current_Pos (B.B);
       B.Next_Token := T;
@@ -204,15 +201,11 @@ package body Posix_Shell.Lexer is
    -- Read_Command_Token --
    ------------------------
 
-   function Read_Command_Token (B : Buffer_Access) return Token is
-      T : Token := Read_Token (B);
+   function Read_Command_Token (B : in out Token_Buffer) return Token is
+      T      : constant Token := Read_Token (B);
       Result : constant Token := Read_Command_Token_Aux (T);
-   begin
-      --  Free unnecessary string
-      if Result.T in T_IF .. T_RBRACE then
-         T.S := Null_Annotated_String;
-      end if;
 
+   begin
       if Debug_Lexer then
          Ada.Text_IO.Put_Line
            (Ada.Text_IO.Standard_Error,
@@ -234,6 +227,12 @@ package body Posix_Shell.Lexer is
       function Is_Assignment (Expr : String) return Boolean;
       --  Return True if the given expression (Expr) is an assignment.
 
+      function To_Word (S : String) return String;
+      --  To improve memory usage, token are simply references to the script
+      --  buffer. As a consequence we differ a bit from what's expected in
+      --  the standard (2.2.1 Escape character) and backslashes followed by
+      --  <newline> are not removed from the tokens. To_Word removes them.
+
       -------------------
       -- Is_Assignment --
       -------------------
@@ -252,6 +251,7 @@ package body Posix_Shell.Lexer is
                return Is_Valid_Variable_Name (Expr (Expr'First .. J - 1));
             end if;
          end loop;
+
          return False;
       end Is_Assignment;
 
@@ -261,13 +261,37 @@ package body Posix_Shell.Lexer is
 
       function New_Token (TT : Token_Type) return Token is
       begin
-         return (TT, Null_Annotated_String, T.Pos);
+         return (TT, T.First, T.Last, T.Content);
       end New_Token;
 
+      -------------
+      -- To_Word --
+      -------------
+
+      function To_Word (S : String) return String is
+         Result : String (1 .. S'Length);
+         Result_Last : Natural := 0;
+         Index : Integer := S'First;
+      begin
+         loop
+            exit when Index > S'Last;
+            if S (Index) = '\' and then S (Index + 1) = ASCII.LF then
+               Index := Index + 1;
+            else
+               Result_Last := Result_Last + 1;
+               Result (Result_Last) := S (Index);
+            end if;
+            Index := Index + 1;
+         end loop;
+         return Result (1 .. Result_Last);
+      end To_Word;
+
    begin
-      if T.T = T_WORD then
+      if T.Kind = T_WORD then
          declare
-            S : constant String := Str (T.S);
+            Raw : constant String := Slice (T.Content, T.First, T.Last);
+            S   : constant String := To_Word (Raw);
+
          begin
             if S = "if"       then
                T := New_Token (T_IF);
@@ -302,7 +326,7 @@ package body Posix_Shell.Lexer is
             elsif S = "!"     then
                T := New_Token (T_BANG);
             elsif Is_Assignment (S) then
-               T.T := T_ASSIGNEMENT;
+               T.Kind := T_ASSIGNEMENT;
             end if;
          end;
       end if;
@@ -315,135 +339,99 @@ package body Posix_Shell.Lexer is
    -----------------
 
    function Read_IOHere
-     (B : Buffer_Access; Marker : Annotated_String)
-      return Annotated_String
+     (B      : in out Token_Buffer;
+      Marker : Token;
+      Eval   : out Boolean)
+      return Token
    is
-      CC            : Character;
-      Evaluation    : Boolean := True;
-
-      Token_A_String : Annotated_String;
-
-      --  Start_Position : constant Text_Position := Current_Pos (B.B);
-
-      procedure Add_To_Token (C : Character; A : Annotation := NO_ANNOTATION);
-      procedure Add_To_Token (T : Token);
-      function Return_IOHere return Annotated_String;
-
-      ------------------
-      -- Add_To_Token --
-      ------------------
-
-      procedure Add_To_Token (C : Character; A : Annotation := NO_ANNOTATION)
-      is
-      begin
-         Append (Token_A_String, C, A);
-      end Add_To_Token;
-
-      procedure Add_To_Token (T : Token)
-      is
-      begin
-         Append (Token_A_String, T.S);
-      end Add_To_Token;
-
-      function Return_IOHere return Annotated_String
-      is
-      begin
-
-         return Token_A_String;
-      end Return_IOHere;
-
-      Marker_String : constant String := Eval_String_Unsplit
-        (null, Marker, Quote_Removal_Only => True);
-
+      CC               : Character;
+      Raw_Marker       : constant String := Get_Token_String (Marker);
+      Real_Marker      : String (1 .. Raw_Marker'Length);
+      Real_Marker_Last : Integer := 0;
+      Token_Start      : Text_Position;
+      In_Single_Quote  : Boolean := False;
+      In_Double_Quote  : Boolean := False;
+      Index            : Integer := Raw_Marker'First;
    begin
-
-      --  Dynamic_Annotations.Init (Token_Annotations);
-
-      for J in 1 .. Length (Marker) loop
-         declare
-            A : constant Annotation := Get_Annotation (Marker, J);
-         begin
-            if A = ESCAPE_SEQUENCE or else
-              A = SINGLE_QUOTE_BEGIN or else
-              A = DOUBLE_QUOTE_BEGIN
-            then
-               Evaluation := False;
-               exit;
-            end if;
-         end;
+      Eval := True;
+      --  Check if we should consider parameter expansion in the IO Here
+      --  document.
+      loop
+         case Raw_Marker (Index) is
+            when '\' =>
+               if not In_Single_Quote then
+                  Eval := False;
+                  if not In_Double_Quote or else
+                    Raw_Marker (Index) = '"' or else
+                    Raw_Marker (Index) = '`' or else
+                    Raw_Marker (Index) = '$' or else
+                    Raw_Marker (Index) = '\'
+                  then
+                     Index := Index + 1;
+                  end if;
+               end if;
+               Real_Marker_Last := Real_Marker_Last + 1;
+               Real_Marker (Real_Marker_Last) := Raw_Marker (Index);
+            when ''' =>
+               Eval := False;
+               if In_Single_Quote then
+                  In_Single_Quote := False;
+               elsif not In_Double_Quote then
+                  In_Single_Quote := True;
+               end if;
+            when '"' =>
+               Eval := False;
+               if In_Double_Quote then
+                  In_Double_Quote := False;
+               elsif not In_Single_Quote then
+                  In_Double_Quote := True;
+               end if;
+            when others =>
+               Real_Marker_Last := Real_Marker_Last + 1;
+               Real_Marker (Real_Marker_Last) := Raw_Marker (Index);
+         end case;
+         Index := Index + 1;
+         exit when Index > Raw_Marker'Last;
       end loop;
 
       --  First skip everything until new line
-      while Get_Char (B) /= ASCII.LF loop null;
+      while Get_Char (B) /= ASCII.LF loop
+         null;
       end loop;
 
-      if Current (B.B, Marker_String'Length + 1) =
-        Marker_String & ASCII.LF
-      then
+      Token_Start := Current_Pos (B.B);
 
-         --  We have the marker
-         CC := Get_Char (B);
-         while CC /= ASCII.LF loop
-            CC := Get_Char (B);
-         end loop;
-         Unget_Char (B);
-         return Return_IOHere;
-      end if;
+      CC := ASCII.LF;
 
       loop
-         CC := Get_Char (B);
          case CC is
             when ASCII.LF =>
-               if Current (B.B, Marker_String'Length + 1) =
-                 Marker_String & ASCII.LF
+               if Current (B.B, Real_Marker_Last + 1) =
+                 Real_Marker (1 .. Real_Marker_Last) & ASCII.LF
+
                then
-
-                  --  We have the marker
-                  Add_To_Token (ASCII.LF);
-                  CC := Get_Char (B);
-                  while CC /= ASCII.LF loop
-
+                  declare
+                     T : constant Token := (T_WORD, Token_Start,
+                                            Prev_Pos (B.B), B.B);
+                  begin
                      CC := Get_Char (B);
 
-                  end loop;
-                  Unget_Char (B);
-                  return Return_IOHere;
+                     while CC /= ASCII.LF loop
+                        CC := Get_Char (B);
+                     end loop;
+                     Unget_Char (B);
+                     return T;
+                  end;
                end if;
 
-               Add_To_Token (CC);
             when ASCII.EOT =>
                Unget_Char (B);
-               return Return_IOHere;
-               --  Lexer_Error (B, "unexpected EOF in IO Here starting at " &
-               --             Image (Start_Position) &
-               --            " marked by '" & Marker_String & "'");
-            when '\' =>
-               if Evaluation then
-                  CC := Get_Char (B);
-                  case CC is
-                     when '$' => Add_To_Token ('$', ESCAPE_SEQUENCE);
-                     when '`' => Add_To_Token ('`', ESCAPE_SEQUENCE);
-                     when '\' => Add_To_Token ('\', ESCAPE_SEQUENCE);
-                     when others => Add_To_Token ('\'); Unget_Char (B);
-                  end case;
-               else
-                  Add_To_Token (CC);
-               end if;
-            when '$' | '`' =>
-               if Evaluation then
-                  Unget_Char (B);
-                  declare
-                     T : constant Token := Read_Token_Aux (B, True);
-                  begin
-                     Add_To_Token (T);
-                  end;
-               else
-                  Add_To_Token (CC);
-               end if;
-            when others =>
-               Add_To_Token (CC);
-         end case;
+               return (T_WORD, Token_Start, Prev_Pos (B.B), B.B);
 
+            when others =>
+               null;
+         end case;
+         CC := Get_Char (B);
       end loop;
    end Read_IOHere;
 
@@ -451,7 +439,7 @@ package body Posix_Shell.Lexer is
    -- Read_Token --
    ----------------
 
-   function Read_Token (B : Buffer_Access) return Token is
+   function Read_Token (B : in out Token_Buffer) return Token is
       Result : Token;
    begin
       if B.Valid_Cache then
@@ -470,107 +458,67 @@ package body Posix_Shell.Lexer is
       return Result;
    end Read_Token;
 
-   function Read_Token (B : Buffer_Access) return Token_Type is
+   function Read_Token (B : in out Token_Buffer) return Token_Type is
       T : constant Token := Read_Token (B);
    begin
-      return T.T;
+      return T.Kind;
    end Read_Token;
 
-   function Read_Token (B : Buffer_Access) return Annotated_String is
+   function Read_Token (B : in out Token_Buffer) return String is
       T : constant Token := Read_Token (B);
    begin
-      return T.S;
+      return Slice (T.Content, T.First, T.Last);
    end Read_Token;
 
    --------------------
    -- Read_Token_Aux --
    --------------------
 
-   function Read_Token_Aux (B : Buffer_Access;
-                            IOHere : Boolean := False)
-                            return Token
+   function Read_Token_Aux
+     (B      : in out Token_Buffer;
+      IOHere : Boolean := False)
+      return Token
    is
 
-      Token_A_String     : Annotated_String;
       --  Buffer containing the current token chars
+
+      Token_Start        : Text_Position;
 
       Has_Token        : Boolean := False;
       --  True if token recognition has started
 
       --  Current_Line     : constant Integer := Current_Lineno (B.B);
       --  Current_Column   : Integer := Current_Columnno (B.B);
-      Pos : Text_Position := Current_Pos (B.B);
+      --  Pos : Text_Position := Current_Pos (B.B);
 
       CC               : Character;
 
-      function Return_Token
-        (T : Token_Type    := T_WORD;
-         S : Boolean       := False)
-         return Token;
+      function Return_Token (T : Token_Type := T_WORD) return Token;
       pragma Inline (Return_Token);
-
-      function Delimit_Token (T : Token_Type := T_WORD) return Token;
-      pragma Inline (Delimit_Token);
-
-      procedure Add_To_Token (C : Character; A : Annotation := NO_ANNOTATION);
-      pragma Inline (Add_To_Token);
 
       procedure Read_Escape_Sequence
         (Skip_Mode       : Boolean;
          In_Double_Quote : Boolean);
 
-      procedure Read_Single_Quote (Skip_Mode : Boolean);
+      procedure Read_Single_Quote;
       procedure Read_Double_Quote (Skip_Mode : Boolean);
 
       procedure Read_Command_Substitution
-        (Skip_Mode       : Boolean;
-         In_Double_Quote : Boolean);
-      procedure Read_Backquote_Command_Substitution
-        (Skip_Mode       : Boolean;
-         In_Double_Quote : Boolean);
+        (In_Double_Quote : Boolean);
+      procedure Read_Backquote_Command_Substitution;
+
       procedure Read_Parameter_Evaluation
         (Skip_Mode       : Boolean;
          In_Double_Quote : Boolean);
 
-      ------------------
-      -- Add_To_Token --
-      ------------------
-
-      procedure Add_To_Token (C : Character; A : Annotation := NO_ANNOTATION)
-      is
-      begin
-         Append (Token_A_String, C, A);
-      end Add_To_Token;
-
-      -------------------
-      -- Delimit_Token --
-      -------------------
-
-      function Delimit_Token (T : Token_Type := T_WORD) return Token is
-      begin
-         Unget_Char (B);
-         return Return_Token (T, S => True);
-      end Delimit_Token;
-
-      -------------------------------
-      -- Read_Command_Substitution --
-      -------------------------------
+      -----------------------------------------
+      -- Read_Backquote_Command_Substitution --
+      -----------------------------------------
 
       procedure Read_Backquote_Command_Substitution
-        (Skip_Mode       : Boolean;
-         In_Double_Quote : Boolean)
       is
-         Begin_Marker : Annotation := COMMAND_SUBST_BEGIN;
-         End_Marker   : Annotation := COMMAND_SUBST_END;
       begin
          Has_Token := True;
-
-         if Skip_Mode then
-            Begin_Marker := NO_ANNOTATION;
-            End_Marker   := NO_ANNOTATION;
-         end if;
-
-         Add_To_Token (CC, Begin_Marker);
 
          loop
             CC := Get_Char (B);
@@ -579,72 +527,57 @@ package body Posix_Shell.Lexer is
                   CC := Get_Char (B);
                   case CC is
                      when '`' | '$' | '\' =>
-                        Add_To_Token (CC);
+                        null;
                      when ASCII.LF =>
                         null;
                      when others =>
-                        if In_Double_Quote and CC = '"' then
-                           Add_To_Token (CC);
-                        else
-                           Add_To_Token ('\');
-                           Add_To_Token (CC);
-                        end if;
+                        null;
                   end case;
                when '`' =>
-                  Add_To_Token (CC, End_Marker);
                   exit;
                when others =>
-                  Add_To_Token (CC);
+                  null;
             end case;
          end loop;
       end Read_Backquote_Command_Substitution;
 
+      -------------------------------
+      -- Read_Command_Substitution --
+      -------------------------------
+
       procedure Read_Command_Substitution
-        (Skip_Mode       : Boolean;
-         In_Double_Quote : Boolean)
+        (In_Double_Quote : Boolean)
       is
-         Begin_Marker : Annotation := COMMAND_SUBST_BEGIN;
-         End_Marker : Annotation := COMMAND_SUBST_END;
       begin
          pragma Assert (CC = '$');
          Has_Token := True;
 
-         if Skip_Mode then
-            Begin_Marker := NO_ANNOTATION;
-            End_Marker := NO_ANNOTATION;
-         end if;
-
          CC := Get_Char (B);
 
          if CC /= '(' then
-            Add_To_Token ('$');
             Unget_Char (B);
             return;
          end if;
-
-         Add_To_Token ('$', Begin_Marker);
-         Add_To_Token (CC);
 
          loop
             CC := Get_Char (B);
             case CC is
                when '\' => Read_Escape_Sequence
                     (Skip_Mode => True, In_Double_Quote => False);
-               when '`' => Read_Backquote_Command_Substitution
-                    (Skip_Mode => True, In_Double_Quote => In_Double_Quote);
+               when '`' => Read_Backquote_Command_Substitution;
                when '$' => Read_Parameter_Evaluation
                     (Skip_Mode => True, In_Double_Quote => In_Double_Quote);
                when '"' => Read_Double_Quote
                     (Skip_Mode => True);
-               when ''' => Read_Single_Quote
-                    (Skip_Mode => True);
+               when ''' => Read_Single_Quote;
+
                when '#' =>
                   while Get_Char (B) /= ASCII.LF loop null; end loop;
                   Unget_Char (B);
                when ')' =>
-                  Add_To_Token (CC, End_Marker);
                   exit;
-               when others => Add_To_Token (CC);
+               when others =>
+                  null;
             end case;
          end loop;
       end Read_Command_Substitution;
@@ -654,34 +587,28 @@ package body Posix_Shell.Lexer is
       -----------------------
 
       procedure Read_Double_Quote (Skip_Mode : Boolean) is
-         Begin_Marker : Annotation := DOUBLE_QUOTE_BEGIN;
-         End_Marker   : Annotation := DOUBLE_QUOTE_END;
       begin
-         if Skip_Mode then
-            Begin_Marker := NO_ANNOTATION;
-            End_Marker := NO_ANNOTATION;
-         end if;
 
          Has_Token := True;
-         Add_To_Token (CC, Begin_Marker);
 
          loop
             CC := Get_Char (B);
             if CC = '"' then
-               Add_To_Token (CC, End_Marker);
                exit;
             else
                case CC is
                   when '\' => Read_Escape_Sequence
                        (Skip_Mode => Skip_Mode, In_Double_Quote => True);
-                  when '`' => Read_Backquote_Command_Substitution
-                       (In_Double_Quote => True, Skip_Mode => Skip_Mode);
+                  when '`' =>
+                     Read_Backquote_Command_Substitution;
+
                   when '$' => Read_Parameter_Evaluation
                        (In_Double_Quote => True, Skip_Mode => Skip_Mode);
                   when ASCII.EOT =>
                      Lexer_Error
                        (B, "unexpected EOF while looking for matchin '""'");
-                  when others => Add_To_Token (CC);
+                  when others =>
+                     null;
                end case;
             end if;
          end loop;
@@ -714,16 +641,16 @@ package body Posix_Shell.Lexer is
                if not In_Double_Quote or else CC = '"' or else CC = '`' or else
                  CC = '$' or else CC = '\'
                then
-                  Add_To_Token (CC, ESCAPE_SEQUENCE);
+                  null;
                else
-                  Add_To_Token ('\');
                   Unget_Char (B);
                end if;
             else
-                  Add_To_Token ('\');
-                  Add_To_Token (CC);
+               null;
             end if;
             --  Add_To_Token (CC);
+         elsif not Has_Token then
+            Token_Start := Current_Pos (B.B);
          end if;
       end Read_Escape_Sequence;
 
@@ -736,26 +663,18 @@ package body Posix_Shell.Lexer is
          In_Double_Quote : Boolean)
       is
          pragma Unreferenced (In_Double_Quote);
-         Begin_Marker : Annotation := PARAM_EVAL_BEGIN;
-         End_Marker : Annotation   := PARAM_EVAL_END;
 
       begin
-         if Skip_Mode then
-            Begin_Marker := NO_ANNOTATION;
-            End_Marker := NO_ANNOTATION;
-         end if;
 
          Has_Token := True;
          CC := Get_Char (B);
 
          --  If the expression starts with a '(', then it is actually
          --  not a parameter expression, but rather a command expression.
-
          if CC = '(' then
             Unget_Char (B);
             CC := '$';
-            Read_Command_Substitution
-              (Skip_Mode => Skip_Mode, In_Double_Quote => False);
+            Read_Command_Substitution (In_Double_Quote => False);
             return;
          end if;
 
@@ -777,7 +696,6 @@ package body Posix_Shell.Lexer is
                  or else CC = '$'
                  or else CC = '!')
          then
-            Add_To_Token ('$');
             Unget_Char (B);
             return;
          end if;
@@ -786,34 +704,29 @@ package body Posix_Shell.Lexer is
          --  name, and thus the '$' sign is indeed the start of a parameter
          --  evaluation.
 
-         Add_To_Token ('$', Begin_Marker);
-
          --  If the '$' is followed by '{', then the parameter evaluation
          --  expression ends at the associated enclosing '}'.
 
          if CC = '{' then
-            while CC /= '}'
-            loop
+            while CC /= '}' loop
                if CC = '\' then
                   Read_Escape_Sequence
                     (Skip_Mode => Skip_Mode, In_Double_Quote => False);
                elsif CC = '"' then
                   Read_Double_Quote (Skip_Mode => Skip_Mode);
                elsif CC = ''' then
-                  Read_Single_Quote (Skip_Mode => Skip_Mode);
+                  Read_Single_Quote;
                elsif CC = '`' then
-                  Read_Backquote_Command_Substitution
-                    (Skip_Mode => Skip_Mode, In_Double_Quote => False);
+                  Read_Backquote_Command_Substitution;
+
                elsif CC = '$' then
                   Read_Parameter_Evaluation
                     (Skip_Mode => Skip_Mode, In_Double_Quote => False);
                else
-                  Add_To_Token (CC);
+                  null;
                end if;
                CC := Get_Char (B);
             end loop;
-
-            Add_To_Token (CC, End_Marker);
             return;
          end if;
 
@@ -829,7 +742,6 @@ package body Posix_Shell.Lexer is
            or else CC = '$'  --  Special parameter
            or else CC = '!'  --  Special parameter
          then
-            Add_To_Token (CC, End_Marker);
             return;
          end if;
 
@@ -844,9 +756,8 @@ package body Posix_Shell.Lexer is
                Next_Char := Get_Char (B);
                case Next_Char is
                   when 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' =>
-                     Add_To_Token (CC);
+                     null;
                   when others =>
-                     Add_To_Token (CC, End_Marker);
                      Unget_Char (B);
                      return;
                end case;
@@ -860,27 +771,18 @@ package body Posix_Shell.Lexer is
       -- Read_Single_Quote --
       -----------------------
 
-      procedure Read_Single_Quote (Skip_Mode : Boolean) is
+      procedure Read_Single_Quote is
          Start_Line   : constant Integer := Current_Lineno (B.B);
          Start_Column : constant Integer := Current_Columnno (B.B);
-         Begin_Marker : Annotation := SINGLE_QUOTE_BEGIN;
-         End_Marker   : Annotation := SINGLE_QUOTE_END;
       begin
-         if Skip_Mode then
-            Begin_Marker := NO_ANNOTATION;
-            End_Marker   := NO_ANNOTATION;
-         end if;
 
          Has_Token := True;
-
-         Add_To_Token (CC, Begin_Marker);
 
          loop
             CC := Get_Char (B);
 
             case CC is
                when ''' =>
-                  Add_To_Token (CC, End_Marker);
                   exit;
                when ASCII.EOT =>
                   Lexer_Error
@@ -889,7 +791,7 @@ package body Posix_Shell.Lexer is
                      To_String (Start_Line) &
                      ":" & To_String (Start_Column));
                when others =>
-                  Add_To_Token (CC);
+                  null;
             end case;
          end loop;
       end Read_Single_Quote;
@@ -898,22 +800,17 @@ package body Posix_Shell.Lexer is
       -- Return_Token --
       ------------------
 
-      function Return_Token
-        (T : Token_Type    := T_WORD;
-         S : Boolean       := False)
-         return Token
+      function Return_Token (T : Token_Type := T_WORD) return Token
       is
       begin
-         if S then
-            --  Ada.Text_IO.Put_Line (Image (Token_A_String));
-            return (T, Token_A_String, Pos);
-         end if;
-         return (T, Null_Annotated_String, Pos);
+         return (T, Token_Start, Prev_Pos (B.B), B.B);
       end Return_Token;
 
    begin
       --  Save current state of the buffer in case pushback is called afterward
-      B.Previous_Token_Pos      := Current_Pos (B.B);
+      B.Previous_Token_Pos := Current_Pos (B.B);
+      Token_Start := Current_Pos (B.B);
+
       loop
          CC := Get_Char (B);
 
@@ -922,12 +819,16 @@ package body Posix_Shell.Lexer is
             case CC is
                when ASCII.EOT | '(' | ')' | ';' | '&' | '|' | ASCII.LF | ' ' |
                     ASCII.HT =>
-                  return Delimit_Token;
+                  Unget_Char (B);
+                  return Return_Token;
                when '>' | '<' =>
-                  if Is_Natural (Str (Token_A_String)) then
-                     return Delimit_Token (T_IO_NUMBER);
+                  Unget_Char (B);
+                  if Is_Natural
+                    (Slice (B.B, Token_Start, Prev_Pos (B.B)))
+                  then
+                     return Return_Token (T_IO_NUMBER);
                   else
-                     return Delimit_Token;
+                     return Return_Token;
                   end if;
                when others => null;
             end case;
@@ -1033,22 +934,22 @@ package body Posix_Shell.Lexer is
                return Return_Token (T_NEWLINE);
             when ' ' | ASCII.HT =>
                --  discard <blank> character
-               Pos := Current_Pos (B.B);
+               Token_Start := Current_Pos (B.B);
             when '\' =>
                Read_Escape_Sequence (False, False);
             when '"' =>
                Read_Double_Quote (False);
             when ''' =>
-               Read_Single_Quote (False);
+               Read_Single_Quote;
             when '`' =>
-               Read_Backquote_Command_Substitution (False, False);
+               Read_Backquote_Command_Substitution;
                if IOHere then
-                  return Return_Token (T_WORD, S => True);
+                  return Return_Token (T_WORD);
                end if;
             when '$' =>
                Read_Parameter_Evaluation (False, False);
                if IOHere then
-                  return Return_Token (T_WORD, S => True);
+                  return Return_Token (T_WORD);
                end if;
             when others =>
                if CC = '#' and then not Has_Token then
@@ -1063,10 +964,10 @@ package body Posix_Shell.Lexer is
                   begin
                      while Tmp_CC /= ASCII.LF and Tmp_CC /= ASCII.EOT loop
                         Tmp_CC := Get_Char (B);
-
                      end loop;
                   end;
                   Unget_Char (B);
+                  Token_Start := Current_Pos (B.B);
                else
                   --  [Section 2.3 Rule 11]
                   --  The current character is used as the start of a new word.
@@ -1075,7 +976,6 @@ package body Posix_Shell.Lexer is
                   --  [Section 2.3 Rule 9]
                   --  If the previous character was part of a word, the current
                   --  character shall be appended to that word.
-                  Add_To_Token (CC);
                end if;
          end case;
 
@@ -1086,20 +986,20 @@ package body Posix_Shell.Lexer is
    -- Read_Word_Token --
    ---------------------
 
-   function Read_Word_Token (B : Buffer_Access) return Annotated_String is
+   function Read_Word_Token (B : in out Token_Buffer) return Token is
       Next : constant Token := Read_Token (B);
    begin
-      if Next.T /= T_WORD then
+      if Next.Kind /= T_WORD then
          Syntax_Error (Next, "expect word token");
       end if;
-      return Next.S;
+      return Next;
    end Read_Word_Token;
 
    ----------------
    -- Skip_Token --
    ----------------
 
-   procedure Skip_Token (B : Buffer_Access) is
+   procedure Skip_Token (B : in out Token_Buffer) is
       T : Token := Read_Token (B);
       pragma Unreferenced (T);
    begin
@@ -1112,29 +1012,30 @@ package body Posix_Shell.Lexer is
 
    procedure Syntax_Error (T : Token; Msg : String) is
    begin
-      if T.T = T_WORD then
+      if T.Kind = T_WORD then
          Raise_Exception
            (Shell_Syntax_Error'Identity,
-            Image (T.Pos) & ":"
+            Image (T.First) & ":"
             & Msg & " (got '"
-            & Token_Type_Img (T.T) & "'," & Str (T.S) & ")");
+            & Token_Type_Img (T.Kind) & "',"
+            & Slice (T.Content, T.First, T.Last) & ")");
       else
          Raise_Exception
            (Shell_Syntax_Error'Identity,
-            Image (T.Pos) & ":"
+            Image (T.First) & ":"
             & Msg & " (got '"
-            & Token_Type_Img (T.T) & "')");
+            & Token_Type_Img (T.Kind) & "')");
       end if;
 
    end Syntax_Error;
 
    function Token_Pos_Img (T : Token) return String is
    begin
-      if T.T = T_WORD then
-         return Image (T.Pos) & ":" & Token_Type_Img (T.T)
-           & "(" & Image (T.S) & ")";
+      if T.Kind = T_WORD then
+         return Image (T.First) & ":" & Token_Type_Img (T.Kind)
+           & "(" & Slice (T.Content, T.First, T.Last) & ")";
       else
-         return Image (T.Pos) & ":" & Token_Type_Img (T.T);
+         return Image (T.First) & ":" & Token_Type_Img (T.Kind);
       end if;
    end Token_Pos_Img;
 
@@ -1190,7 +1091,7 @@ package body Posix_Shell.Lexer is
    -- Unget_Char --
    ----------------
 
-   procedure Unget_Char (B : Buffer_Access) is
+   procedure Unget_Char (B : in out Token_Buffer) is
    begin
       Rewind (B.B);
    end Unget_Char;

@@ -20,36 +20,42 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with System;
+package body Posix_Shell.Traces is
 
-package body Posix_Shell.GNULib is
-
-   function C_Fnmatch
-     (Pattern : System.Address; Str : System.Address)
-      return Integer;
-   pragma Import (C, C_Fnmatch, "gsh_fnmatch");
-
-   -------------
-   -- Fnmatch --
-   -------------
-
-   function Fnmatch (Pattern : String; Str : String) return Boolean is
-      C_Pattern : aliased String (1 .. Pattern'Length + 1);
-      C_Str : aliased String (1 .. Str'Length + 1);
-      Result : Integer;
+   function Open_Append
+     (Name  : C_File_Name;
+      Fmode : Mode) return File_Descriptor
+   is
+      function C_Open_Append
+        (Name  : C_File_Name;
+         Fmode : Mode) return File_Descriptor;
+      pragma Import (C, C_Open_Append, "__gnat_open_append");
    begin
-      C_Pattern (1 .. Pattern'Length) := Pattern;
-      C_Pattern (C_Pattern'Last) := ASCII.NUL;
-      C_Str (1 .. Str'Length) := Str;
-      C_Str (C_Str'Last) := ASCII.NUL;
+      return C_Open_Append (Name, Fmode);
+   end Open_Append;
 
-      Result := C_Fnmatch (C_Pattern'Address, C_Str'Address);
-      if Result = 0 then
-         return True;
-      else
-         return False;
+   function Open_Append
+     (Name  : String;
+      Fmode : Mode) return File_Descriptor
+   is
+      C_Name : String (1 .. Name'Length + 1);
+   begin
+      C_Name (1 .. Name'Length) := Name;
+      C_Name (C_Name'Last)      := ASCII.NUL;
+      return Open_Append (C_Name (C_Name'First)'Address, Fmode);
+   end Open_Append;
+
+   procedure Log (Logger : String; Msg : String) is
+      Final : constant String := Logger & ":" & Msg & ASCII.LF;
+      N : Integer;
+   begin
+      if Enable_Traces then
+         if Logger_Handler = Invalid_FD then
+            Logger_Handler := Open_Append ("/tmp/gsh.out", Binary);
+         end if;
+
+         N := Write (Logger_Handler, Final'Address, Final'Length);
       end if;
+   end Log;
 
-   end Fnmatch;
-
-end Posix_Shell.GNULib;
+end Posix_Shell.Traces;

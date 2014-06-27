@@ -104,6 +104,21 @@ wjoin (char *args[])
   return wresult;
 }
 
+int
+__gsh_set_close_on_exec (int fd,
+                          int close_on_exec_p)
+{
+
+  HANDLE h = (HANDLE) _get_osfhandle (fd);
+  if (h == (HANDLE) -1)
+    return -1;
+  if (close_on_exec_p)
+    return ! SetHandleInformation (h, HANDLE_FLAG_INHERIT, 0);
+  return ! SetHandleInformation (h, HANDLE_FLAG_INHERIT,
+    HANDLE_FLAG_INHERIT);
+
+}
+
 HANDLE
 __gsh_no_block_spawn (char *args[], char *cwd, char *env[])
 {
@@ -164,5 +179,3 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[])
 
     }
 }
-
-

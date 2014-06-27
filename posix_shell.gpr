@@ -10,7 +10,7 @@ project Posix_Shell is
    Gnatmem   : Boolean_Type := external ("GNATMEM", "false");
    Sys       : System_Type := external ("SYS", "windows");
 
-   Default_Switches := ("-gnat05", "-gnatwcfijklmopruvz", "-gnaty");
+   Default_Switches := ("-gnat12", "-gnatwcfijklmopruvz", "-gnaty");
 
    Default_Libs := ();
 
@@ -43,7 +43,7 @@ project Posix_Shell is
       when "false" => Build_Dir        := Build_Dir & "/no-gmem";
    end case;
 
-   for Main use ("gsh.adb");
+   for Main use ("gsh_lexer.adb", "gsh.adb");
    for Source_Dirs use (".", "src", "src/builtins", "src/" & Sys);
 
    for Languages use ("Ada", "C");
