@@ -76,7 +76,7 @@ package body Posix_Shell.Lexer is
    begin
       if Next.Kind /= T then
          if Msg'Length = 0 then
-            Syntax_Error (Next, "expect token '" & Token_Type_Img (T) & "'");
+            Syntax_Error (Next, "expect token '" & Image (T) & "'");
          else
             Syntax_Error (Next, Msg);
          end if;
@@ -1013,14 +1013,14 @@ package body Posix_Shell.Lexer is
            (Shell_Syntax_Error'Identity,
             Image (T.First) & ":"
             & Msg & " (got '"
-            & Token_Type_Img (T.Kind) & "',"
+            & Image (T.Kind) & "',"
             & Slice (T.Content, T.First, T.Last) & ")");
       else
          Raise_Exception
            (Shell_Syntax_Error'Identity,
             Image (T.First) & ":"
             & Msg & " (got '"
-            & Token_Type_Img (T.Kind) & "')");
+            & Image (T.Kind) & "')");
       end if;
 
    end Syntax_Error;
@@ -1028,18 +1028,18 @@ package body Posix_Shell.Lexer is
    function Token_Pos_Img (T : Token) return String is
    begin
       if T.Kind = T_WORD then
-         return Image (T.First) & ":" & Token_Type_Img (T.Kind)
+         return Image (T.First) & ":" & Image (T.Kind)
            & "(" & Slice (T.Content, T.First, T.Last) & ")";
       else
-         return Image (T.First) & ":" & Token_Type_Img (T.Kind);
+         return Image (T.First) & ":" & Image (T.Kind);
       end if;
    end Token_Pos_Img;
 
-   --------------------
-   -- Token_Type_Img --
-   --------------------
+   -----------
+   -- Image --
+   -----------
 
-   function Token_Type_Img (T : Token_Type) return String is
+   function Image (T : Token_Type) return String is
    begin
       case T is
          when T_WORD        => return "word";
@@ -1081,7 +1081,7 @@ package body Posix_Shell.Lexer is
          when T_RBRACE      => return "}";
          when others        => return T'Img;
       end case;
-   end Token_Type_Img;
+   end Image;
 
    ----------------
    -- Unget_Char --

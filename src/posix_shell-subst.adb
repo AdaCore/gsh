@@ -222,8 +222,6 @@ package body Posix_Shell.Subst is
                         end if;
                      when UNSPLITABLE_END =>
                         Unsplitable_Level := Unsplitable_Level - 1;
-                     when others =>
-                        null;
                   end case;
                when E_CHAR =>
                   if In_IFS (El.Char) and then Unsplitable_Level = 0 and then

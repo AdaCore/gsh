@@ -104,7 +104,7 @@ package Posix_Shell.Lexer is
       return Token;
    --  Read IO Here content
 
-   function Token_Type_Img (T : Token_Type) return String;
+   function Image (T : Token_Type) return String;
    --  return a string represanting the current token type. this function
    --  is used mainly for error messages computation.
 
