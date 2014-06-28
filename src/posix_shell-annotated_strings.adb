@@ -196,33 +196,6 @@ package body Posix_Shell.Annotated_Strings is
                   Result_Last := F;
                when E_CTRL =>
                   case E.Ctrl is
-                     when SINGLE_QUOTE_BEGIN  =>
-                        Result (F .. F + 2) := "<S>";
-                        Result_Last := F + 2;
-                     when SINGLE_QUOTE_END    =>
-                        Result (F .. F + 3) := "</S>";
-                        Result_Last := F + 3;
-                     when DOUBLE_QUOTE_BEGIN  =>
-                        Result (F .. F + 2) := "<D>";
-                        Result_Last := F + 2;
-                     when DOUBLE_QUOTE_END    =>
-                        Result (F .. F + 3) := "</D>";
-                        Result_Last := F + 3;
-                     when ESCAPE_SEQUENCE     =>
-                        Result (F .. F + 3) := "<E/>";
-                        Result_Last := F + 3;
-                     when COMMAND_SUBST_BEGIN =>
-                        Result (F .. F + 2) := "<C>";
-                        Result_Last := F + 2;
-                     when COMMAND_SUBST_END   =>
-                        Result (F .. F + 3) := "</C>";
-                        Result_Last := F + 3;
-                     when PARAM_EVAL_BEGIN    =>
-                        Result (F .. F + 2) := "<R>";
-                        Result_Last := F + 2;
-                     when PARAM_EVAL_END      =>
-                        Result (F .. F + 3) := "</R>";
-                        Result_Last := F + 3;
                      when NULL_STRING         =>
                         Result (F .. F + 3) := "<N/>";
                         Result_Last := F + 3;
@@ -238,8 +211,6 @@ package body Posix_Shell.Annotated_Strings is
                      when FIELD_SEP           =>
                         Result (F .. F + 3) := "<F/>";
                         Result_Last := F + 3;
-                     when others =>
-                        null;
                   end case;
                when others =>
                   null;

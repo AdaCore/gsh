@@ -25,17 +25,7 @@ with GNAT.OS_Lib;
 package Posix_Shell is
 
    type Annotation is
-     (NO_ANNOTATION,         --  no annotation
-      SINGLE_QUOTE_BEGIN,    --  mark beginning of a single quote expression
-      SINGLE_QUOTE_END,      --  mark end of a single quote expression
-      DOUBLE_QUOTE_BEGIN,    --  likewise for double quotes
-      DOUBLE_QUOTE_END,
-      ESCAPE_SEQUENCE,       --  mark an escaped character
-      COMMAND_SUBST_BEGIN,   --  mark beginning of a command substitution
-      COMMAND_SUBST_END,     --  mark end of a command substitution
-      PARAM_EVAL_BEGIN,      --  likewise for parameter evaluation
-      PARAM_EVAL_END,
-      NULL_STRING,           --  a '' string (character value is ignored)
+     (NULL_STRING,           --  a '' string (character value is ignored)
       QUOTED_NULL_STRING,    --  a '' string but that should also be ignored
                              --  even inside a quote. This state is used only
                              --  in relation with "$@" expansion
