@@ -108,7 +108,9 @@ package Posix_Shell.Lexer is
    --  return a string represanting the current token type. this function
    --  is used mainly for error messages computation.
 
-   function Token_Pos_Img (T : Token) return String;
+   function Image (T : Token) return String;
+   --  return string image of the token (the image contains position, type and
+   --  content if the token is of type T_WORD.
 
    procedure Syntax_Error (T : Token; Msg : String);
 

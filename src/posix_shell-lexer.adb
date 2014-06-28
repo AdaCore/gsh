@@ -207,7 +207,7 @@ package body Posix_Shell.Lexer is
       if Debug_Lexer then
          Ada.Text_IO.Put_Line
            (Ada.Text_IO.Standard_Error,
-            "ctoken:" & Token_Pos_Img (Result));
+            "ctoken:" & Image (Result));
       end if;
       return Result;
    end Read_Command_Token;
@@ -451,7 +451,7 @@ package body Posix_Shell.Lexer is
       if Debug_Lexer then
          Ada.Text_IO.Put_Line
               (Ada.Text_IO.Standard_Error,
-               "token:" & Token_Pos_Img (Result));
+               "token:" & Image (Result));
       end if;
       return Result;
    end Read_Token;
@@ -1025,7 +1025,7 @@ package body Posix_Shell.Lexer is
 
    end Syntax_Error;
 
-   function Token_Pos_Img (T : Token) return String is
+   function Image (T : Token) return String is
    begin
       if T.Kind = T_WORD then
          return Image (T.First) & ":" & Image (T.Kind)
@@ -1033,7 +1033,7 @@ package body Posix_Shell.Lexer is
       else
          return Image (T.First) & ":" & Image (T.Kind);
       end if;
-   end Token_Pos_Img;
+   end Image;
 
    -----------
    -- Image --
