@@ -347,11 +347,11 @@ package body Posix_Shell.Tree is
       end if;
 
       Current := new Node'(CMD_NODE,
-                      Redirections    => Current.Redirections,
-                      Arguments       => Null_Token_List,
-                      Cmd             => Cmd,
-                      Cmd_Assign_List => Assign_List,
-                      Pos             => Current.Pos);
+                           Redirections    => Current.Redirections,
+                           Arguments       => Null_Token_List,
+                           Cmd             => Cmd,
+                           Cmd_Assign_List => Assign_List,
+                           Pos             => Current.Pos);
       Deallocate (Tree.Node_Table.Table (N));
       Tree.Node_Table.Table (N) := Current;
    end Set_Cmd_Node;

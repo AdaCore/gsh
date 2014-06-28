@@ -28,35 +28,71 @@ package Posix_Shell.Buffers is
    Null_Buffer : constant Buffer;
 
    type Text_Position is private;
+   --  Represent a position in a buffer.
+
    Null_Text_Position : constant Text_Position;
+   --  An invalid text position
 
-   function Get_Pos (T : Text_Position) return Natural;
-   pragma Inline (Get_Pos);
+   function Offset (T : Text_Position) return Natural;
+   --  Return the offset corresponding to T
 
-   function Get_Lineno (T : Text_Position) return Natural;
-   function Image (T : Text_Position) return String;
+   function Line (T : Text_Position) return Natural;
+   --  Return the line corresponding to position T
+
+   function Line (T : Text_Position) return String;
+   --  Return the line corresponding to position T as a string
+
+   function Image (T : Text_Position; Msg : String := "") return String;
+   --  Return a string image of position T. If Msg is not the null string then
+   --  the image will contain the image of the T followed by a colon and the
+   --  message.
 
    procedure Rewind  (B : in out Buffer; Step : Positive := 1);
+   --  Rewind buffer B by Step positions
+
    procedure Forward (B : in out Buffer; Step : Positive := 1);
-   procedure Set_Pos (B : in out Buffer; P : Text_Position);
+   --  Forward buffer B by Step positions
+
+   procedure Seek (B : in out Buffer; T : Text_Position);
+   --  Reset position of B to T
 
    function Current (B : Buffer) return Character;
-   function Current (B : Buffer; Size : Positive) return String;
+   --  Get current character at current position
 
-   function Current_Pos (B : Buffer) return Text_Position;
-   function Prev_Pos    (B : Buffer) return Text_Position;
-   function Current_Pos (B : Buffer) return Natural;
-   function Current_Lineno (B : Buffer) return Natural;
+   function Current (B : Buffer; Size : Positive) return String;
+   --  Get String of length Size starting at current position
+
+   function Current (B : Buffer) return Text_Position;
+   --  Get current position
+
+   function Previous (B : Buffer) return Text_Position;
+   --  Get position previous to the current one (i.e one character before)
+
+   function Current_Offset (B : Buffer) return Natural;
+   --  Get current offset
+
+   function Current_Line (B : Buffer) return Natural;
+   --  Get current line
 
    function New_Buffer (Str : String) return Buffer;
+   --  Create a buffer from Str and set its position to the first character
+
    function New_Buffer_From_File (Filename : String) return Buffer;
+   --  Create a buffer with the content of the file Filename and set its
+   --  position to the first character in the buffer
+
    function Slice (B : Buffer; First, Last : Text_Position) return String;
+   --  Return the string delimited by First and Last
+
 private
+
    pragma Inline (Forward);
    pragma Inline (Rewind);
+   pragma Inline (Offset);
+   pragma Inline (Line);
 
    type Text_Position is record
-      Pos    : Natural;
+      Offset : Natural;
       Line   : Natural;
    end record;
 

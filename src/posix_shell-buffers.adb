@@ -30,11 +30,11 @@ package body Posix_Shell.Buffers is
 
    function Current (B : Buffer) return Character is
    begin
-      if B.Pos.Pos > B.S'Last then
+      if B.Pos.Offset > B.S'Last then
          return ASCII.EOT;
       end if;
 
-      return B.S (B.Pos.Pos);
+      return B.S (B.Pos.Offset);
    end Current;
 
    -------------
@@ -43,43 +43,43 @@ package body Posix_Shell.Buffers is
 
    function Current (B : Buffer; Size : Positive) return String is
    begin
-      if B.Pos.Pos > B.S'Last then
+      if B.Pos.Offset > B.S'Last then
          return "";
       end if;
 
-      if B.Pos.Pos + Size - 1 > B.S'Last then
-         return B.S (B.Pos.Pos .. B.S'Last);
+      if B.Pos.Offset + Size - 1 > B.S'Last then
+         return B.S (B.Pos.Offset .. B.S'Last);
       end if;
 
-      return B.S (B.Pos.Pos .. B.Pos.Pos + Size - 1);
+      return B.S (B.Pos.Offset .. B.Pos.Offset + Size - 1);
    end Current;
 
-   --------------------
-   -- Current_Lineno --
-   --------------------
+   -------------
+   -- Current --
+   -------------
 
-   function Current_Lineno (B : Buffer) return Natural is
-   begin
-      return B.Pos.Line;
-   end Current_Lineno;
-
-   -----------------
-   -- Current_Pos --
-   -----------------
-
-   function Current_Pos (B : Buffer) return Text_Position is
+   function Current (B : Buffer) return Text_Position is
    begin
       return B.Pos;
-   end Current_Pos;
+   end Current;
 
-   -----------------
-   -- Current_Pos --
-   -----------------
+   ------------------
+   -- Current_Line --
+   ------------------
 
-   function Current_Pos (B : Buffer) return Natural is
+   function Current_Line (B : Buffer) return Natural is
    begin
-      return B.Pos.Pos;
-   end Current_Pos;
+      return B.Pos.Line;
+   end Current_Line;
+
+   --------------------
+   -- Current_Offset --
+   --------------------
+
+   function Current_Offset (B : Buffer) return Natural is
+   begin
+      return B.Pos.Offset;
+   end Current_Offset;
 
    -------------
    -- Forward --
@@ -89,41 +89,41 @@ package body Posix_Shell.Buffers is
    begin
       for J in 1 .. Step loop
 
-         if B.Pos.Pos < B.S'Last and then B.S (B.Pos.Pos) = ASCII.LF then
+         if B.Pos.Offset < B.S'Last and then B.S (B.Pos.Offset) = ASCII.LF then
             B.Pos.Line := B.Pos.Line + 1;
          end if;
 
-         B.Pos.Pos := B.Pos.Pos + 1;
+         B.Pos.Offset := B.Pos.Offset + 1;
       end loop;
 
    end Forward;
-
-   ----------------
-   -- Get_Lineno --
-   ----------------
-
-   function Get_Lineno (T : Text_Position) return Natural is
-   begin
-      return T.Line;
-   end Get_Lineno;
-
-   -------------
-   -- Get_Pos --
-   -------------
-
-   function Get_Pos (T : Text_Position) return Natural is
-   begin
-      return T.Pos;
-   end Get_Pos;
 
    -----------
    -- Image --
    -----------
 
-   function Image (T : Text_Position) return String is
+   function Image (T : Text_Position; Msg : String := "") return String is
+   begin
+      if Msg'Length = 0 then
+         return To_String (T.Line);
+      else
+         return To_String (T.Line) & ":" & Msg;
+      end if;
+   end Image;
+
+   ----------
+   -- Line --
+   ----------
+
+   function Line (T : Text_Position) return Natural is
+   begin
+      return T.Line;
+   end Line;
+
+   function Line (T : Text_Position) return String is
    begin
       return To_String (T.Line);
-   end Image;
+   end Line;
 
    ----------------
    -- New_Buffer --
@@ -171,34 +171,43 @@ package body Posix_Shell.Buffers is
    end New_Buffer_From_File;
 
    ------------
+   -- Offset --
+   ------------
+
+   function Offset (T : Text_Position) return Natural is
+   begin
+      return T.Offset;
+   end Offset;
+
+   ------------
    -- Rewind --
    ------------
 
    procedure Rewind (B : in out Buffer; Step : Positive := 1) is
    begin
-      if B.Pos.Pos - Step < 1 then
+      if B.Pos.Offset - Step < 1 then
          B.Pos := (1, 1);
          return;
       end if;
 
       for J in 1 .. Step loop
-         if B.Pos.Pos - J <=  B.S'Last and then
-           B.S (B.Pos.Pos - J) = ASCII.LF
+         if B.Pos.Offset - J <=  B.S'Last and then
+           B.S (B.Pos.Offset - J) = ASCII.LF
          then
             B.Pos.Line := B.Pos.Line - 1;
          end if;
       end loop;
-      B.Pos.Pos := B.Pos.Pos - Step;
+      B.Pos.Offset := B.Pos.Offset - Step;
    end Rewind;
 
-   -------------
-   -- Set_Pos --
-   -------------
+   ----------
+   -- Seek --
+   ----------
 
-   procedure Set_Pos (B : in out Buffer; P : Text_Position) is
+   procedure Seek (B : in out Buffer; T : Text_Position) is
    begin
-      B.Pos := P;
-   end Set_Pos;
+      B.Pos := T;
+   end Seek;
 
    -----------
    -- Slice --
@@ -206,17 +215,17 @@ package body Posix_Shell.Buffers is
 
    function Slice (B : Buffer; First, Last : Text_Position) return String is
    begin
-      return B.S (First.Pos .. Last.Pos);
+      return B.S (First.Offset .. Last.Offset);
    end Slice;
 
    --------------
    -- Prev_Pos --
    --------------
 
-   function Prev_Pos (B : Buffer) return Text_Position is
+   function Previous (B : Buffer) return Text_Position is
       Buffer_Copy : Buffer := B;
    begin
       Rewind (Buffer_Copy);
-      return Current_Pos (Buffer_Copy);
-   end Prev_Pos;
+      return Current (Buffer_Copy);
+   end Previous;
 end Posix_Shell.Buffers;

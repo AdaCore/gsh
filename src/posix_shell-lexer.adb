@@ -128,7 +128,7 @@ package body Posix_Shell.Lexer is
    procedure Lexer_Error (B : in out Token_Buffer; Msg : String) is
    begin
       Raise_Exception
-        (Shell_Lexer_Error'Identity, Image (Current_Pos (B.B)) & ":" & Msg);
+        (Shell_Lexer_Error'Identity, Image (Current (B.B), Msg));
    end Lexer_Error;
 
    ---------------
@@ -163,8 +163,8 @@ package body Posix_Shell.Lexer is
       Result : Token_Buffer;
    begin
       Result.B := New_Buffer (Str);
-      Result.Previous_Token_Pos := Current_Pos (Result.B);
-      Result.Next_Token_Pos := Current_Pos (Result.B);
+      Result.Previous_Token_Pos := Current (Result.B);
+      Result.Next_Token_Pos := Current (Result.B);
       Result.Valid_Cache := False;
       return Result;
    end New_Buffer;
@@ -177,8 +177,8 @@ package body Posix_Shell.Lexer is
       Result : Token_Buffer;
    begin
       Result.B := New_Buffer_From_File (Filename);
-      Result.Previous_Token_Pos := Current_Pos (Result.B);
-      Result.Next_Token_Pos := Current_Pos (Result.B);
+      Result.Previous_Token_Pos := Current (Result.B);
+      Result.Next_Token_Pos := Current (Result.B);
       Result.Valid_Cache := False;
       return Result;
    end New_Buffer_From_File;
@@ -189,10 +189,10 @@ package body Posix_Shell.Lexer is
 
    procedure Pushback (B : in out Token_Buffer; T : Token) is
    begin
-      B.Next_Token_Pos := Current_Pos (B.B);
+      B.Next_Token_Pos := Current (B.B);
       B.Next_Token := T;
       B.Valid_Cache := True;
-      Set_Pos (B.B, B.Previous_Token_Pos);
+      Seek (B.B, B.Previous_Token_Pos);
    end Pushback;
 
    ------------------------
@@ -397,7 +397,7 @@ package body Posix_Shell.Lexer is
          null;
       end loop;
 
-      Token_Start := Current_Pos (B.B);
+      Token_Start := Current (B.B);
 
       CC := ASCII.LF;
 
@@ -410,7 +410,7 @@ package body Posix_Shell.Lexer is
                then
                   declare
                      T : constant Token := (T_WORD, Token_Start,
-                                            Prev_Pos (B.B), B.B);
+                                            Previous (B.B), B.B);
                   begin
                      CC := Get_Char (B);
 
@@ -424,7 +424,7 @@ package body Posix_Shell.Lexer is
 
             when ASCII.EOT =>
                Unget_Char (B);
-               return (T_WORD, Token_Start, Prev_Pos (B.B), B.B);
+               return (T_WORD, Token_Start, Previous (B.B), B.B);
 
             when others =>
                null;
@@ -441,7 +441,7 @@ package body Posix_Shell.Lexer is
       Result : Token;
    begin
       if B.Valid_Cache then
-         Set_Pos (B.B, B.Next_Token_Pos);
+         Seek (B.B, B.Next_Token_Pos);
          B.Valid_Cache := False;
          Result := B.Next_Token;
       else
@@ -648,7 +648,7 @@ package body Posix_Shell.Lexer is
             end if;
             --  Add_To_Token (CC);
          elsif not Has_Token then
-            Token_Start := Current_Pos (B.B);
+            Token_Start := Current (B.B);
          end if;
       end Read_Escape_Sequence;
 
@@ -770,7 +770,7 @@ package body Posix_Shell.Lexer is
       -----------------------
 
       procedure Read_Single_Quote is
-         Start_Pos : constant Text_Position := Current_Pos (B.B);
+         Start_Pos : constant Text_Position := Current (B.B);
 
       begin
          Has_Token := True;
@@ -799,13 +799,13 @@ package body Posix_Shell.Lexer is
       function Return_Token (T : Token_Type := T_WORD) return Token
       is
       begin
-         return (T, Token_Start, Prev_Pos (B.B), B.B);
+         return (T, Token_Start, Previous (B.B), B.B);
       end Return_Token;
 
    begin
       --  Save current state of the buffer in case pushback is called afterward
-      B.Previous_Token_Pos := Current_Pos (B.B);
-      Token_Start := Current_Pos (B.B);
+      B.Previous_Token_Pos := Current (B.B);
+      Token_Start := Current (B.B);
 
       loop
          CC := Get_Char (B);
@@ -820,7 +820,7 @@ package body Posix_Shell.Lexer is
                when '>' | '<' =>
                   Unget_Char (B);
                   if Is_Natural
-                    (Slice (B.B, Token_Start, Prev_Pos (B.B)))
+                    (Slice (B.B, Token_Start, Previous (B.B)))
                   then
                      return Return_Token (T_IO_NUMBER);
                   else
@@ -930,7 +930,7 @@ package body Posix_Shell.Lexer is
                return Return_Token (T_NEWLINE);
             when ' ' | ASCII.HT =>
                --  discard <blank> character
-               Token_Start := Current_Pos (B.B);
+               Token_Start := Current (B.B);
             when '\' =>
                Read_Escape_Sequence (False, False);
             when '"' =>
@@ -963,7 +963,7 @@ package body Posix_Shell.Lexer is
                      end loop;
                   end;
                   Unget_Char (B);
-                  Token_Start := Current_Pos (B.B);
+                  Token_Start := Current (B.B);
                else
                   --  [Section 2.3 Rule 11]
                   --  The current character is used as the start of a new word.

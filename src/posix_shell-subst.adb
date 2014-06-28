@@ -375,7 +375,7 @@ package body Posix_Shell.Subst is
             T := Parse_Buffer (Buf, Until_Token => T_RPAR);
             Append (Buffer, Strip (Eval (SS, T)));
             Free_Node (T);
-            Index := Index + Get_Pos (Buf.Previous_Token_Pos) - 1;
+            Index := Index + Offset (Buf.Previous_Token_Pos) - 1;
             pragma Debug (Log ("command subst",
                                "'" & S (Index .. S'Last) & "'"));
          end;

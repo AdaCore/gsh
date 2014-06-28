@@ -221,7 +221,7 @@ package body Posix_Shell.Tree.Evals is
    is
       Tmp : Token_List;
    begin
-      Set_Var_Value (S.all, "LINENO", To_String (Get_Lineno (N.Pos)));
+      Set_Var_Value (S.all, "LINENO", Line (N.Pos));
       if N.Kind = CMD_NODE then
          Tmp := N.Cmd_Assign_List;
       else
@@ -384,7 +384,7 @@ package body Posix_Shell.Tree.Evals is
 
             New_State : Shell_State_Access := S;
          begin
-            Set_Var_Value (S.all, "LINENO", To_String (Get_Lineno (N.Pos)));
+            Set_Var_Value (S.all, "LINENO", Line (N.Pos));
 
             --  Is the command a special builtin ?
             if Match (Special_Builtin_Matcher, Cmd) then

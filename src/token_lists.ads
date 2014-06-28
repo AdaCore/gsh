@@ -20,7 +20,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Finalization;
 with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 
 package Token_Lists is
