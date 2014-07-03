@@ -818,7 +818,7 @@ package body Posix_Shell.Builtins is
 
       if Args'Length > 0 then
          declare
-            List : constant String_List := Eval_String
+            List : constant String_List := Split_String
               (S, Str (Line), Args'Length - 1);
             Index : Integer := List'First;
          begin
@@ -982,9 +982,9 @@ package body Posix_Shell.Builtins is
    is
 
       File_List_Start : Integer := Args'First;
-      Recursive : Boolean := False;
-      Force : Boolean := False;
-      Got_Errors : Boolean := False;
+      Recursive       : Boolean := False;
+      Force           : Boolean := False;
+      Got_Errors      : Boolean := False;
 
       procedure Rm_Tree (Filename : String);
 

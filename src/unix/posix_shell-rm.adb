@@ -1,4 +1,5 @@
 with GNAT.OS_Lib;
+with GNAT.Directory_Operations;
 
 package body Posix_Shell.Rm is
 
@@ -13,7 +14,17 @@ package body Posix_Shell.Rm is
       pragma Unreferenced (Status);
 
    begin
-      GNAT.OS_Lib.Delete_File (Filename, Success);
+      if GNAT.OS_Lib.Is_Directory (Filename) then
+         begin
+            GNAT.Directory_Operations.Remove_Dir (Filename);
+            Success := True;
+         exception
+            when GNAT.Directory_Operations.Directory_Error =>
+               Success := False;
+         end;
+      else
+         GNAT.OS_Lib.Delete_File (Filename, Success);
+      end if;
       if not Success then
          return 1;
       else

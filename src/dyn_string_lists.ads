@@ -1,4 +1,3 @@
-with Ada.Finalization;
 with GNAT.Strings; use GNAT.Strings;
 
 package Dyn_String_Lists is
@@ -14,34 +13,32 @@ package Dyn_String_Lists is
    procedure Append
      (Source : in out Dyn_String_List; Item : Dyn_String_List);
 
-   function "&" (Left  : String_Access;
-                 Right : Dyn_String_List)
-                 return Dyn_String_List;
+   function "&"
+     (Left  : String_Access;
+      Right : Dyn_String_List)
+      return Dyn_String_List;
 
    function Length (Source : Dyn_String_List) return Integer;
-
-   function Element
-     (Source : Dyn_String_List;
-      Index : Natural)
-      return String_Access;
 
    function Content
      (Source : Dyn_String_List) return String_List;
 
 private
-   use Ada.Finalization;
 
-   type Dyn_String_Array_Access is access all String_List;
+   type Node;
+   type Node_Access is access Node;
 
-   type Dyn_String_List is new Controlled with record
-      Reference   : Dyn_String_Array_Access := null;
-      Last        : Natural := 0;
+   type Node is record
+      T      : String_Access;
+      Next   : Node_Access := null;
    end record;
 
-   pragma Finalize_Storage_Only (Dyn_String_List);
+   type Dyn_String_List is record
+      First  : Node_Access := null;
+      Last   : Node_Access := null;
+      Length : Natural := 0;
+   end record;
 
-   procedure Initialize (Object : in out Dyn_String_List);
-   procedure Adjust     (Object : in out Dyn_String_List);
-   procedure Finalize   (Object : in out Dyn_String_List);
+   Null_String_List : constant Dyn_String_List := (null, null, 0);
 
 end Dyn_String_Lists;

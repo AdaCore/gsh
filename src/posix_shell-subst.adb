@@ -41,6 +41,12 @@ with Posix_Shell.Exec; use Posix_Shell.Exec;
 
 package body Posix_Shell.Subst is
 
+   function Split_String
+     (SS        : Shell_State_Access;
+      S         : Annotated_String;
+      Max_Split : Integer := -1)
+      return Dyn_String_Lists.Dyn_String_List;
+
    function Eval_String_Aux
      (SS              : Shell_State_Access;
       S               : String;
@@ -50,6 +56,12 @@ package body Posix_Shell.Subst is
       Is_Splitable    : Boolean := True;
       Is_Param_Subst  : Boolean := False)
       return Annotated_String;
+
+   function Eval_String
+     (SS        : Shell_State_Access;
+      S         : String;
+      Max_Split : Integer := -1)
+      return Dyn_String_Lists.Dyn_String_List;
 
    function Simple_Filename_Expansion
      (SS        : Shell_State_Access;
@@ -73,15 +85,11 @@ package body Posix_Shell.Subst is
    function Strip (S : String) return String;
    --  Strip any CR in the string and also all trailing LF.
 
-   -----------------
-   -- Eval_String --
-   -----------------
-
    function Eval_String
      (SS        : Shell_State_Access;
       S         : String;
       Max_Split : Integer := -1)
-      return String_List
+      return Dyn_String_Lists.Dyn_String_List
    is
       use Ada.Strings.Unbounded;
       use Dyn_String_Lists;
@@ -89,6 +97,23 @@ package body Posix_Shell.Subst is
       Characters_Read : Integer := 0;
       Result          : constant Annotated_String := Eval_String_Aux
         (SS, S, Characters_Read);
+   begin
+      return Split_String (SS, Result, Max_Split);
+   end Eval_String;
+
+   -----------------
+   -- Split_String --
+   -----------------
+
+   function Split_String
+     (SS        : Shell_State_Access;
+      S         : Annotated_String;
+      Max_Split : Integer := -1)
+      return Dyn_String_Lists.Dyn_String_List
+   is
+      use Ada.Strings.Unbounded;
+      use Dyn_String_Lists;
+
       Result_List : Dyn_String_List;
 
       type State is
@@ -182,10 +207,10 @@ package body Posix_Shell.Subst is
    begin
 
       --  Perform field splitting
-      for I in 1 .. Length (Result) loop
+      for I in 1 .. Length (S) loop
 
          declare
-            El : constant Str_Element := Get_Element (Result, I);
+            El : constant Str_Element := Get_Element (S, I);
          begin
             case El.Kind is
                when E_CTRL =>
@@ -250,9 +275,33 @@ package body Posix_Shell.Subst is
       --  if Last (Result_List) = 0 then
       --    return Null_Result;
       --  else
-      return Content (Result_List);
+      return Result_List;
 
       --  end if;
+   end Split_String;
+
+   function Split_String
+     (SS        : Shell_State_Access;
+      S         : String;
+      Max_Split : Integer := -1)
+      return String_List
+   is
+      use Dyn_String_Lists;
+      AS : Annotated_String;
+   begin
+      Append (AS, S);
+      return Content (Split_String (SS, AS, Max_Split));
+   end Split_String;
+
+   function Eval_String
+     (SS        : Shell_State_Access;
+      S         : String;
+      Max_Split : Integer := -1)
+      return String_List
+   is
+      use Dyn_String_Lists;
+   begin
+      return Content (Eval_String (SS, S, Max_Split));
    end Eval_String;
 
    ---------------------
@@ -760,35 +809,19 @@ package body Posix_Shell.Subst is
    function Eval_String_List
      (SS : Shell_State_Access; S : Token_List) return String_List
    is
-
+      use Dyn_String_Lists;
+      Result : Dyn_String_List;
    begin
-      if Length (S) = 1 then
-         return Eval_String (SS, Get_Token_String (Element (S, 1)));
-      end if;
+      for I in 1 .. Length (S) loop
+         declare
+            Elem_Eval : constant Dyn_String_List :=
+              Eval_String (SS, Get_Token_String (Element (S, I)));
+         begin
+            Append (Result, Elem_Eval);
+         end;
+      end loop;
 
-      declare
-         use Dyn_String_Lists;
-         Result : Dyn_String_List;
-
-      begin
-         if S = Null_Token_List then
-            return Null_String_List;
-         end if;
-
-         for I in 1 .. Length (S) loop
-            declare
-               Elem_Eval : constant String_List :=
-                 Eval_String (SS, Get_Token_String (Element (S, I)));
-            begin
-
-               for J in Elem_Eval'Range loop
-                  Append (Result, Elem_Eval (J));
-               end loop;
-            end;
-         end loop;
-
-         return Content (Result);
-      end;
+      return Content (Result);
    end Eval_String_List;
 
    -------------------------

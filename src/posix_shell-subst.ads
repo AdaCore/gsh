@@ -32,6 +32,12 @@ package Posix_Shell.Subst is
       Max_Split : Integer := -1)
       return String_List;
 
+   function Split_String
+     (SS        : Shell_State_Access;
+      S         : String;
+      Max_Split : Integer := -1)
+      return String_List;
+
    function Eval_String_Unsplit
      (SS                 : Shell_State_Access;
       S                  : String;
