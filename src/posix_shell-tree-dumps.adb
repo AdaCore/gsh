@@ -24,101 +24,117 @@ with Ada.Text_IO; use Ada.Text_IO;
 
 package body Posix_Shell.Tree.Dumps is
 
-   procedure Dump_List (N : Node; Indent : Integer := 0);
-   procedure Dump_If (N : Node; Indent : Integer := 0);
-   procedure Dump_Function (N : Node; Indent : Integer := 0);
-   procedure Dump_Subshell (N : Node; Indent : Integer := 0);
-   procedure Dump_Cmd (N : Node; Indent : Integer := 0);
-   procedure Dump_Assign (N : Node; Indent : Integer := 0);
-   procedure Dump_Pipe (N : Node; Indent : Integer := 0);
+   procedure Dump_List (N : Node);
+   procedure Dump_If (N : Node);
+   procedure Dump_Function (N : Node);
+   procedure Dump_Subshell (N : Node);
+   procedure Dump_Cmd (T : Shell_Tree; N : Node);
+   procedure Dump_Assign (T : Shell_Tree; N : Node);
+   procedure Dump_Pipe (N : Node);
+   procedure Dump_For (N : Node);
 
-   procedure Dump (N : Node_Id; Indent : Integer := 0) is
+   procedure Dump (T : Shell_Tree) is
    begin
-      Dump (Node_Table.Table (N).all, Indent);
+      for J in 1 .. Last (T.Node_Table) loop
+
+            Put (J'Img & ":");
+            Dump (T, T.Node_Table.Table (J));
+      end loop;
    end Dump;
 
-   procedure Dump (N : Node; Indent : Integer := 0) is
+   procedure Dump
+     (T : Shell_Tree;
+      N : Node)
+   is
    begin
-      Set_Col (Positive_Count ((Indent * 4) + 1));
+      Put (N.Kind'Img & ": ");
       case N.Kind is
-         when LIST_NODE => Dump_List (N, Indent);
-         when IF_NODE   => Dump_If (N, Indent);
-         when FUNCTION_NODE => Dump_Function (N, Indent);
-         when SUBSHELL_NODE => Dump_Subshell (N, Indent);
-         when CMD_NODE => Dump_Cmd (N, Indent);
-         when ASSIGN_NODE => Dump_Assign (N, Indent);
-         when PIPE_NODE => Dump_Pipe (N, Indent);
+         when LIST_NODE => Dump_List (N);
+         when IF_NODE   => Dump_If (N);
+         when FUNCTION_NODE => Dump_Function (N);
+         when SUBSHELL_NODE => Dump_Subshell (N);
+         when CMD_NODE => Dump_Cmd (T, N);
+         when ASSIGN_NODE => Dump_Assign (T, N);
+         when PIPE_NODE => Dump_Pipe (N);
+         when FOR_NODE => Dump_For (N);
          when others => Put_Line ("unknown structure");
 
       end case;
    end Dump;
 
-   procedure Dump_Pipe (N : Node; Indent : Integer := 0) is
+   procedure Dump_For (N : Node) is
    begin
-      Set_Col (Positive_Count ((Indent * 4) + 1));
-      Dump (N.Pipe_Left,  Indent);
-      Dump (N.Pipe_Right, Indent);
+      Put ("var: " & Get_Token_String (N.Loop_Var) & ", ");
+      Put ("values: ,");
+      Put ("code:" & N.Loop_Code'Img & ", ");
+      Put ("use @:" & N.Loop_Default_Values'Img);
+      New_Line;
+   end Dump_For;
+
+   procedure Dump_Pipe (N : Node) is
+   begin
+      for J in N.Pipe_Childs'Range loop
+         Put (N.Pipe_Childs (J)'Img);
+      end loop;
+      New_Line;
    end Dump_Pipe;
 
-   procedure Dump_Assign (N : Node; Indent : Integer := 0) is
+   procedure Dump_Assign
+     (T : Shell_Tree;
+      N : Node)
+   is
+      Cursor : Token_List := N.Assign_List;
+      Pool   : constant List_Pool := Token_List_Pool (T);
    begin
-
-      for I in 1 .. Length (N.Assign_List) loop
-         Set_Col (Positive_Count ((Indent * 4) + 1));
-         Put_Line (Image (Element (N.Assign_List, I)));
+      while Cursor /= Null_List loop
+         Put (Get_Token_String (Get_Element (Pool, Cursor)));
+         Put (", ");
+         Cursor := Next (Pool, Cursor);
       end loop;
+      New_Line;
    end Dump_Assign;
 
-   procedure Dump_Cmd (N : Node; Indent : Integer := 0) is
+   procedure Dump_Cmd (T : Shell_Tree; N : Node)
+   is
+      Cursor : Token_List := N.Arguments;
+      Pool   : constant List_Pool := Token_List_Pool (T);
    begin
-      Set_Col (Positive_Count ((Indent * 4) + 1));
-      Put (Image (N.Cmd) & " ");
-      for I in 1 .. Length (N.Arguments) loop
-         Put (Image (Element (N.Arguments, I)) & " ");
-
+      Put (Get_Token_String (N.Cmd) & " ");
+      while Cursor /= Null_List loop
+         Put (Get_Token_String (Get_Element (Pool, Cursor)) & " ");
+         Cursor := Next (Pool, Cursor);
       end loop;
       New_Line;
    end Dump_Cmd;
 
-   procedure Dump_Function (N : Node; Indent : Integer := 0) is
+   procedure Dump_Function (N : Node) is
    begin
-      Set_Col (Positive_Count ((Indent * 4) + 1));
-      Put_Line ("function " & Str (N.Function_Name));
+      Put_Line ("function " & Get_Token_String (N.Function_Name));
    end Dump_Function;
 
-   procedure Dump_If (N : Node; Indent : Integer := 0) is
+   procedure Dump_If (N : Node) is
    begin
-      Set_Col (Positive_Count ((Indent * 4) + 1));
-      Put_Line ("if");
-      Dump (N.Cond, Indent + 1);
-      Set_Col (Positive_Count ((Indent * 4) + 1));
-      Put_Line ("then");
-      Dump (N.True_Code, Indent + 1);
+      Put ("if: ");
+      Put (N.Cond'Img);
+      Put (" then");
+      Put (N.True_Code'Img);
 
-      if N.False_Code /= Null_Node then
-         Set_Col (Positive_Count ((Indent * 4) + 1));
-         Put_Line ("else");
-         Dump (N.False_Code, Indent + 1);
-      end if;
-      Set_Col (Positive_Count ((Indent * 4) + 1));
-      Put_Line ("fi");
+      Put (" else");
+      Put (N.False_Code'Img);
+      New_Line;
    end Dump_If;
 
-   procedure Dump_List (N : Node; Indent : Integer := 0) is
+   procedure Dump_List (N : Node) is
    begin
       for J in N.List_Childs'Range loop
-         Set_Col (Positive_Count ((Indent * 4) + 1));
-         Dump (N.List_Childs (J),  Indent);
+         Put (N.List_Childs (J)'Img);
       end loop;
+      New_Line;
    end Dump_List;
 
-   procedure Dump_Subshell (N : Node; Indent : Integer := 0) is
+   procedure Dump_Subshell (N : Node) is
    begin
-      Set_Col (Positive_Count ((Indent * 4) + 1));
-      Put_Line ("(");
-      Dump (N.Subshell_Code, Indent + 1);
-      Set_Col (Positive_Count ((Indent * 4) + 1));
-      Put_Line (")");
+      Put_Line ("code:" & N.Subshell_Code'Img);
    end Dump_Subshell;
 
 end Posix_Shell.Tree.Dumps;

@@ -125,7 +125,7 @@ package Posix_Shell.Lexer is
 
 private
 
-   type Token is record
+    type Token is record
       Kind     : Token_Type := T_WORD;
       First    : Text_Position;
       Last     : Text_Position;
@@ -136,4 +136,6 @@ private
                                    Null_Text_Position,
                                    Null_Text_Position,
                                    Null_Buffer);
+
+
 end Posix_Shell.Lexer;

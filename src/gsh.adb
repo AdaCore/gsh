@@ -35,6 +35,7 @@ with Posix_Shell.Opts; use Posix_Shell.Opts;
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell; use Posix_Shell;
+with Posix_Shell.Tree.Dumps; use Posix_Shell.Tree.Dumps;
 
 ---------
 -- GSH --
@@ -112,6 +113,10 @@ begin
          end if;
 
          T := Parse_Buffer (Script_Buffer.all);
+
+         if Dump_Node_Table then
+            Dump (T);
+         end if;
 
          --  If -n was passed skip evaluation of the script.
          if Do_Script_Evaluation then

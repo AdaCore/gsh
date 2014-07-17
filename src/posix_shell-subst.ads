@@ -22,7 +22,8 @@
 
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 with Posix_Shell.Variables;  use Posix_Shell.Variables;
-with Token_Lists; use Token_Lists;
+with Posix_Shell.Tree; use Posix_Shell.Tree;
+with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 
 package Posix_Shell.Subst is
 
@@ -47,6 +48,7 @@ package Posix_Shell.Subst is
 
    function Eval_String_List
      (SS : Shell_State_Access;
+      T  : Shell_Tree;
       S  : Token_List)
       return String_List;
 

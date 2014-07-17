@@ -68,12 +68,14 @@ package body Posix_Shell.Tree.Evals is
    --  This function takes care of setting and the restoring the redirections
    --  as well.
 
-   procedure Eval_Cmd (S : Shell_State_Access; N : Node);
+   procedure Eval_Cmd (S : Shell_State_Access; T : Shell_Tree; N : Node);
    --  Evaluate the given node as a command, after having expanded
    --  the command name and its arguments.
 
    procedure Eval_Assign
-     (S : Shell_State_Access; N : Node;
+     (S         : Shell_State_Access;
+      T         : Shell_Tree;
+      N         : Node;
       Do_Export : Boolean := False);
 
    ----------
@@ -98,7 +100,7 @@ package body Posix_Shell.Tree.Evals is
       if N = 0 then
          return;
       else
-         Eval (S, T, T.Node_Table.Table (N).all);
+         Eval (S, T, T.Node_Table.Table (N));
       end if;
    end Eval;
 
@@ -178,8 +180,8 @@ package body Posix_Shell.Tree.Evals is
          when BRACE_NODE       => Eval_Brace (S, T, N);
          when SUBSHELL_NODE    => Eval_Subshell (S, T, N);
          when FUNCTION_NODE    => Eval_Function (S, N);
-         when ASSIGN_NODE      => Eval_Assign (S, N);
-         when CMD_NODE         => Eval_Cmd (S, N);
+         when ASSIGN_NODE      => Eval_Assign (S, T, N);
+         when CMD_NODE         => Eval_Cmd (S, T, N);
          when NULL_CMD_NODE    => Eval_Null_Cmd (S, N);
          when others           => raise Program_Error;
       end case;
@@ -215,11 +217,13 @@ package body Posix_Shell.Tree.Evals is
    -----------------
 
    procedure Eval_Assign
-     (S : Shell_State_Access;
-      N : Node;
+     (S         : Shell_State_Access;
+      T         : Shell_Tree;
+      N         : Node;
       Do_Export : Boolean := False)
    is
-      Tmp : Token_List;
+      Tmp    : Token_List;
+      Pool   : constant List_Pool := Token_List_Pool (T);
    begin
       Set_Var_Value (S.all, "LINENO", Line (N.Pos));
       if N.Kind = CMD_NODE then
@@ -228,9 +232,11 @@ package body Posix_Shell.Tree.Evals is
          Tmp := N.Assign_List;
       end if;
 
-      for A in 1 .. Length (Tmp) loop
+      while Tmp /= Null_List loop
+
          declare
-            Assign : constant String := Get_Token_String (Element (Tmp, A));
+            Assign : constant String :=
+              Get_Token_String (Get_Element (Pool, Tmp));
          begin
             for I in Assign'First .. Assign'Last loop
                if Assign (I) = '=' then
@@ -249,6 +255,7 @@ package body Posix_Shell.Tree.Evals is
                end if;
             end loop;
          end;
+         Tmp := Next (Pool, Tmp);
       end loop;
    end Eval_Assign;
 
@@ -274,20 +281,30 @@ package body Posix_Shell.Tree.Evals is
    -- Eval_Case --
    ---------------
 
-   procedure Eval_Case (S : Shell_State_Access; T : Shell_Tree; N : Node) is
-      Case_Value : constant String :=
+   procedure Eval_Case
+     (S : Shell_State_Access;
+      T : Shell_Tree;
+      N : Node)
+   is
+      Case_Value     : constant String :=
         Eval_String_Unsplit (S, Get_Token_String (N.Case_Word));
-      Current_Case : Node_Access := Get_Node (T, N.First_Case);
-      Pattern_Found : Boolean := False;
+      Current_Case   : Node := Get_Node (T, N.First_Case);
+      Pattern_Found  : Boolean := False;
       Current_Redirs : constant Redirection_States :=
         Get_Redirections (S.all);
+
+      Cursor : Token_List;
+      Pool   : constant List_Pool := Token_List_Pool (T);
    begin
       Set_Redirections (S, N.Redirections);
-      while Current_Case /= null loop
-         for I in 1 .. Length (Current_Case.Pattern_List) loop
+      while Current_Case.Kind /= NOP_NODE loop
+         Cursor := Current_Case.Pattern_List;
+
+         while Cursor /= Null_List loop
+
             declare
                Str : constant String := Eval_String_Unsplit
-                 (S, Get_Token_String (Element (Current_Case.Pattern_List, I)),
+                 (S, Get_Token_String (Get_Element (Pool, Cursor)),
                   True);
             begin
                if Fnmatch (Str, Case_Value) then
@@ -300,7 +317,10 @@ package body Posix_Shell.Tree.Evals is
                   exit;
                end if;
             end;
+
+            Cursor := Next (Pool, Cursor);
          end loop;
+
          exit when Pattern_Found;
          Current_Case := Get_Node (T, Current_Case.Next_Patterns);
       end loop;
@@ -363,11 +383,17 @@ package body Posix_Shell.Tree.Evals is
    -- Eval_Cmd --
    --------------
 
-   procedure Eval_Cmd (S : Shell_State_Access; N : Node) is
+   procedure Eval_Cmd
+     (S : Shell_State_Access;
+      T : Shell_Tree;
+      N : Node)
+   is
+      Pool : constant List_Pool := Token_List_Pool (T);
    begin
       declare
          Result_String : String_List :=
-           Eval_String_List (S, N.Cmd & N.Arguments);
+           Eval_String (S, Get_Token_String (N.Cmd)) &
+           Eval_String_List (S, T, N.Arguments);
 
       begin
 
@@ -391,7 +417,7 @@ package body Posix_Shell.Tree.Evals is
                Is_Special_Builtin := True;
             end if;
 
-            if Length (N.Cmd_Assign_List) > 0 then
+            if not Is_Empty (Pool, N.Cmd_Assign_List) then
                --  As stated by posix shell standard (2.14 Special Built-In
                --  Utilities). Variable assignments specified with special
                --  built-in utilities remain in effect after the built-in
@@ -401,7 +427,7 @@ package body Posix_Shell.Tree.Evals is
                   New_State := new Shell_State;
                   New_State.all := Enter_Scope (S.all);
                end if;
-               Eval_Assign (New_State, N, True);
+               Eval_Assign (New_State, T, N, True);
             end if;
 
             if Is_Xtrace_Enabled (S.all) then
@@ -426,7 +452,9 @@ package body Posix_Shell.Tree.Evals is
                   "(return " & Get_Last_Exit_Status (New_State.all)'Img & ")");
             end if;
 
-            if Length (N.Cmd_Assign_List) > 0 and not Is_Special_Builtin then
+            if not Is_Empty (Pool, N.Cmd_Assign_List) and then
+              not Is_Special_Builtin
+            then
                Leave_Scope (New_State.all, S.all, True);
             end if;
          end;
@@ -450,7 +478,7 @@ package body Posix_Shell.Tree.Evals is
       Loop_Var        : constant String := Get_Token_String (N.Loop_Var);
       Loop_Var_Values : String_List :=
         (if not N.Loop_Default_Values then
-         Eval_String_List (S, N.Loop_Var_Values) else
+         Eval_String_List (S, T, N.Loop_Var_Values) else
          Eval_String (S, """$@"""));
       Is_Valid        : Boolean;
       Break_Number    : Integer;
@@ -502,7 +530,8 @@ package body Posix_Shell.Tree.Evals is
      (S : Shell_State_Access; N : Node)
    is
    begin
-      Register_Function (Get_Token_String (N.Function_Name), N.Function_Code);
+      Register_Function (Get_Token_String (N.Function_Name),
+                         N.Function_Code.all);
       Save_Last_Exit_Status (S.all, 0);
    end Eval_Function;
 

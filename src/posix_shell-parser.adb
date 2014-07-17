@@ -26,7 +26,7 @@
 
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell.Variables.Output;
-with Token_Lists; use Token_Lists;
+with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 with Posix_Shell.Traces; use Posix_Shell.Traces;
 
 package body Posix_Shell.Parser is
@@ -203,6 +203,7 @@ package body Posix_Shell.Parser is
 
    function Parse_Word_List
      (B : in out Token_Buffer;
+      T : in out Shell_Tree;
       C : Parser_Context)
       return Token_List;
    --  wordlist         : wordlist WORD
@@ -231,7 +232,9 @@ package body Posix_Shell.Parser is
    --                   |           case_item
    --                   ;
 
-   function Parse_Pattern (B : in out Token_Buffer)
+   function Parse_Pattern
+     (B : in out Token_Buffer;
+      T : in out Shell_Tree)
      return Token_List;
    --  pattern          :             WORD         /* Apply rule 4 */
    --                   | pattern '|' WORD         /* Do not apply rule 4 */
@@ -575,7 +578,7 @@ package body Posix_Shell.Parser is
          return Null_Node;
       end if;
 
-      Pattern  := Parse_Pattern (B);
+      Pattern  := Parse_Pattern (B, T);
 
       Expect_Token (B, T_RPAR);
       Parse_Linebreak (B, T, C);
@@ -826,7 +829,7 @@ package body Posix_Shell.Parser is
    is
       Current            : constant Token := Read_Command_Token (B);
       Variable_Name      : Token;
-      Value_List         : Token_List := Null_Token_List;
+      Value_List         : Token_List := Null_List;
       Loop_Code          : Node_Id := Null_Node;
       Default_Value_List : Boolean := False;
    begin
@@ -844,7 +847,7 @@ package body Posix_Shell.Parser is
          --   get the list of value for the loop variable
          case Lookahead (B) is
             when T_SEMI | T_NEWLINE => null;
-            when others => Value_List := Parse_Word_List (B, C);
+            when others => Value_List := Parse_Word_List (B, T, C);
          end case;
          Parse_Sequential_Sep (B, T, C);
       else
@@ -1115,14 +1118,14 @@ package body Posix_Shell.Parser is
    -- Parse_Pattern --
    -------------------
 
-   function Parse_Pattern (B : in out Token_Buffer)
+   function Parse_Pattern (B : in out Token_Buffer; T : in out Shell_Tree)
      return Token_List
    is
       S      : Token := Read_Word_Token (B);
-      Result : Token_List := Null_Token_List;
+      Result : Token_List := Null_List;
    begin
       loop
-         Append (Result, S);
+         Append (T, Result, S);
          if Lookahead (B) = T_PIPE then
             Skip_Token (B);
             S := Read_Word_Token (B);
@@ -1506,10 +1509,11 @@ package body Posix_Shell.Parser is
 
    function Parse_Word_List
      (B : in out Token_Buffer;
+      T : in out Shell_Tree;
       C : Parser_Context)
       return Token_List
    is
-      Result : Token_List := Null_Token_List;
+      Result : Token_List := Null_List;
       Value  : Token := Read_Word_Token (B);
    begin
       loop
@@ -1518,13 +1522,13 @@ package body Posix_Shell.Parser is
                if C = BRACEGROUP_CONTEXT and then
                  Lookahead_Command (B) = T_RBRACE
                then
-                  Append (Result, Value);
+                  Append (T, Result, Value);
                   return Result;
                end if;
 
-               Append (Result, Value);
+               Append (T, Result, Value);
             when others =>
-               Append (Result, Value);
+               Append (T, Result, Value);
                return Result;
          end case;
          Value := Read_Word_Token (B);

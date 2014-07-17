@@ -26,7 +26,6 @@
 
 with Posix_Shell.Variables.Output;     use Posix_Shell.Variables.Output;
 with Posix_Shell.Parser;     use Posix_Shell.Parser;
-with Posix_Shell.Tree;       use Posix_Shell.Tree;
 with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
 with Posix_Shell.String_Utils;      use Posix_Shell.String_Utils;
 with Ada.Strings.Unbounded;
@@ -807,18 +806,26 @@ package body Posix_Shell.Subst is
    ----------------------
 
    function Eval_String_List
-     (SS : Shell_State_Access; S : Token_List) return String_List
+     (SS : Shell_State_Access;
+      T  : Shell_Tree;
+      S  : Token_List)
+      return String_List
    is
       use Dyn_String_Lists;
       Result : Dyn_String_List;
+      Pool   : constant List_Pool := Token_List_Pool (T);
+      Cursor : Token_List := S;
    begin
-      for I in 1 .. Length (S) loop
+      while Cursor /= Null_List loop
+         pragma Debug (Log ("eval_string_list", "cursor: " & Cursor'Img));
          declare
             Elem_Eval : constant Dyn_String_List :=
-              Eval_String (SS, Get_Token_String (Element (S, I)));
+              Eval_String (SS, Get_Token_String (Get_Element (Pool, Cursor)));
          begin
             Append (Result, Elem_Eval);
          end;
+
+         Cursor := Next (Pool, Cursor);
       end loop;
 
       return Content (Result);

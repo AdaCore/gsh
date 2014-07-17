@@ -22,7 +22,7 @@
 
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Buffers; use Posix_Shell.Buffers;
-with Token_Lists; use Token_Lists;
+with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 with GNAT.Dynamic_Tables;
 
@@ -154,7 +154,7 @@ package Posix_Shell.Tree is
       Eval      : Boolean);
 
    procedure Append_Arg
-     (Tree   : Shell_Tree;
+     (Tree   : in out Shell_Tree;
       N      : Node_Id;
       S      : Token);
 
@@ -175,6 +175,12 @@ package Posix_Shell.Tree is
      (Tree   : in out Shell_Tree);
 
    function New_Tree return Shell_Tree;
+
+   function Token_List_Pool (T : Shell_Tree) return List_Pool;
+   procedure Append
+     (Tree : in out Shell_Tree;
+      List : in out Token_List;
+      T    : Token);
 
    procedure Set_Tree_Toplevel (Tree : in out Shell_Tree; N : Node_Id);
    type Node is private;
@@ -197,33 +203,20 @@ private
       FUNCTION_NODE,
       ASSIGN_NODE,
       CMD_NODE,
-      NULL_CMD_NODE);
+      NULL_CMD_NODE,
+      NOP_NODE);
 
    type And_Or_Record is record
       N    : Node_Access;
       Kind : List_Kind;
    end record;
 
-   type Node_Triplet is array (1 .. 3) of Node_Access;
    type Node_Id_Array_Access is access Node_Id_Array;
    type And_Or_Node_Id_Array_Access is access And_Or_Node_Id_Array;
 
-   package Node_Tables is new GNAT.Dynamic_Tables
-     (Node_Access,
-      Positive,
-      1,
-      128,
-      100);
 
-   use Node_Tables;
 
-   type Shell_Tree is record
-      Node_Table    : Instance;
-      Next_Node     : Node_Id := 1;
-      Toplevel_Node : Node_Id := 0;
-   end record;
-
-   function Get_Node (Tree : Shell_Tree; N : Node_Id) return Node_Access;
+   function Get_Node (Tree : Shell_Tree; N : Node_Id) return Node;
 
    type Node (Kind : Node_Kind := IF_NODE) is record
       Redirections      : Redirection_Op_Stack := Empty_Redirection_Op_Stack;
@@ -266,14 +259,31 @@ private
             While_Code         : Node_Id;
          when FUNCTION_NODE =>
             Function_Name      : Token;
-            Function_Code      : Shell_Tree;
+            Function_Code      : Shell_Tree_Access;
          when CMD_NODE =>
             Cmd                : Token;
             Arguments          : Token_List;
             Cmd_Assign_List    : Token_List;
          when ASSIGN_NODE =>
-            Assign_List        : Token_List;
+            Assign_List         : Token_List;
+         when others =>
+            null;
       end case;
    end record;
 
+   package Node_Tables is new GNAT.Dynamic_Tables
+     (Node,
+      Positive,
+      1,
+      4,
+      100);
+
+   use Node_Tables;
+
+   type Shell_Tree is record
+      Node_Table    : Instance;
+      Next_Node     : Node_Id := 1;
+      Toplevel_Node : Node_Id := 0;
+      Pool          : List_Pool;
+   end record;
 end Posix_Shell.Tree;
