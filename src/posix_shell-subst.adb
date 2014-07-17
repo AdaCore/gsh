@@ -28,7 +28,6 @@ with Posix_Shell.Variables.Output;     use Posix_Shell.Variables.Output;
 with Posix_Shell.Parser;     use Posix_Shell.Parser;
 with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
 with Posix_Shell.String_Utils;      use Posix_Shell.String_Utils;
-with Ada.Strings.Unbounded;
 with Ada.Directories;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Dyn_String_Lists;
@@ -123,7 +122,8 @@ package body Posix_Shell.Subst is
          WORD_FIELD);
 
       Current_State     : State := EMPTY_FIELD;
-      Buffer            : Unbounded_String := To_Unbounded_String ("");
+      Buffer            : String (1 .. Length (S));
+      Buffer_Last       : Natural := 0;
       Split_Count       : Integer := 0;
       --  Number of fields encountered so far
       Unsplitable_Level : Integer := 0;
@@ -146,14 +146,14 @@ package body Posix_Shell.Subst is
                --  We have a null word so create an empty field
                Append (Result_List, new String'(""));
             when QUOTED_WORD_FIELD =>
-               Append (Result_List, new String'(To_String (Buffer)));
+               Append (Result_List, new String'(Buffer (1 .. Buffer_Last)));
             when WORD_FIELD =>
                if Is_File_Expansion_Enabled (SS.all) then
                   Append (Result_List,
-                          Filename_Expansion (SS, To_String (Buffer)));
+                          Filename_Expansion (SS, Buffer (1 .. Buffer_Last)));
                else
                   Append (Result_List,
-                          new String'(To_String (Buffer)));
+                          new String'(Buffer (1 .. Buffer_Last)));
                end if;
 
          end case;
@@ -161,7 +161,7 @@ package body Posix_Shell.Subst is
          if Current_State /= EMPTY_FIELD then
             Current_State := EMPTY_FIELD;
             Split_Count := Split_Count + 1;
-            Buffer := To_Unbounded_String ("");
+            Buffer_Last := 0;
          end if;
 
          if Unsplitable_Level > 0 then
@@ -260,7 +260,8 @@ package body Posix_Shell.Subst is
                      if Unsplitable_Level > 0 then
                         Current_State := QUOTED_WORD_FIELD;
                      end if;
-                     Buffer := Buffer & El.Char;
+                     Buffer_Last := Buffer_Last + 1;
+                     Buffer (Buffer_Last) := El.Char;
                   end if;
                when E_NULL =>
                   raise Program_Error;
