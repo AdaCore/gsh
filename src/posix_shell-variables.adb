@@ -28,13 +28,9 @@ with Ada.Environment_Variables; use Ada.Environment_Variables;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Interfaces.C; use Interfaces.C;
 with Ada.Strings.Maps.Constants; use Ada.Strings.Maps.Constants;
-with Dyn_String_Lists; use Dyn_String_Lists;
 with Ada.Unchecked_Deallocation;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
-with Ada.Text_IO;
-
-pragma Elaborate_All (Dyn_String_Lists);
 
 package body Posix_Shell.Variables is
 
@@ -120,7 +116,9 @@ package body Posix_Shell.Variables is
 
    function Get_Environment (State : Shell_State) return String_List is
 
-      Result : Dyn_String_List;
+      Result      : String_List (1 .. Integer (Length (State.Var_Table)));
+      Result_Last : Natural := 0;
+
       procedure Export_Aux (Position : Cursor);
 
       procedure Export_Aux (Position : Cursor) is
@@ -129,9 +127,13 @@ package body Posix_Shell.Variables is
          --  Upper_Name : constant String := Translate (K, Upper_Case_Map);
       begin
          if V.Is_Exported then
-            Append (Result, new String'(K & "=" & V.Val.all & ASCII.NUL));
+            Result_Last := Result_Last + 1;
+            Result (Result_Last) :=
+              new String'(K & "=" & V.Val.all & ASCII.NUL);
          elsif V.Env_Val /= null then
-            Append (Result, new String'(K & "=" & V.Env_Val.all & ASCII.NUL));
+            Result_Last := Result_Last + 1;
+            Result (Result_Last) :=
+              new String'(K & "=" & V.Env_Val.all & ASCII.NUL);
          end if;
       end Export_Aux;
 
@@ -140,7 +142,7 @@ package body Posix_Shell.Variables is
       Iterate (State.Var_Table,
                Export_Aux'Unrestricted_Access);
 
-      return Content (Result);
+      return Result (1 .. Result_Last);
    end Get_Environment;
 
    ----------------

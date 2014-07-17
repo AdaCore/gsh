@@ -36,6 +36,7 @@ with Posix_Shell.Traces; use Posix_Shell.Traces;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Posix_Shell.Buffers; use Posix_Shell.Buffers;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
+with Ada.Strings.Unbounded;
 
 package body Posix_Shell.Subst is
 
