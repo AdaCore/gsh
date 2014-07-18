@@ -153,8 +153,14 @@ package body Posix_Shell.Commands_Preprocessor is
 
       --  This command can only be an executable. See if we can
       --  locate an executable using the various possible filename
-      --  extensions.
-      Exec_Path := Locate_Exec (S.all, Cmd);
+      --  extensions. Note that if we are trying to spawn cmd we should not try
+      --  to compute the full path otherwise it will result in a strange
+      --  message: "the syntax of the command is incorrect".
+      if Cmd = "cmd" or else Cmd = "cmd.exe" then
+         Exec_Path := new String'("cmd.exe");
+      else
+         Exec_Path := Locate_Exec (S.all, Cmd);
+      end if;
 
       if Exec_Path = null then
          Put (S.all, 2, Cmd & ": command not found"); New_Line (S.all, 2);
