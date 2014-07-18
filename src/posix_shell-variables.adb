@@ -219,10 +219,10 @@ package body Posix_Shell.Variables is
            Directory_Separator = '\'
          then
             declare
-               Result : String (1 .. S'Length);
+               Result      : String (1 .. S'Length);
                Result_Last : Integer := 0;
-               Is_First : Boolean := True;
-               Index : Natural := S'First;
+               Is_First    : Boolean := True;
+               Index       : Natural := S'First;
             begin
                loop
                   if Is_First and then Index + 1 <= S'Last and then
