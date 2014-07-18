@@ -254,7 +254,7 @@ package body Posix_Shell.Annotated_Strings is
       Chunk_Size  : Natural;
       Is_Slice    : Boolean := False)
    is
-      Growth_Factor : constant := 32;
+      Growth_Factor : constant := 3;
       --  The growth factor controls how much extra space is allocated when
       --  we have to increase the size of an allocated unbounded string. By
       --  allocating extra space, we avoid the need to reallocate on every
