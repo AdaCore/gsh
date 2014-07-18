@@ -333,11 +333,12 @@ package body Posix_Shell.Tree is
       Tree.Node_Table.Table (N) := Current;
    end Append_Assignement;
 
-   function New_Tree return Shell_Tree is
+   function New_Tree (B : Buffer) return Shell_Tree is
       T : Shell_Tree;
    begin
       Init (T.Node_Table);
       T.Pool := New_Pool;
+      T.Buffer := B;
       return T;
    end New_Tree;
 
@@ -446,6 +447,8 @@ package body Posix_Shell.Tree is
    begin
       Free_Node (Tree, Tree.Toplevel_Node);
       Free (Tree.Node_Table);
+      Deallocate (Tree.Pool);
+      Deallocate (Tree.Buffer);
    end Free_Node;
 
    procedure Free_Node (Tree : in out Shell_Tree; N : Node_Id) is

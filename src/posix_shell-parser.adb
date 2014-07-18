@@ -525,7 +525,7 @@ package body Posix_Shell.Parser is
       Until_Token : Token_Type := T_NULL)
       return Shell_Tree
    is
-      T : Shell_Tree := New_Tree;
+      T : Shell_Tree := New_Tree (B.B);
       N : Node_Id := 0;
    begin
       N := Parse (B, T, Until_Token => Until_Token);
@@ -808,9 +808,10 @@ package body Posix_Shell.Parser is
    function Parse_File (Filename : String) return Shell_Tree is
       B : Token_Buffer;
       N : Node_Id := 0;
-      T : Shell_Tree := New_Tree;
+      T : Shell_Tree;
    begin
       B := New_Buffer_From_File (Filename);
+      T := New_Tree (B.B);
       N := Parse (B, T);
       --  XXX deallocate buffer and tree
       Set_Tree_Toplevel (T, N);
@@ -1348,7 +1349,7 @@ package body Posix_Shell.Parser is
             Expect_Token (B, T_RPAR);
             Parse_Linebreak (B, T, C);
             declare
-               Function_Tree : Shell_Tree := New_Tree;
+               Function_Tree : Shell_Tree := New_Tree (B.B);
                N : constant Node_Id := Parse_Compound_Command
                  (B, Function_Tree, C);
             begin
@@ -1387,10 +1388,11 @@ package body Posix_Shell.Parser is
       return Shell_Tree
    is
       B : Token_Buffer;
-      T : Shell_Tree := New_Tree;
+      T : Shell_Tree;
       N : Node_Id := 0;
    begin
       B := New_Buffer (S);
+      T := New_Tree (B.B);
       N := Parse (B, T);
       Set_Tree_Toplevel (T, N);
       return T;

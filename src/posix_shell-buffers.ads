@@ -84,6 +84,8 @@ package Posix_Shell.Buffers is
    function Slice (B : Buffer; First, Last : Text_Position) return String;
    --  Return the string delimited by First and Last
 
+   procedure Deallocate (B : in out Buffer);
+
 private
 
    pragma Inline (Forward);

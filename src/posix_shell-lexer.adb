@@ -59,9 +59,16 @@ package body Posix_Shell.Lexer is
           (Token_Buffer,
            Buffer_Access);
    begin
+      Deallocate (B.B);
       B.B := Null_Buffer;
       Internal_Free (B);
    end Deallocate;
+
+   procedure Deallocate (B : in out Token_Buffer) is
+   begin
+      Deallocate (B.B);
+   end Deallocate;
+
 
    ------------------
    -- Expect_Token --

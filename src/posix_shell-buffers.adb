@@ -81,6 +81,18 @@ package body Posix_Shell.Buffers is
       return B.Pos.Offset;
    end Current_Offset;
 
+   ----------------
+   -- Deallocate --
+   ----------------
+
+   procedure Deallocate (B : in out Buffer) is
+   begin
+      if B.S /= null then
+         Free (B.S);
+         B.S := null;
+      end if;
+   end Deallocate;
+
    -------------
    -- Forward --
    -------------

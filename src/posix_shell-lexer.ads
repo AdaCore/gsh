@@ -62,6 +62,7 @@ package Posix_Shell.Lexer is
    --  Access to the buffer
 
    procedure Deallocate (B : in out Buffer_Access);
+   procedure Deallocate (B : in out Token_Buffer);
 
    function New_Buffer_From_File (Filename : String) return Token_Buffer;
    function New_Buffer (Str : String) return Token_Buffer;
@@ -125,7 +126,7 @@ package Posix_Shell.Lexer is
 
 private
 
-    type Token is record
+   type Token is record
       Kind     : Token_Type := T_WORD;
       First    : Text_Position;
       Last     : Text_Position;

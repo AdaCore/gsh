@@ -174,7 +174,7 @@ package Posix_Shell.Tree is
    procedure Free_Node
      (Tree   : in out Shell_Tree);
 
-   function New_Tree return Shell_Tree;
+   function New_Tree (B : Buffer) return Shell_Tree;
 
    function Token_List_Pool (T : Shell_Tree) return List_Pool;
    procedure Append
@@ -285,5 +285,6 @@ private
       Next_Node     : Node_Id := 1;
       Toplevel_Node : Node_Id := 0;
       Pool          : List_Pool;
+      Buffer        : Posix_Shell.Buffers.Buffer;
    end record;
 end Posix_Shell.Tree;
