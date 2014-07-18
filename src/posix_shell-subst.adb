@@ -36,7 +36,6 @@ with Posix_Shell.Traces; use Posix_Shell.Traces;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Posix_Shell.Buffers; use Posix_Shell.Buffers;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
-with Ada.Strings.Unbounded;
 
 package body Posix_Shell.Subst is
 
@@ -90,7 +89,6 @@ package body Posix_Shell.Subst is
       Max_Split : Integer := -1)
       return Dyn_String_Lists.Dyn_String_List
    is
-      use Ada.Strings.Unbounded;
       use Dyn_String_Lists;
 
       Characters_Read : Integer := 0;
@@ -110,7 +108,6 @@ package body Posix_Shell.Subst is
       Max_Split : Integer := -1)
       return Dyn_String_Lists.Dyn_String_List
    is
-      use Ada.Strings.Unbounded;
       use Dyn_String_Lists;
 
       Result_List : Dyn_String_List;
