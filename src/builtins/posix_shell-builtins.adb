@@ -522,7 +522,7 @@ package body Posix_Shell.Builtins is
      (S : Shell_State_Access; Args : String_List) return Integer
    is
       Str : Ada.Strings.Unbounded.Unbounded_String;
-      T : Shell_Tree := New_Tree;
+      T : Shell_Tree;
       use Ada.Strings.Unbounded;
    begin
       Str := To_Unbounded_String (Args (Args'First).all);
