@@ -1,4 +1,5 @@
 doc/build/*
+install/*
 testsuite/out/*
 obj/*
 gnutools/bin/sh.exe
