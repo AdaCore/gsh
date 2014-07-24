@@ -1,6 +1,12 @@
 Developer's Guide
 ###################
 
+Objectives
+==========
+
+GSH aims at replacing **Cygwin** on Windows platforms for internal
+usages of the *Production Team*.
+
 Sources
 =======
 
@@ -29,6 +35,18 @@ tools and libraries::
                                      (for interactive mode)
 
 .. _build:
+
+Dev Hints
+---------
+
+the following points must be known by developers:
+
+* The 'current directory' in GSH may not be the system's one.
+  ALWAYS use 'Resolve_Path' function to get the absolute path
+  when working on files.
+
+* ALWAYS use the internal GSH `rm` function and not the runtime Ada rm,
+  when removing files is necessary
 
 Building
 ========
