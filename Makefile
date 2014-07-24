@@ -35,6 +35,7 @@ check:
 install:
 	mkdir -p $(PREFIX)
 	mkdir -p $(PREFIX)/etc
+	mkdir -p $(PREFIX)/bin
 	if [ "$(SYS)" = "windows" ]; then cp -p -r gnutools/* $(PREFIX)/; fi
 	cp -r etc/* $(PREFIX)/etc
 	cp -p obj/$(BUILD)/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/gsh$(EXEEXT)
