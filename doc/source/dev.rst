@@ -28,28 +28,43 @@ tools and libraries::
     readline/                        prompt support
                                      (for interactive mode)
 
+.. _build:
 
 Building
 ========
 
-Just run ``make``. In case you need a version with debugging information just do:
+Just run ``make``.
+
+In case you need a version with debugging information just do:
 
 .. code-block:: bash
 
-  make BUILD=dev
+  $ make BUILD=dev
 
+
+.. _install:
 
 Installing
 ==========
 
-TBD
+run the following commands:
 
+.. code-block:: bash
+
+   $ make install
+
+.. _test:
 
 Testing
 =======
 
-testsuite is available at::
+Once gsh is build (ses :ref:`build`) and installed (ses :ref:`install`), run the following command:
+
+.. code-block:: bash
+
+   $ make check
+
+testsuite framework and sources are available at::
 
     testsuite/
-
 
