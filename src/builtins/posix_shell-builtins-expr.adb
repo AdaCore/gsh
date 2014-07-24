@@ -26,7 +26,7 @@ with GNAT.Regpat; use GNAT.Regpat;
 with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
 with Posix_Shell.Traces; use Posix_Shell.Traces;
 
-package body Posix_Shell.Builtins_Expr is
+package body Posix_Shell.Builtins.Expr is
 
    --  here is the list of operators supported by the expr utility:
    --   |  &  =  >  >=  <  <=  !=  +  -  *  /  %  :
@@ -68,10 +68,10 @@ package body Posix_Shell.Builtins_Expr is
    Expr_Error : exception;
 
    -------------------
-   --  Builtin_Expr --
+   --  Expr_Builtin --
    -------------------
 
-   function Builtin_Expr
+   function Expr_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer
    is
 
@@ -537,6 +537,6 @@ package body Posix_Shell.Builtins_Expr is
       when Expr_Error =>
          Put (S.all, 2, "invalid expression" & ASCII.LF);
          return 2;
-   end Builtin_Expr;
+   end Expr_Builtin;
 
-end Posix_Shell.Builtins_Expr;
+end Posix_Shell.Builtins.Expr;

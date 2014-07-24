@@ -23,9 +23,9 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 
-package body Posix_Shell.Builtins_Printf is
+package body Posix_Shell.Builtins.Printf is
 
-   function Builtin_Printf
+   function Printf_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer
    is
       Format_String : constant String := Args (Args'First).all;
@@ -115,6 +115,6 @@ package body Posix_Shell.Builtins_Printf is
 
       Put (S.all, 1, To_String (Output));
       return 0;
-   end Builtin_Printf;
+   end Printf_Builtin;
 
-end Posix_Shell.Builtins_Printf;
+end Posix_Shell.Builtins.Printf;

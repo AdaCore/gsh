@@ -20,13 +20,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with GNAT.OS_Lib; use GNAT.OS_Lib;
-with Posix_Shell.Variables; use Posix_Shell.Variables;
+package Posix_Shell.Builtins.Expr is
 
-package Posix_Shell.Builtins_Expr is
-
-   function Builtin_Expr
+   function Expr_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
-   --  Implement the "printf" builtin.
+   --  Implement the "expr" builtin.
 
-end Posix_Shell.Builtins_Expr;
+end Posix_Shell.Builtins.Expr;

@@ -24,8 +24,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Builtins_Printf; use Posix_Shell.Builtins_Printf;
-with Posix_Shell.Builtins_Expr; use Posix_Shell.Builtins_Expr;
+with Posix_Shell.Builtins.Printf; use Posix_Shell.Builtins.Printf;
+with Posix_Shell.Builtins.Expr; use Posix_Shell.Builtins.Expr;
 with Posix_Shell.Builtins.Test; use Posix_Shell.Builtins.Test;
 with Posix_Shell.Builtins.Tail; use Posix_Shell.Builtins.Tail;
 with Posix_Shell.Builtins.Head; use Posix_Shell.Builtins.Head;
@@ -902,8 +902,8 @@ package body Posix_Shell.Builtins is
       Include (Builtin_Map, "unsetenv",      Unsetenv_Builtin'Access);
       Include (Builtin_Map, "unset",         Unset_Builtin'Access);
       Include (Builtin_Map, "[",             Test_Builtin'Access);
-      Include (Builtin_Map, "printf",        Builtin_Printf'Access);
-      Include (Builtin_Map, "expr",          Builtin_Expr'Access);
+      Include (Builtin_Map, "printf",        Printf_Builtin'Access);
+      Include (Builtin_Map, "expr",          Expr_Builtin'Access);
       Include (Builtin_Map, ":",             True_Builtin'Access);
       Include (Builtin_Map, "exec",          Exec_Builtin'Access);
       Include (Builtin_Map, "continue",      Continue_Builtin'Access);
