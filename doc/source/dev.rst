@@ -63,6 +63,19 @@ In case you need a version with debugging information just do:
 
   $ make BUILD=dev
 
+Using GPS
+---------
+
+Use preferencially:
+
+:menuselection:`Build --> Makefile --> all`
+
+In order to enjoy all the 'power' of GPS (eg: correct Xref Info !!!),
+make sure to set the following Scenario Variables::
+
+   BUILD : 'prod' (default value is 'dev')
+   SYS : must be set to consistent values with your own system (default value is 'windows')
+
 
 .. _install:
 
