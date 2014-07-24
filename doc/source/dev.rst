@@ -7,6 +7,10 @@ Objectives
 GSH aims at replacing **Cygwin** on Windows platforms for internal
 usages of the *Production Team*.
 
+All specs are available in `Standard <http://pubs.opengroup.org/onlinepubs/9699919799/>`_
+
+Deviations from the standard should be documented in source code.
+
 Sources
 =======
 

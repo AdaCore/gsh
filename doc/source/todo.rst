@@ -9,7 +9,7 @@ Todo List
 
    **specifications**:
 
-   refer to: `Standard <http://pubs.opengroup.org/onlinepubs/9699919799/>`_
+   refer to: `cp spec <http://pubs.opengroup.org/onlinepubs/9699919799/utilities/cp.html>`_
 
    * '-i' is not required to be implemented (no interactive mode)
    * '-r' must be supported and have the same behaviour than '-R'
@@ -30,4 +30,4 @@ Todo List
 
    **specifications**:
 
-   refer to: `Standard <http://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html#tag_02_06_04>`_
+   refer to: `arithmetic expansion spec <http://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html#tag_02_06_04>`_
