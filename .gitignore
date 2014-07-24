@@ -1,8 +1,5 @@
+doc/build/*
 testsuite/out/*
-testsuite/doc/source/shell*
-testsuite/doc/source/builtins*
-testsuite/doc/source/special-builtins*
-testsuite/doc/source/root.rst
 obj/*
 gnutools/bin/sh.exe
 gnutools/bin/gsh.exe
