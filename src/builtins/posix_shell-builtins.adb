@@ -32,6 +32,7 @@ with Posix_Shell.Builtins.Head; use Posix_Shell.Builtins.Head;
 with Posix_Shell.Builtins.Basename; use Posix_Shell.Builtins.Basename;
 with Posix_Shell.Builtins.Dirname; use Posix_Shell.Builtins.Dirname;
 with Posix_Shell.Builtins.Mkdir; use Posix_Shell.Builtins.Mkdir;
+with Posix_Shell.Builtins.Cp; use Posix_Shell.Builtins.Cp;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Parser; use Posix_Shell.Parser;
@@ -817,6 +818,7 @@ package body Posix_Shell.Builtins is
       Include (Builtin_Map, "cat",           Cat_Builtin'Access);
       Include (Builtin_Map, "read",          Read_Builtin'Access);
       Include (Builtin_Map, "wc",            Wc_Builtin'Access);
+      Include (Builtin_Map, "cp",            Cp_Builtin'Access);
 
       --  if GNAT.Directory_Operations.Dir_Separator = '\' then
          --  No need to include these builtins on non-windows machines
