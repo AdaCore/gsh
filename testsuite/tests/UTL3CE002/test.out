@@ -1,0 +1,67 @@
+duplicate and rename a file: cp a copy_a
+copy_a
+content of a
+
+duplicate and rename a file - use '-f': cp -f a copy_a
+copy_a
+content of a
+
+duplicate and rename a file - use '-p': cp -p a copy_a
+copy_a
+content of a
+
+copy a file into an existing directory: cp a dir_a
+a
+initial
+content of a
+
+copy and rename a file into an existing directory: cp a dir_a/copy_a
+copy_a
+initial
+content of a
+
+copy and rename a file from a dir: cp dir_a/initial copy_a
+copy_a
+initial file of dir_a
+
+duplicate and rename a dir with -r: cp -r dir_a copy_dir_a
+copy_dir_a/initial
+initial file of dir_a
+
+duplicate and rename a dir with -R: cp -R dir_b copy_dir_b
+initial
+initial_2
+initial_3
+nested_dir
+initial_content of dir b
+initial_content 2 of dir b
+
+
+initial_content 3 of dir b
+
+copy several files into an existing dir: cp a b dir_a
+a
+b
+initial
+content of a
+content of b
+initial file of dir_a
+
+copy a file and a dir and a dir into an existing dir: cp -r a dir_b dir_a
+a
+dir_b
+initial
+content of a
+initial file of dir_a
+
+last copy prevail: cp dir_a/* dir_b/* dir_c
+[error] cp: 'dir_b/nested_dir' is a directory (not copied)
+content.txt
+initial
+initial_2
+initial_3
+initial_content of dir b
+initial_content 2 of dir b
+
+
+initial_content 3 of dir b
