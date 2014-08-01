@@ -249,19 +249,24 @@ package body Posix_Shell.Builtins is
          if Args (J).all = "-" then
             Put (S.all, 1, Read (S.all, 0));
          else
-            Fd := Open_Read (Resolve_Path (S.all, Args (J).all), Binary);
-            if Fd < 0 then
+            if GNAT.OS_Lib.Is_Directory (Args (J).all) then
                Put (S.all, 2, "cat: " & Args (J).all &
-                    ": No such file or directory" & ASCII.LF);
+                      ": Is a directory" & ASCII.LF);
             else
-               loop
-                  R := Read (Fd, Buffer'Address, Buffer'Last);
-                  if R > 0 then
-                     Put (S.all, 1, Strip_CR (Buffer (1 .. R)));
-                  end if;
-                  exit when R /= Buffer'Last;
-               end loop;
-               Close (Fd);
+               Fd := Open_Read (Resolve_Path (S.all, Args (J).all), Binary);
+               if Fd < 0 then
+                  Put (S.all, 2, "cat: " & Args (J).all &
+                         ": No such file or directory" & ASCII.LF);
+               else
+                  loop
+                     R := Read (Fd, Buffer'Address, Buffer'Last);
+                     if R > 0 then
+                        Put (S.all, 1, Strip_CR (Buffer (1 .. R)));
+                     end if;
+                     exit when R /= Buffer'Last;
+                  end loop;
+                  Close (Fd);
+               end if;
             end if;
          end if;
       end loop;
