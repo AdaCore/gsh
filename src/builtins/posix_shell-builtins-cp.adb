@@ -60,8 +60,6 @@ package body Posix_Shell.Builtins.Cp is
       Preserve          : Attribute := Time_Stamps;
       Got_Errors        : Boolean   := False;
 
-      pragma Unreferenced (Force);
-
       procedure Cp_Tree (Filename : String);
 
       -------------
@@ -69,12 +67,10 @@ package body Posix_Shell.Builtins.Cp is
       -------------
 
       procedure Cp_Tree (Filename : String) is
-         Search      : Search_Type;
-         Dir_Ent     : Directory_Entry_Type;
-         Success     : Boolean;
-         Status_L    : long;
-
-         pragma Unreferenced (Status_L);
+         Search  : Search_Type;
+         Dir_Ent : Directory_Entry_Type;
+         Success : Boolean;
+         Status  : long := 0;
 
          procedure Recursive_Copy (Source_Path : String;
                                    Target_Path : String);
@@ -108,7 +104,16 @@ package body Posix_Shell.Builtins.Cp is
                   --  copy ignoring '.' and '..' entries
                   if Base_Name /= "." and then Base_Name /= ".." then
                      if GNAT.OS_Lib.Is_Regular_File (Source) then
-                        Status_L := Posix_Shell.Rm.Delete_File (Target);
+                        if GNAT.OS_Lib.Is_Regular_File (Target) then
+                           Status := Posix_Shell.Rm.Delete_File (Target);
+                        end if;
+
+                        if Status /= 0 then
+                           Error (S.all, "cp: cannot remove '" &
+                                    Target & "': windows error " & Status'Img);
+                           Got_Errors := Force;
+                        end if;
+
                         Copy_File (Name     => Source,
                                    Pathname => Target,
                                    Success  => Success,
@@ -132,13 +137,35 @@ package body Posix_Shell.Builtins.Cp is
       begin
          if GNAT.OS_Lib.Is_Regular_File (Filename) then
             if not Target_Dir_Exists then
-               Status_L := Posix_Shell.Rm.Delete_File (Target_Name);
+
+               if GNAT.OS_Lib.Is_Regular_File (Target_Name) then
+                  Status := Posix_Shell.Rm.Delete_File (Target_Name);
+               end if;
+
+               if Status /= 0 then
+                  Error (S.all, "cp: cannot remove '" &
+                           Target_Name & "': windows error " & Status'Img);
+                  Got_Errors := Force;
+               end if;
+
             else
-               Status_L :=
-                 Posix_Shell.Rm.Delete_File
-                   (Target_Name &
-                      GNAT.Directory_Operations.Dir_Separator &
-                      Base_Name (Filename));
+               declare
+                  Target : constant String := Target_Name &
+                         GNAT.Directory_Operations.Dir_Separator &
+                         Base_Name (Filename);
+               begin
+                  if GNAT.OS_Lib.Is_Regular_File (Target) then
+                     Status :=
+                       Posix_Shell.Rm.Delete_File (Target);
+                  end if;
+
+                  if Status /= 0 then
+                     Error (S.all, "cp: cannot remove '" &
+                              Target & "': windows error " & Status'Img);
+                     Got_Errors := Force;
+                  end if;
+
+               end;
             end if;
 
             Copy_File (Name     => Filename,

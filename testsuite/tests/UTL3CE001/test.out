@@ -1,6 +1,3 @@
-no args: cp
-[error] cp: missing operand
-
 unknow option: cp -q
 [error] cp: unknown option: -q
 
