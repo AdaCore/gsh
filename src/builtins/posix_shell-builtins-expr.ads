@@ -2,6 +2,10 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
+--                       Posix_Shell.Builtins.Expr                          --
+--                                                                          --
+--                                 S p e c                                  --
+--                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --

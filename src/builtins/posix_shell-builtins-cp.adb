@@ -2,9 +2,9 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                       Posix_Shell.Builtins.Basename                      --
+--                       Posix_Shell.Builtins.Cp                            --
 --                                                                          --
---                                 S p e c                                  --
+--                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --

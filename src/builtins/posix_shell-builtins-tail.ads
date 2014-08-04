@@ -2,6 +2,10 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
+--                       Posix_Shell.Builtins.Tail                          --
+--                                                                          --
+--                                 S p e c                                  --
+--                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --

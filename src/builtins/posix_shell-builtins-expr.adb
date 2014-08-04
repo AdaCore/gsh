@@ -2,6 +2,10 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
+--                       Posix_Shell.Builtins.Expr                          --
+--                                                                          --
+--                                 B o d y                                  --
+--                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
@@ -20,11 +24,12 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Utils; use Posix_Shell.Utils;
+with GNAT.Regpat;                  use GNAT.Regpat;
+
+with Posix_Shell.String_Utils;     use Posix_Shell.String_Utils;
+with Posix_Shell.Traces;           use Posix_Shell.Traces;
+with Posix_Shell.Utils;            use Posix_Shell.Utils;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
-with GNAT.Regpat; use GNAT.Regpat;
-with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
-with Posix_Shell.Traces; use Posix_Shell.Traces;
 
 package body Posix_Shell.Builtins.Expr is
 

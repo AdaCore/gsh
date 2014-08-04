@@ -24,36 +24,100 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
+
 with GNAT.Directory_Operations;
 
 package body Posix_Shell.Builtins.Support is
 
-      -------------------------
-      --  Recursive_Make_Dir --
-      -------------------------
+   -------------------------
+   --  Recursive_Make_Dir --
+   -------------------------
 
-      procedure Recursive_Make_Dir (Dir : String) is
-      begin
-         if Is_Directory (Dir) then
-            return;
-         else
-            declare
-               PD : constant String :=
-                 GNAT.Directory_Operations.Dir_Name (Dir);
-               PD_Last : Integer := PD'Last;
-            begin
-               if not Is_Directory (PD) then
-                  if PD (PD'Last) = '\' or else PD (PD'Last) = '/' then
-                     PD_Last := PD_Last - 1;
-                  end if;
-
-                  if PD_Last >= PD'First then
-                     Recursive_Make_Dir (PD (PD'First .. PD_Last));
-                  end if;
+   procedure Recursive_Make_Dir (Dir : String) is
+   begin
+      if Is_Directory (Dir) then
+         return;
+      else
+         declare
+            PD : constant String :=
+              GNAT.Directory_Operations.Dir_Name (Dir);
+            PD_Last : Integer := PD'Last;
+         begin
+            if not Is_Directory (PD) then
+               if PD (PD'Last) = '\' or else PD (PD'Last) = '/' then
+                  PD_Last := PD_Last - 1;
                end if;
-            end;
-            GNAT.Directory_Operations.Make_Dir (Dir);
+
+               if PD_Last >= PD'First then
+                  Recursive_Make_Dir (PD (PD'First .. PD_Last));
+               end if;
+            end if;
+         end;
+         GNAT.Directory_Operations.Make_Dir (Dir);
+      end if;
+   end Recursive_Make_Dir;
+
+   ----------------
+   -- Change_Dir --
+   ----------------
+
+   function Change_Dir
+     (S        : Shell_State_Access;
+      Dir_Name : String;
+      Verbose  : Boolean := False)
+      return Integer
+   is
+      function Get_Absolute_Path (D : String) return String;
+
+      function Get_Absolute_Path (D : String) return String is
+      begin
+         if Is_Absolute_Path (D) then
+            return D;
+         else
+            return Get_Current_Dir (S.all) & "/" & D;
          end if;
-      end Recursive_Make_Dir;
+      end Get_Absolute_Path;
+
+      Abs_Dir : constant String := Get_Absolute_Path (Dir_Name);
+
+   begin
+      if Dir_Name = "" then
+         return 0;
+      end if;
+
+      if not Is_Directory (Abs_Dir) then
+         Put (S.all, 2, "cd: " & Dir_Name & ": No such file or directory");
+         New_Line (S.all, 2);
+         return 1;
+      end if;
+
+      declare
+         use GNAT.Directory_Operations;
+         Full_Path : constant String := Format_Pathname
+           (GNAT.OS_Lib.Normalize_Pathname (Abs_Dir),
+            GNAT.Directory_Operations.UNIX);
+      begin
+         Set_Current_Dir (S.all, Full_Path);
+         Set_Var_Value (S.all, "OLDPWD", Get_Var_Value (S.all, "PWD"));
+
+         --  Update PWd variable. Use a Unix format (without drive letter)
+         Set_Var_Value (S.all, "PWD", Get_Current_Dir (S.all, True));
+      end;
+
+      if Verbose then
+         Put (S.all, 1, Dir_Name);
+         New_Line (S.all, 1);
+      end if;
+
+      return 0;
+
+   exception
+      when GNAT.Directory_Operations.Directory_Error =>
+         Put (S.all, 2,
+              "cd: " & Dir_Name & ": Cannot change to this directory");
+         New_Line (S.all, 2);
+         return 1;
+   end Change_Dir;
 
 end Posix_Shell.Builtins.Support;

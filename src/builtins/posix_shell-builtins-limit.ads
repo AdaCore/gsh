@@ -2,7 +2,7 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                       Posix_Shell.Builtins.Cp                            --
+--                       Posix_Shell.Builtins.Limit                         --
 --                                                                          --
 --                                 S p e c                                  --
 --                                                                          --
@@ -24,14 +24,9 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-package Posix_Shell.Builtins.Cp is
+package Posix_Shell.Builtins.Limit is
 
-   function Cp_Builtin
+   function Limit_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
-   --  Implement the "cp" builtin.
-   --  Deviation from Standard:
-   --  only -R (-r), -p and -f are currently currently supported.
-   --  Env variable such as LANG, LC_ALL, ... do not actually affect
-   --  the execution of "cp"
 
-end Posix_Shell.Builtins.Cp;
+end Posix_Shell.Builtins.Limit;

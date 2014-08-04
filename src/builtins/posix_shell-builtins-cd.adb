@@ -2,9 +2,9 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                       Posix_Shell.Builtins.Cp                            --
+--                       Posix_Shell.Builtins.Cd                            --
 --                                                                          --
---                                 S p e c                                  --
+--                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --
@@ -24,14 +24,33 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-package Posix_Shell.Builtins.Cp is
+with Posix_Shell.Builtins.Support; use Posix_Shell.Builtins.Support;
 
-   function Cp_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
-   --  Implement the "cp" builtin.
-   --  Deviation from Standard:
-   --  only -R (-r), -p and -f are currently currently supported.
-   --  Env variable such as LANG, LC_ALL, ... do not actually affect
-   --  the execution of "cp"
+package body Posix_Shell.Builtins.Cd is
 
-end Posix_Shell.Builtins.Cp;
+   ------------------------
+   -- Change_Dir_Builtin --
+   ------------------------
+
+   function Change_Dir_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+   begin
+      --  If there was no argument provided, then cd to the HOME directory.
+      --  If HOME directory is not provided, then the behavior is
+      --  implementation-defined, and we simply do nothing.
+      if Args'Length =  0 then
+         return Change_Dir (S, Get_Var_Value (S.all, "HOME"));
+      end if;
+
+      --  "-" is a special case: It should be equivalent to
+      --  ``cd "$OLDPWD" && pwd''
+      if Args (Args'First).all = "-" then
+         return Change_Dir
+           (S, Get_Var_Value (S.all, "OLDPWD"), Verbose => True);
+      end if;
+
+      return Change_Dir (S, Args (Args'First).all);
+   end Change_Dir_Builtin;
+
+end Posix_Shell.Builtins.Cd;

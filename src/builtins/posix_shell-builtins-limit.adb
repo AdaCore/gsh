@@ -2,9 +2,9 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                       Posix_Shell.Builtins.Cp                            --
+--                       Posix_Shell.Builtins.Limit                         --
 --                                                                          --
---                                 S p e c                                  --
+--                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --
@@ -24,14 +24,19 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-package Posix_Shell.Builtins.Cp is
+package body Posix_Shell.Builtins.Limit is
 
-   function Cp_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
-   --  Implement the "cp" builtin.
-   --  Deviation from Standard:
-   --  only -R (-r), -p and -f are currently currently supported.
-   --  Env variable such as LANG, LC_ALL, ... do not actually affect
-   --  the execution of "cp"
+   -------------------
+   -- Limit_Builtin --
+   -------------------
 
-end Posix_Shell.Builtins.Cp;
+   function Limit_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+      pragma Unreferenced (Args);
+      pragma Unreferenced (S);
+   begin
+      return 0;
+   end Limit_Builtin;
+
+end Posix_Shell.Builtins.Limit;

@@ -4,7 +4,7 @@
 --                                                                          --
 --                       Posix_Shell.Builtins.Support                       --
 --                                                                          --
---                                 B o d y                                  --
+--                                 S p e c                                  --
 --                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --
@@ -26,6 +26,19 @@
 
 package Posix_Shell.Builtins.Support is
 
-      procedure Recursive_Make_Dir (Dir : String);
+   procedure Recursive_Make_Dir (Dir : String);
+
+   function Change_Dir
+     (S : Shell_State_Access;
+      Dir_Name : String;
+      Verbose : Boolean := False)
+     return Integer;
+   --  Change the directory to Dir_Name and return 0 if successful.
+   --  This function also maintains the PWD and OLDPWD variables.
+   --  If Verbose is True and the directory change was successful,
+   --  then print on standard output the name of the new directory.
+   --
+   --  This function does nothing and returns zero if Dir_Name is
+   --  the empty string.
 
 end Posix_Shell.Builtins.Support;

@@ -2,9 +2,9 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                       Posix_Shell.Builtins.Cp                            --
+--                       Posix_Shell.Builtins.Pwd                           --
 --                                                                          --
---                                 S p e c                                  --
+--                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --
@@ -24,14 +24,21 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-package Posix_Shell.Builtins.Cp is
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 
-   function Cp_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
-   --  Implement the "cp" builtin.
-   --  Deviation from Standard:
-   --  only -R (-r), -p and -f are currently currently supported.
-   --  Env variable such as LANG, LC_ALL, ... do not actually affect
-   --  the execution of "cp"
+package body Posix_Shell.Builtins.Pwd is
 
-end Posix_Shell.Builtins.Cp;
+   -----------------
+   -- Pwd_Builtin --
+   -----------------
+
+   function Pwd_Builtin
+     (S : Shell_State_Access; Args : String_List) return Integer
+   is
+      pragma Unreferenced (Args);
+   begin
+      Put (S.all, 1, Get_Current_Dir (S.all, True) & ASCII.LF);
+      return 0;
+   end Pwd_Builtin;
+
+end Posix_Shell.Builtins.Pwd;
