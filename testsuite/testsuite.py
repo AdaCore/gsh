@@ -47,7 +47,7 @@ def main():
     if m.args:
         test_list = [t.strip('/') for t in m.args]
     else:
-        test_list = ls('tests/*') 
+        test_list = ls('tests/*')
 
     if os.path.dirname(__file__):
         os.chdir(os.path.dirname(__file__))

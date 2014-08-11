@@ -26,7 +26,7 @@ class TestGNATPython(TestRunner):
                  failed_only=False,
                  default_timeout=780,
                  use_basename=True):
-        TestRunner.__init__(self, test, discs, result_dir, temp_dir, 
+        TestRunner.__init__(self, test, discs, result_dir, temp_dir,
                             enable_cleanup, restricted_discs, test_args,
                             failed_only, default_timeout, use_basename=True)
 
@@ -34,7 +34,7 @@ class TestGNATPython(TestRunner):
         self.result['msg'] = "%-16s: %s" % (self.result['msg'], split_file (self.test + '/description')[0])
         TestRunner.write_results(self)
 
-        
+
 
 def main():
     """Run a gprbuild test"""
