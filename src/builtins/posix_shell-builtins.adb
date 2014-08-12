@@ -24,11 +24,16 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Strings.Hash;
+with Ada.Strings.Unbounded;
+
 with Posix_Shell.Annotated_Strings;     use Posix_Shell.Annotated_Strings;
 with Posix_Shell.Builtins.Basename;     use Posix_Shell.Builtins.Basename;
 with Posix_Shell.Builtins.Booleans;     use Posix_Shell.Builtins.Booleans;
 with Posix_Shell.Builtins.Cat;          use Posix_Shell.Builtins.Cat;
 with Posix_Shell.Builtins.Cd;           use Posix_Shell.Builtins.Cd;
+with Posix_Shell.Builtins.Command;      use Posix_Shell.Builtins.Command;
 with Posix_Shell.Builtins.Cp;           use Posix_Shell.Builtins.Cp;
 with Posix_Shell.Builtins.Dirname;      use Posix_Shell.Builtins.Dirname;
 with Posix_Shell.Builtins.Echo;         use Posix_Shell.Builtins.Echo;
@@ -42,8 +47,9 @@ with Posix_Shell.Builtins.Rm;           use Posix_Shell.Builtins.Rm;
 with Posix_Shell.Builtins.Source;       use Posix_Shell.Builtins.Source;
 with Posix_Shell.Builtins.Tail;         use Posix_Shell.Builtins.Tail;
 with Posix_Shell.Builtins.Test;         use Posix_Shell.Builtins.Test;
-with Posix_Shell.Builtins.Uname;         use Posix_Shell.Builtins.Uname;
+with Posix_Shell.Builtins.Uname;        use Posix_Shell.Builtins.Uname;
 with Posix_Shell.Builtins.Wc;           use Posix_Shell.Builtins.Wc;
+
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
 with Posix_Shell.Exec;                  use Posix_Shell.Exec;
 with Posix_Shell.Functions;             use Posix_Shell.Functions;
@@ -54,10 +60,6 @@ with Posix_Shell.Tree;                  use Posix_Shell.Tree;
 with Posix_Shell.Tree.Evals;            use Posix_Shell.Tree.Evals;
 with Posix_Shell.Utils;                 use Posix_Shell.Utils;
 with Posix_Shell.Variables.Output;      use Posix_Shell.Variables.Output;
-
-with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Strings.Hash;
-with Ada.Strings.Unbounded;
 
 package body Posix_Shell.Builtins is
 
@@ -122,9 +124,6 @@ package body Posix_Shell.Builtins is
      (S : Shell_State_Access; Args : String_List) return Integer;
 
    function Break_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
-
-   function Type_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer;
 
    function Read_Builtin
@@ -373,37 +372,6 @@ package body Posix_Shell.Builtins is
    end Is_Builtin;
 
    ------------------
-   -- Type_Builtin --
-   ------------------
-
-   function Type_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
-   is
-      Exit_Status : Integer := 0;
-      Exec_Path : String_Access;
-   begin
-      for Index in Args'Range loop
-         if Is_Builtin (Args (Index).all) then
-            Put (S.all, 1, Args (Index).all & " is a builtin");
-            New_Line (S.all, 1);
-         elsif Is_Function (Args (Index).all) then
-            Put (S.all, 1, Args (Index).all & " is a function");
-            New_Line (S.all, 1);
-         else
-            Exec_Path := Locate_Exec (S.all, Args (Index).all);
-            if Exec_Path = null then
-               Error (S.all, Args (Index).all & ": not found");
-               Exit_Status := 1;
-            else
-               Put (S.all, 1, Args (Index).all & " is " & Exec_Path.all);
-               New_Line (S.all, 1);
-            end if;
-         end if;
-      end loop;
-      return Exit_Status;
-   end Type_Builtin;
-
-   ------------------
    -- Read_Builtin --
    ------------------
 
@@ -454,47 +422,50 @@ package body Posix_Shell.Builtins is
    procedure Register_Default_Builtins is
    begin
       --  Register all the builtins.
-      Include (Builtin_Map, "pwd",           Pwd_Builtin'Access);
+
       Include (Builtin_Map, ".",             Source_Builtin'Access);
+      Include (Builtin_Map, ":",             True_Builtin'Access);
+      Include (Builtin_Map, "[",             Test_Builtin'Access);
+      Include (Builtin_Map, "break",         Break_Builtin'Access);
+      Include (Builtin_Map, "cat",           Cat_Builtin'Access);
       Include (Builtin_Map, "cd",            Change_Dir_Builtin'Access);
+      Include (Builtin_Map, "command",       Command_Builtin'Access);
+      Include (Builtin_Map, "continue",      Continue_Builtin'Access);
+      Include (Builtin_Map, "cp",            Cp_Builtin'Access);
       Include (Builtin_Map, "echo",          Echo_Builtin'Access);
       Include (Builtin_Map, "eval",          Eval_Builtin'Access);
+      Include (Builtin_Map, "exec",          Exec_Builtin'Access);
       Include (Builtin_Map, "exit",          Exit_Builtin'Access);
       Include (Builtin_Map, "export",        Export_Builtin'Access);
+      Include (Builtin_Map, "expr",          Expr_Builtin'Access);
       Include (Builtin_Map, "false",         False_Builtin'Access);
       Include (Builtin_Map, "limit",         Limit_Builtin'Access);
+      Include (Builtin_Map, "printf",        Printf_Builtin'Access);
+      Include (Builtin_Map, "pwd",           Pwd_Builtin'Access);
+      Include (Builtin_Map, "read",          Read_Builtin'Access);
       Include (Builtin_Map, "recho",         REcho_Builtin'Access);
       Include (Builtin_Map, "return",        Return_Builtin'Access);
       Include (Builtin_Map, "set",           Set_Builtin'Access);
       Include (Builtin_Map, "setenv",        Export_Builtin'Access);
       Include (Builtin_Map, "shift",         Shift_Builtin'Access);
       Include (Builtin_Map, "test",          Test_Builtin'Access);
+      Include (Builtin_Map, "trap",          Trap_Builtin'Access);
       Include (Builtin_Map, "true",          True_Builtin'Access);
       Include (Builtin_Map, "umask",         Limit_Builtin'Access);
-      Include (Builtin_Map, "unsetenv",      Unsetenv_Builtin'Access);
       Include (Builtin_Map, "unset",         Unset_Builtin'Access);
-      Include (Builtin_Map, "[",             Test_Builtin'Access);
-      Include (Builtin_Map, "printf",        Printf_Builtin'Access);
-      Include (Builtin_Map, "expr",          Expr_Builtin'Access);
-      Include (Builtin_Map, ":",             True_Builtin'Access);
-      Include (Builtin_Map, "exec",          Exec_Builtin'Access);
-      Include (Builtin_Map, "continue",      Continue_Builtin'Access);
-      Include (Builtin_Map, "break",         Break_Builtin'Access);
-      Include (Builtin_Map, "trap",          Trap_Builtin'Access);
-      Include (Builtin_Map, "cat",           Cat_Builtin'Access);
-      Include (Builtin_Map, "read",          Read_Builtin'Access);
+      Include (Builtin_Map, "unsetenv",      Unsetenv_Builtin'Access);
+      Include (Builtin_Map, "which",         Which_Builtin'Access);
       Include (Builtin_Map, "wc",            Wc_Builtin'Access);
-      Include (Builtin_Map, "cp",            Cp_Builtin'Access);
 
       --  if GNAT.Directory_Operations.Dir_Separator = '\' then
          --  No need to include these builtins on non-windows machines
-         Include (Builtin_Map, "tail",          Tail_Builtin'Access);
-         Include (Builtin_Map, "head",          Head_Builtin'Access);
-         Include (Builtin_Map, "rm",            Rm_Builtin'Access);
-         Include (Builtin_Map, "type",          Type_Builtin'Access);
          Include (Builtin_Map, "basename",      Basename_Builtin'Access);
          Include (Builtin_Map, "dirname",       Dirname_Builtin'Access);
+         Include (Builtin_Map, "head",          Head_Builtin'Access);
          Include (Builtin_Map, "mkdir",         Mkdir_Builtin'Access);
+         Include (Builtin_Map, "rm",            Rm_Builtin'Access);
+         Include (Builtin_Map, "tail",          Tail_Builtin'Access);
+         Include (Builtin_Map, "type",          Type_Builtin'Access);
          Include (Builtin_Map, "uname",         Uname_Builtin'Access);
       --  end if;
    end Register_Default_Builtins;
