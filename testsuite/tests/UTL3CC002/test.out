@@ -1,0 +1,34 @@
+ls is /bin/ls
+/bin/ls
+ls is /bin/ls
+/bin/ls
+
+cp is a shell builtin
+cp: shell built-in command
+cp is a shell builtin
+cp: shell built-in command
+
+* test 'command' on cp a copy_a
+* ls to see the creation of copy_a
+a
+copy_a
+description
+test.cmd
+test.out
+test.sh
+* content of copy_a
+content of a
+
+
+* several builtins and elem
+cp: shell built-in command
+echo: shell built-in command
+printf: shell built-in command
+
+cp: shell built-in command
+echo: shell built-in command
+printf: shell built-in command
+
+cp is a shell builtin
+echo is a shell builtin
+printf is a shell builtin

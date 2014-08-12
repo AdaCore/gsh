@@ -1,0 +1,17 @@
+* type coin
+[error] coin not found
+
+* command -v coin (should not produce output)
+* command -V coin
+[error] coin not found
+
+* which coin
+[error] coin not found
+
+* option -q for the 3 tested builtins
+[error] type: unknown option: -q
+[error] command: unknown option: -q
+[error] which: unknown option: -q
+
+* command with several but no -v
+[error] cp: no such directory 'printf'
