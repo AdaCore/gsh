@@ -6,3 +6,5 @@ cd subdir
 
 . ../sourced_script.sh
 echo "counter: $counter"
+
+myfun
