@@ -119,16 +119,24 @@ package body Posix_Shell.Commands_Preprocessor is
 
    end Get_Launcher;
 
-   function Run (S : Shell_State_Access;
-                 Cmd : String;
-                 Args : String_List;
-                 Env : String_List)
-                 return Integer
+   ---------
+   -- Run --
+   ---------
+
+   function Run
+     (S    : Shell_State_Access;
+      Cmd  : String;
+      Args : String_List;
+      Env  : String_List)
+      return Integer
    is
-      Exec_Path : String_Access := null;
+      Exec_Path   : String_Access := null;
       Exit_Status : Integer;
+      Args_First  : Integer := Args'First;
+      Opt_Args    : access String_List := null;
    begin
 
+      --  Output command line if -x is set
       if Is_Xtrace_Enabled (S.all) then
          Ada.Text_IO.Put (Ada.Text_IO.Standard_Error, "+ " & Cmd);
          for I in Args'Range loop
@@ -145,7 +153,7 @@ package body Posix_Shell.Commands_Preprocessor is
          return Exit_Status;
       end if;
 
-      --  Next, is this a function?
+      --  Next, is this a function ?
       if Is_Function (Cmd) then
          Execute_Function (S, Cmd, Args);
          return Get_Last_Exit_Status (S.all);
@@ -158,6 +166,16 @@ package body Posix_Shell.Commands_Preprocessor is
       --  message: "the syntax of the command is incorrect".
       if Cmd = "cmd" or else Cmd = "cmd.exe" then
          Exec_Path := new String'("cmd.exe");
+
+         --  This hooks is used in to fix an issue with script written for
+         --  mingw environment. Indeed in mingw cmd in non interactive mode
+         --  is launched using //c rather than /c. Ensure that if first
+         --  argument to cmd is //c then it is replaced by /c
+         if Args'Length > 0 and then Args (Args'First).all = "//c" then
+            Opt_Args := new String_List'(1 => new String'("/c"));
+            Args_First := Args'First + 1;
+         end if;
+
       else
          Exec_Path := Locate_Exec (S.all, Cmd);
       end if;
@@ -175,7 +193,10 @@ package body Posix_Shell.Commands_Preprocessor is
 
       declare
          Launcher : String_List := Get_Launcher (S.all, Exec_Path);
-         Cmd_Line : constant String_List := Launcher & Args;
+         Cmd_Line : constant String_List :=
+           (if Opt_Args /= null then
+               Launcher & Opt_Args.all & Args (Args_First .. Args'Last) else
+                 Launcher & Args (Args_First .. Args'Last));
       begin
 
          if Cmd_Line (Cmd_Line'First) = null then
@@ -201,6 +222,7 @@ package body Posix_Shell.Commands_Preprocessor is
          for J in Launcher'Range loop
             Free (Launcher (J));
          end loop;
+
       exception
          when Program_Error =>
             for J in Launcher'Range loop
@@ -208,6 +230,13 @@ package body Posix_Shell.Commands_Preprocessor is
             end loop;
             Exit_Status := 127;
       end;
+
+      if Opt_Args /= null then
+         for J in Opt_Args'Range loop
+            Free (Opt_Args (J));
+         end loop;
+         Free (Opt_Args);
+      end if;
 
       return Exit_Status;
    end Run;
