@@ -114,15 +114,23 @@ package body Posix_Shell.String_Utils is
    -- From_Line --
    ---------------
 
-   function From_Line
-     (S : String; LineNo : Natural) return String
+   function From_Line (S : String; LineNo : Natural) return String
    is
-      Pos : Integer := S'First;
+      Pos          : Integer := S'First;
       Current_Line : Integer := 1;
    begin
-      while Current_Line < LineNo and then Pos <= S'Last loop
+      if S = "" then
+         return "";
+      end if;
+
+      while Current_Line < LineNo loop
+         pragma Loop_Invariant (Pos in S'Range);
          if S (Pos) = ASCII.LF then
             Current_Line := Current_Line + 1;
+         end if;
+
+         if Pos = S'Last then
+            return "";
          end if;
 
          Pos := Pos + 1;
@@ -153,23 +161,27 @@ package body Posix_Shell.String_Utils is
    -- To_Line --
    -------------
 
-   function To_Line
-     (S : String; LineNo : Natural) return String
+   function To_Line (S : String; LineNo : Natural) return String
    is
-      Pos : Integer := S'First;
+      Pos           : Integer := S'First;
       Newline_Found : Integer := 0;
    begin
-      while Newline_Found < LineNo + 1 and then Pos <= S'Last loop
+      if S = "" then
+         return "";
+      end if;
+
+      while Newline_Found < LineNo loop
+         pragma Loop_Invariant (Pos in S'Range);
          if S (Pos) = ASCII.LF then
             Newline_Found := Newline_Found + 1;
          end if;
 
+         if Pos = S'Last then
+            return S;
+         end if;
+
          Pos := Pos + 1;
       end loop;
-
-      if Newline_Found = LineNo + 1 then
-         Pos := Pos - 1;
-      end if;
 
       return S (S'First .. Pos - 1);
    end To_Line;
