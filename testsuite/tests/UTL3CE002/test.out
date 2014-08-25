@@ -56,10 +56,10 @@ initial_content 2 of dir b
 initial_content 3 of dir b
 cat: copy_dir_b/nested_dir: Is a directory
 
-copy several files into an existing dir: cp a b dir_a
+copy several files into an existing dir: cp a b.rst dir_a
 * ls dir_a
 a
-b
+b.rst
 initial
 * cat dir_a/*
 content of a

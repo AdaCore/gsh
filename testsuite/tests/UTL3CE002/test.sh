@@ -78,14 +78,14 @@ cat copy_dir_b/*
 rm -r copy_dir_b
 
 echo ""
-echo "copy several files into an existing dir: cp a b dir_a"
-cp a b dir_a
+echo "copy several files into an existing dir: cp a b.rst dir_a"
+cp a b.rst dir_a
 echo "* ls dir_a"
 ls dir_a
 echo "* cat dir_a/*"
 cat dir_a/*
 
-rm dir_a/a dir_a/b
+rm dir_a/a dir_a/b.rst
 
 echo ""
 echo "copy a file and a dir into an existing dir: cp -r a dir_b dir_a"
