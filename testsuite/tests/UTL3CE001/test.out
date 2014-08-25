@@ -1,4 +1,7 @@
-unknow option: cp -q
+no args: cp
+[error] cp: missing operand
+
+unknow option: cp -q a copy_a
 [error] cp: unknown option: -q
 
 missing target: cp -f -p a

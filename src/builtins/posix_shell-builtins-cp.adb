@@ -50,9 +50,11 @@ package body Posix_Shell.Builtins.Cp is
       File_List_Start : Integer := Args'First;
       File_List_End   : constant Integer := Args'Last - 1;
 
-      Target_Name     : constant String := GNAT.OS_Lib.Normalize_Pathname
-         (Resolve_Path (S.all, Args (Args'Last).all),
-          Resolve_Links => False);
+      Target_Name     : constant String := (if File_List_End < File_List_Start
+         then "" else
+         GNAT.OS_Lib.Normalize_Pathname (Resolve_Path (S.all,
+                                                       Args (Args'Last).all),
+                                         Resolve_Links => False));
 
       Target_Dir_Exists : Boolean   := False;
       Recursive         : Boolean   := False;
@@ -118,6 +120,14 @@ package body Posix_Shell.Builtins.Cp is
                                    Pathname => Target,
                                    Success  => Success,
                                    Preserve => Preserve);
+
+                        if not Success then
+                           Error (S.all,
+                                  "cp: '"  & Source & "' not copied to '" &
+                                    Target & "'");
+                           Got_Errors := True;
+                        end if;
+
                      elsif GNAT.OS_Lib.Is_Directory (Source) then
                         Recursive_Copy (Source,
                                         Target);
@@ -135,6 +145,7 @@ package body Posix_Shell.Builtins.Cp is
          end Recursive_Copy;
 
       begin
+
          if GNAT.OS_Lib.Is_Regular_File (Filename) then
             if not Target_Dir_Exists then
 
@@ -173,6 +184,13 @@ package body Posix_Shell.Builtins.Cp is
                        Success  => Success,
                        Preserve => Preserve);
 
+            if not Success then
+               Error (S.all,
+                      "cp: '"  & Filename & "' not copied to '" &
+                        Target_Name & "'");
+               Got_Errors := True;
+            end if;
+
          elsif GNAT.OS_Lib.Is_Directory (Filename) then
 
             if not Recursive then
@@ -201,6 +219,11 @@ package body Posix_Shell.Builtins.Cp is
       end Cp_Tree;
 
    begin
+
+      if Target_Name = "" then
+         Error (S.all, "cp: missing operand");
+         return 1;
+      end if;
 
       --  Parse options
       for Index in Args'Range loop

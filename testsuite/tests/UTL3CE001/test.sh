@@ -1,12 +1,9 @@
-# currently the followin raise a program error on windows
-# (not on unix). To be investigated
-# raised PROGRAM_ERROR : EXCEPTION_ACCESS_VIOLATION
-# echo "no args: cp"
-# cp
+echo "no args: cp"
+cp
 
 echo ""
-echo "unknow option: cp -q"
-cp -q
+echo "unknow option: cp -q a copy_a"
+cp -q a copy_a
 
 echo ""
 echo "missing target: cp -f -p a"
