@@ -84,7 +84,14 @@ package body Posix_Shell.Builtins.Cp is
                                    Target_Path : String) is
             Success : Boolean := False;
          begin
-            GNAT.Directory_Operations.Make_Dir (Target_Path);
+            --  Check if target_path is a directory and it exists
+            if GNAT.OS_Lib.Is_Regular_File (Target_Path) then
+               Error  (S.all, "cp: " & Target_Path & "is not a directory");
+               Got_Errors := True;
+            elsif not GNAT.OS_Lib.Is_Directory (Target_Path) then
+               GNAT.Directory_Operations.Make_Dir (Target_Path);
+            end if;
+
             Ada.Directories.Start_Search (Search,
                                           Directory => Source_Path,
                                           Pattern   => "");
