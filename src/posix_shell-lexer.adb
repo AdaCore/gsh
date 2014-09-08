@@ -530,14 +530,6 @@ package body Posix_Shell.Lexer is
             case CC is
                when '\' =>
                   CC := Get_Char (B);
-                  case CC is
-                     when '`' | '$' | '\' =>
-                        null;
-                     when ASCII.LF =>
-                        null;
-                     when others =>
-                        null;
-                  end case;
                when '`' =>
                   exit;
                when others =>
