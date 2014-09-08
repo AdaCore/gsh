@@ -24,18 +24,19 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Variables.Output;     use Posix_Shell.Variables.Output;
-with Posix_Shell.Parser;     use Posix_Shell.Parser;
-with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
-with Posix_Shell.String_Utils;      use Posix_Shell.String_Utils;
 with Ada.Directories;
-with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Dyn_String_Lists;
-with Posix_Shell.Lexer; use Posix_Shell.Lexer;
-with Posix_Shell.Traces; use Posix_Shell.Traces;
+with GNAT.Directory_Operations;     use GNAT.Directory_Operations;
+
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
-with Posix_Shell.Buffers; use Posix_Shell.Buffers;
-with Posix_Shell.Exec; use Posix_Shell.Exec;
+with Posix_Shell.Buffers;           use Posix_Shell.Buffers;
+with Posix_Shell.Exec;              use Posix_Shell.Exec;
+with Posix_Shell.Lexer;             use Posix_Shell.Lexer;
+with Posix_Shell.Parser;            use Posix_Shell.Parser;
+with Posix_Shell.String_Utils;      use Posix_Shell.String_Utils;
+with Posix_Shell.Traces;            use Posix_Shell.Traces;
+with Posix_Shell.Tree.Evals;        use Posix_Shell.Tree.Evals;
+with Posix_Shell.Variables.Output;  use Posix_Shell.Variables.Output;
 
 package body Posix_Shell.Subst is
 
@@ -333,11 +334,17 @@ package body Posix_Shell.Subst is
       procedure Eval_Command_Subst;
       --  Eval a command substitution construction
 
+      procedure Eval_Arithmetic_Expansion;
+      --  Eval an arithmetic expansion
+
       procedure Eval_Double_Quote;
       --  Eval a double quoted string
 
       procedure Eval_Escape_Sequence (In_Double_Quote : Boolean);
       --  Eval an escape sequence
+
+      procedure Eval_Dollar_Subst (Is_Splitable : Boolean);
+      --  Eval a substitution introduced by a $
 
       function Read_Parameter
         (Is_Brace_Expansion : Boolean)
@@ -427,6 +434,22 @@ package body Posix_Shell.Subst is
 
       end Eval_Command_Subst;
 
+      -------------------------------
+      -- Eval_Arithmetic_Expansion --
+      -------------------------------
+
+      procedure Eval_Arithmetic_Expansion is
+      begin
+         Index := Index + 2;
+         --  skip the initial parentheses. dollar has already been skipped
+
+         Error (SS.all,
+                S (Index - 2 .. S'Last)
+                & ": arithmetic expressions are not yet implemented");
+
+         raise Program_Error;
+      end Eval_Arithmetic_Expansion;
+
       -----------------------
       -- Eval_Double_Quote --
       -----------------------
@@ -444,7 +467,7 @@ package body Posix_Shell.Subst is
                when '`' =>
                   Eval_Backquoted_Command_Subst (True);
                when '$' =>
-                  Eval_Param_Subst (Is_Splitable => False);
+                  Eval_Dollar_Subst (Is_Splitable => False);
                when '\' =>
                   Eval_Escape_Sequence (In_Double_Quote => True);
                when '"' =>
@@ -574,6 +597,34 @@ package body Posix_Shell.Subst is
          end if;
       end Apply_Substitution_Op;
 
+      -----------------------
+      -- Eval_Dollar_Subst --
+      -----------------------
+
+      procedure Eval_Dollar_Subst (Is_Splitable : Boolean) is
+         Is_Arithmetic_Expansion : Boolean := False;
+      begin
+         --  Skip the initial '$'...
+         Index := Index + 1;
+
+         --  Check if the kind of expansion (with braces or not). Using braces
+         --  allows the use of more complex patterns for the substitution.
+
+         if S (Index) = '(' then
+            Is_Arithmetic_Expansion := S (Index + 1) = '(';
+
+            if Is_Arithmetic_Expansion then
+               Eval_Arithmetic_Expansion;
+            else
+               Eval_Command_Subst;
+            end if;
+
+         else
+            Eval_Param_Subst (Is_Splitable);
+         end if;
+
+      end Eval_Dollar_Subst;
+
       ----------------------
       -- Eval_Param_Subst --
       ----------------------
@@ -586,18 +637,10 @@ package body Posix_Shell.Subst is
          CC                    : Character;
 
       begin
-         --  Skip the initial '$'...
-         Index := Index + 1;
-
-         --  Check if the kind of expansion (with braces or not). Using braces
-         --  allows the use of more complex patterns for the substitution.
+         --  initial $ has been previously skipped.
          if S (Index) = '{' then
             Is_Brace_Expansion := True;
             Index := Index + 1;
-         elsif S (Index) = '(' then
-            --  This is a command substitution not a parameter one.
-            Eval_Command_Subst;
-            return;
          end if;
 
          --  All parameters expansions do start with a parameter.
@@ -780,7 +823,7 @@ package body Posix_Shell.Subst is
                Eval_Backquoted_Command_Subst (False);
 
             when '$' =>
-               Eval_Param_Subst (Is_Splitable);
+               Eval_Dollar_Subst (Is_Splitable);
 
             when '\' =>
                Eval_Escape_Sequence (IOHere);

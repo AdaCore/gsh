@@ -69,7 +69,6 @@ package body Posix_Shell.Lexer is
       Deallocate (B.B);
    end Deallocate;
 
-
    ------------------
    -- Expect_Token --
    ------------------
@@ -512,7 +511,11 @@ package body Posix_Shell.Lexer is
         (In_Double_Quote : Boolean);
       procedure Read_Backquote_Command_Substitution;
 
-      procedure Read_Parameter_Evaluation
+      procedure Read_Arithmetic_Expansion;
+
+      procedure Read_Parameter_Evaluation (Skip_Mode : Boolean);
+
+      procedure Read_Dollar_Substitution
         (Skip_Mode       : Boolean;
          In_Double_Quote : Boolean);
 
@@ -547,7 +550,6 @@ package body Posix_Shell.Lexer is
       is
       begin
          pragma Assert (CC = '$');
-         Has_Token := True;
 
          CC := Get_Char (B);
 
@@ -562,7 +564,7 @@ package body Posix_Shell.Lexer is
                when '\' => Read_Escape_Sequence
                     (Skip_Mode => True, In_Double_Quote => False);
                when '`' => Read_Backquote_Command_Substitution;
-               when '$' => Read_Parameter_Evaluation
+               when '$' => Read_Dollar_Substitution
                     (Skip_Mode => True, In_Double_Quote => In_Double_Quote);
                when '"' => Read_Double_Quote
                     (Skip_Mode => True);
@@ -578,6 +580,52 @@ package body Posix_Shell.Lexer is
             end case;
          end loop;
       end Read_Command_Substitution;
+
+      -------------------------------
+      -- Read_Arithmetic_Expansion --
+      -------------------------------
+
+      procedure Read_Arithmetic_Expansion is
+         Local_CC           : Character;
+         Opened_Paranthesis : Natural := 2;
+         Previous_Was_Par   : Boolean := False;
+      begin
+         pragma Assert (CC = '$');
+
+         Local_CC := Get_Char (B);
+         CC := Get_Char (B);
+
+         if Local_CC /= '(' or else CC /= '(' then
+            Unget_Char (B);
+            Unget_Char (B);
+            return;
+         end if;
+
+         loop
+            CC := Get_Char (B);
+
+            case CC is
+               when '(' => Opened_Paranthesis := Opened_Paranthesis + 1;
+               when ')' =>
+                  Opened_Paranthesis := Opened_Paranthesis - 1;
+                  if Opened_Paranthesis = 0 and Previous_Was_Par then
+                     exit;
+                  end if;
+               when '$' =>
+                  Read_Dollar_Substitution
+                    (Skip_Mode => False, In_Double_Quote => False);
+               when '`' => Read_Backquote_Command_Substitution;
+               when ASCII.EOT =>
+                     Lexer_Error
+                        (B, "unexpected EOF while looking for matchin '))'");
+               when others =>
+                  null;
+            end case;
+
+            Previous_Was_Par := CC = ')';
+         end loop;
+
+      end Read_Arithmetic_Expansion;
 
       -----------------------
       -- Read_Double_Quote --
@@ -599,7 +647,7 @@ package body Posix_Shell.Lexer is
                   when '`' =>
                      Read_Backquote_Command_Substitution;
 
-                  when '$' => Read_Parameter_Evaluation
+                  when '$' => Read_Dollar_Substitution
                        (In_Double_Quote => True, Skip_Mode => Skip_Mode);
                   when ASCII.EOT =>
                      Lexer_Error
@@ -651,29 +699,55 @@ package body Posix_Shell.Lexer is
          end if;
       end Read_Escape_Sequence;
 
-      -------------------------------
-      -- Read_Parameter_Evaluation --
-      -------------------------------
+      -----------------------------------
+      -- Read_Dollar_Substitution --
+      -----------------------------------
 
-      procedure Read_Parameter_Evaluation
+      procedure Read_Dollar_Substitution
         (Skip_Mode       : Boolean;
          In_Double_Quote : Boolean)
       is
          pragma Unreferenced (In_Double_Quote);
+         Is_Arithmetic_Expansion : Boolean := False;
 
       begin
-
          Has_Token := True;
          CC := Get_Char (B);
 
-         --  If the expression starts with a '(', then it is actually
-         --  not a parameter expression, but rather a command expression.
          if CC = '(' then
+            CC := Get_Char (B);
+            Is_Arithmetic_Expansion := CC = '(';
+
+            Unget_Char (B);
             Unget_Char (B);
             CC := '$';
-            Read_Command_Substitution (In_Double_Quote => False);
-            return;
+
+            if Is_Arithmetic_Expansion then
+               --  if $ is followed by (( then it's an arithmetic expression
+               --  that is to be expanded.
+               Read_Arithmetic_Expansion;
+            else
+               --  if $ is followed by a unique ( it's actually a command
+               --  substitution.
+               Read_Command_Substitution (In_Double_Quote => False);
+            end if;
+         else
+            Unget_Char (B);
+            CC := '$';
+            Read_Parameter_Evaluation (Skip_Mode);
          end if;
+      end Read_Dollar_Substitution;
+
+      -------------------------------
+      -- Read_Parameter_Evaluation --
+      -------------------------------
+
+      procedure Read_Parameter_Evaluation (Skip_Mode : Boolean)
+      is
+      begin
+         pragma Assert (CC = '$');
+
+         CC := Get_Char (B);
 
          --  Check the first character following the '$' sign.
          --  If it is a paramater evaluation, then only a few selected
@@ -717,7 +791,7 @@ package body Posix_Shell.Lexer is
                   Read_Backquote_Command_Substitution;
 
                elsif CC = '$' then
-                  Read_Parameter_Evaluation
+                  Read_Dollar_Substitution
                     (Skip_Mode => Skip_Mode, In_Double_Quote => False);
                else
                   null;
@@ -942,7 +1016,7 @@ package body Posix_Shell.Lexer is
                   return Return_Token (T_WORD);
                end if;
             when '$' =>
-               Read_Parameter_Evaluation (False, False);
+               Read_Dollar_Substitution (False, False);
                if IOHere then
                   return Return_Token (T_WORD);
                end if;
