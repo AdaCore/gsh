@@ -50,25 +50,25 @@ package body Posix_Shell.Builtins.Cp is
 
       File_List_Start : Integer := Args'First;
       File_List_End   : constant Integer := Args'Last - 1;
+      Recursive       : Boolean   := False;
+      Force           : Boolean   := False;
+      Preserve        : Attribute := Time_Stamps;
+      Got_Errors      : Boolean   := False;
 
-      Target_Name     : constant String := (if File_List_End < File_List_Start
-         then "" else
-         GNAT.OS_Lib.Normalize_Pathname (Resolve_Path (S.all,
-                                                       Args (Args'Last).all),
-                                         Resolve_Links => False));
-      Target_Is_Directory : Boolean   := False;
-      Recursive           : Boolean   := False;
-      Force               : Boolean   := False;
-      Preserve            : Attribute := Time_Stamps;
-      Got_Errors          : Boolean   := False;
-
-      procedure Cp_Tree (Filename : String);
+      procedure Cp_Tree
+        (Filename            : String;
+         Target_Name         : String;
+         Target_Is_Directory : Boolean);
 
       -------------
       -- Cp_Tree --
       -------------
 
-      procedure Cp_Tree (Filename : String) is
+      procedure Cp_Tree
+        (Filename            : String;
+         Target_Name         : String;
+         Target_Is_Directory : Boolean)
+      is
          Search  : Ada.Directories.Search_Type;
          Dir_Ent : Ada.Directories.Directory_Entry_Type;
          Success : Boolean := False;
@@ -259,11 +259,6 @@ package body Posix_Shell.Builtins.Cp is
 
    begin
 
-      if Target_Name = "" then
-         Error (S.all, "cp: missing operand");
-         return 1;
-      end if;
-
       --  Parse options
       for Index in Args'Range loop
          if Args (Index) (Args (Index)'First) = '-' then
@@ -298,30 +293,40 @@ package body Posix_Shell.Builtins.Cp is
          return 1;
       end if;
 
-      Target_Is_Directory := GNAT.OS_Lib.Is_Directory (Target_Name);
+      declare
+         Target_Path : constant String :=
+           GNAT.OS_Lib.Normalize_Pathname
+             (Resolve_Path (S.all,
+                            Args (Args'Last).all),
+              Resolve_Links => False);
+         Target_Is_Directory : constant Boolean :=
+           GNAT.OS_Lib.Is_Directory (Target_Path);
+      begin
 
-      if File_List_Start /= File_List_End then
-         --  When a list of elements is to be copied, args'last must be an
-         --  existing directory.
-         if not Target_Is_Directory then
-            Error (S.all, "cp: no such directory '" & Target_Name & "'");
-            return 1;
+         if File_List_Start /= File_List_End then
+            --  When a list of elements is to be copied, args'last must be an
+            --  existing directory.
+            if not Target_Is_Directory then
+               Error (S.all, "cp: no such directory '" & Target_Path & "'");
+               return 1;
+            end if;
          end if;
-      end if;
 
-      --  Iterate the files
-      for Index in File_List_Start .. File_List_End loop
-         Cp_Tree (GNAT.OS_Lib.Normalize_Pathname
-                  (Resolve_Path (S.all, Args (Index).all),
-                     Resolve_Links => False));
-      end loop;
+         --  Iterate the files
+         for Index in File_List_Start .. File_List_End loop
+            Cp_Tree (GNAT.OS_Lib.Normalize_Pathname
+                     (Resolve_Path (S.all, Args (Index).all),
+                        Resolve_Links => False),
+                     Target_Path,
+                     Target_Is_Directory);
+         end loop;
 
-      if Got_Errors then
-         return 1;
-      else
-         return 0;
-      end if;
-
+         if Got_Errors then
+            return 1;
+         else
+            return 0;
+         end if;
+      end;
    end Cp_Builtin;
 
 end Posix_Shell.Builtins.Cp;
