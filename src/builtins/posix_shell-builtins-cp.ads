@@ -30,8 +30,12 @@ package Posix_Shell.Builtins.Cp is
      (S : Shell_State_Access; Args : String_List) return Integer;
    --  Implement the "cp" builtin.
    --  Deviation from Standard:
-   --  only -R (-r), -p and -f are currently currently supported.
-   --  Env variable such as LANG, LC_ALL, ... do not actually affect
-   --  the execution of "cp"
+   --    * only -R (-r), -p and -f are currently currently supported.
+   --    * Env variable such as LANG, LC_ALL, ... do not actually affect
+   --      the execution of "cp"
+   --    * WORKAROUND for Windows executables :
+   --      `cp a b` when file 'a' does not actually exist, uses on a windows
+   --      platform the file 'a.exe' (if existing) as source.
+   --      the target 'b' will be named 'b.exe'
 
 end Posix_Shell.Builtins.Cp;
