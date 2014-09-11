@@ -2,9 +2,9 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                       Posix_Shell.Builtins.Expr                          --
+--                       Posix_Shell.Subst.Arith                            --
 --                                                                          --
---                                 B o d y                                  --
+--                                 S p e c                                  --
 --                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --
@@ -24,37 +24,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Subst.Arith;      use Posix_Shell.Subst.Arith;
-with Posix_Shell.Traces;           use Posix_Shell.Traces;
-with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
+package Posix_Shell.Subst.Arith is
 
-package body Posix_Shell.Builtins.Expr is
+   function Eval_Expr (Args : String_List) return String;
 
-   -------------------
-   --  Expr_Builtin --
-   -------------------
+   Expr_Error : exception;
 
-   function Expr_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
-   is
-   begin
-      pragma Debug (Log ("expr", "start"));
-
-      declare
-         Result : constant String := Eval_Expr (Args);
-      begin
-         Put (S.all, 1, Result & ASCII.LF);
-         if Result = "0" or else Result = "" then
-            return 1;
-         else
-            return 0;
-         end if;
-      end;
-
-   exception
-      when Expr_Error =>
-         Put (S.all, 2, "invalid expression" & ASCII.LF);
-         return 2;
-   end Expr_Builtin;
-
-end Posix_Shell.Builtins.Expr;
+end Posix_Shell.Subst.Arith;
