@@ -31,6 +31,8 @@ with Posix_Shell.String_Utils;     use Posix_Shell.String_Utils;
 with Posix_Shell.Traces;           use Posix_Shell.Traces;
 with Posix_Shell.Utils;            use Posix_Shell.Utils;
 
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
+
 package body Posix_Shell.Subst.Arith is
 
    --  here is the list of operators supported by the expr utility:
@@ -44,37 +46,46 @@ package body Posix_Shell.Subst.Arith is
       RIGHT_PAR,     -- ')'        |
       PIPE,          -- '|'        |
       CAND,          -- '&'        |
-      EQUAL,         -- '='        |
+      EQUAL,         -- '='        | when Is_Arith_Exp affectation
+                     --            | otherwise eq test
+      DOUBLE_EQUAL,  -- '=='       | only when Is_Arith_Exp
       GT,            -- '>'        |
       GE,            -- '>='       |
       LT,            -- '<'        |
       LE,            -- '<='       |
       DIFF,          -- '!='       |
       PLUS,          -- '+'        |
+      UNARY_PLUS,    -- '-'        |
+      DOUBLE_PLUS,   -- '++'       | only when Is_Arith_Exp
       MINUS,         -- '-'        |
+      UNARY_MINUS,   -- '-'        |
+      DOUBLE_MINUS,  -- '--'       | only when Is_Arith_Exp
       STAR,          -- '*'        |
       DIV,           -- '/'        |
       PERCENT,       -- '%'        |
       COLON,         -- ':'        |
       LEFT_PAR,      -- '('        V highest priority operator
       NUM,
-      STRG);          -- numbers
+      STRG);         -- numbers
 
    type Expr_Token is record
-      T : Expr_Token_Type;
-      I : Integer;
-      S : String_Access;
+      T        : Expr_Token_Type;
+      I        : Integer;
+      S        : String_Access;
+      Var_Name : String_Access := null;
    end record;
    --  expr tokens can be eitheir an operator or a number. When T field is NUM
    --  then I field contains the number value.
 
-   Null_Expr_Token : constant Expr_Token := (EOC, 0, null);
+   Null_Expr_Token : constant Expr_Token := (EOC, 0, null, null);
 
    -----------------
    --  Eval_Expr  --
    -----------------
 
-   function Eval_Expr (Args : String_List) return String
+   function Eval_Expr (S            : Shell_State_Access;
+                       Args         : String_List;
+                       Is_Arith_Exp : Boolean := False) return String
    is
 
       Index : Integer := Args'First;
@@ -117,11 +128,11 @@ package body Posix_Shell.Subst.Arith is
       --  |SN|SO|      |SN|SO|      |SN|SO|      |SN|SO|    |SN|SO|
       --
 
-      CT : Expr_Token;
-      --  Current token
+      CT : Expr_Token := Null_Expr_Token; --  Current token
+      PT : Expr_Token; --  Previous token
 
       function Next return Expr_Token;
-      procedure Push_Result (I : Integer);
+      procedure Push_Result (I : Integer; One_Arg : Boolean := False);
       procedure Push_Result (S : String);
       procedure Push_Result (T : Expr_Token);
       procedure Check_Type (L, R : Expr_Token; T : Expr_Token_Type);
@@ -164,18 +175,18 @@ package body Posix_Shell.Subst.Arith is
          begin
             if Str_Length = 1 then
                if Second_Char = ASCII.NUL then
-                  return (T, 0, null);
+                  return (T, 0, null, null);
                elsif First_Choice /= EOC then
-                  return (First_Choice, 0, null);
+                  return (First_Choice, 0, null, null);
                else
-                  return (STRG, 0, new String'(Str));
+                  return (STRG, 0, new String'(Str), null);
                end if;
             elsif Str_Length = 2 and then
               Second_Char = Str (Str'First + 1)
             then
-               return (T, 0, null);
+               return (T, 0, null, null);
             else
-               return (STRG, 1, new String'(Str));
+               return (STRG, 1, new String'(Str), null);
             end if;
          end Return_Op_Token;
 
@@ -183,7 +194,7 @@ package body Posix_Shell.Subst.Arith is
          Index := Index + 1;
 
          if Str_Length = 0 then
-            return (STRG, 0, new String'(""));
+            return (STRG, 0, new String'(""), null);
          end if;
 
          case Str (Str'First) is
@@ -191,63 +202,214 @@ package body Posix_Shell.Subst.Arith is
             when '(' => return Return_Op_Token (LEFT_PAR);
             when '|' => return Return_Op_Token (PIPE);
             when '&' => return Return_Op_Token (CAND);
-            when '=' => return Return_Op_Token (EQUAL);
+            when '=' => return Return_Op_Token (DOUBLE_EQUAL, '=', EQUAL);
             when '>' => return Return_Op_Token (GE, '=', GT);
             when '<' => return Return_Op_Token (LE, '=', LT);
             when '!' => return Return_Op_Token (DIFF, '=');
-            when '+' => return Return_Op_Token (PLUS);
             when '*' => return Return_Op_Token (STAR);
             when '/' => return Return_Op_Token (DIV);
             when '%' => return Return_Op_Token (PERCENT);
             when ':' => return Return_Op_Token (COLON);
-            when '0' .. '9' | '-' =>
-               if Str_Length = 1 and Str (Str'First) = '-' then
-                  return (MINUS, 0, null);
+
+            when '+' =>
+               if not Is_Arith_Exp then
+                  return Return_Op_Token (PLUS);
+               else
+                  if Str_Length = 1 then
+                     case PT.T is
+                        when NUM | STRG | RIGHT_PAR =>
+                           return (PLUS, 0, null, null);
+
+                        when others =>
+                           return (UNARY_PLUS, 0, null, null);
+                     end case;
+
+                  elsif Str = "++" then
+                     return (DOUBLE_PLUS, 0, null, null);
+                  else
+                     return Return_Op_Token (PLUS);
+                  end if;
                end if;
 
+            when '-' =>
+
+               if not Is_Arith_Exp then
+                  if Str_Length = 1 then
+                     return (MINUS, 0, null, null);
+                  end if;
+               else
+                  if Str_Length = 1 then
+                     case PT.T is
+                        when NUM | STRG | RIGHT_PAR =>
+                           return (MINUS, 0, null, null);
+
+                        when others =>
+                           return (UNARY_MINUS, 0, null, null);
+                     end case;
+
+                  elsif Str = "--" then
+                     return (DOUBLE_MINUS, 0, null, null);
+                  end if;
+               end if;
+
+               --  this is a negative number.
                To_Integer (Str, N, Is_Num);
 
                if Is_Num then
-                  return (NUM, N, new String'(Str));
+                  return (NUM, N, new String'(Str), null);
                else
-                  return (STRG, 1, new String'(Str));
+                  return (STRG, 1, new String'(Str), null);
                end if;
 
-            when others => return (STRG, 1, new String'(Str));
+            when '0' .. '9' =>
+
+               To_Integer (Str, N, Is_Num);
+               if Is_Num then
+                  return (NUM, N, new String'(Str), null);
+               else
+                  return (STRG, 1, new String'(Str), null);
+               end if;
+
+            when 'a' .. 'z' | 'A' .. 'Z' | '_' =>
+
+               if Is_Arith_Exp then
+
+                  declare
+                     Var_Value           : constant String :=
+                                             Get_Var_Value (S.all, Str);
+                     use Dyn_String_Lists;
+                     Tokenized_List      : Dyn_String_List;
+                     Previous_Was_Number : Boolean := False;
+                  begin
+
+                     if Var_Value = "" then
+                        --  variable is not defined
+                        --  use 0 as value
+                        return (NUM,
+                                0,
+                                new String'("0"),
+                                new String'(Str));
+                     end if;
+
+                     To_Integer (Var_Value, N, Is_Num);
+
+                     if Is_Num then
+                        --  the substitution of the variable directly leads
+                        --  to a value.
+                        return (NUM,
+                                N,
+                                new String'(Var_Value),
+                                new String'(Str));
+                     else
+                        --  the substitution retuns a string that must be
+                        --  a valid arithmetic expression.
+                        Split_Arithmetic_String (S,
+                                                 Var_Value,
+                                                 Previous_Was_Number,
+                                                 Tokenized_List);
+                        declare
+                           --  the expression is evaluated and then returned
+                           Value : constant String :=
+                                     Eval_Expr (S,
+                                                Content (Tokenized_List),
+                                                True);
+                        begin
+                           To_Integer (Value, N, Is_Num);
+
+                           if Is_Num then
+                              return (NUM,
+                                      N,
+                                      new String'(Value),
+                                      new String'(Str));
+                           else
+                              return (STRG,
+                                      1,
+                                      new String'(Var_Value),
+                                      new String'(Str));
+                           end if;
+                        end;
+                     end if;
+                  end;
+
+               else
+                  return (STRG, 1, new String'(Str), null);
+               end if;
+
+            when others => return (STRG, 1, new String'(Str), null);
          end case;
 
       end Next;
 
-      procedure Push_Result (I : Integer) is
+      -----------------
+      -- Push_Result --
+      -----------------
+
+      procedure Push_Result (I : Integer; One_Arg : Boolean := False) is
       begin
-         Free (Arg_Stack (Arg_Stack_Top).S);
-         Free (Arg_Stack (Arg_Stack_Top - 1).S);
-         --  remove the arguments of the eval
-         Arg_Stack_Top := Arg_Stack_Top - 1;
+
+         if Arg_Stack (Arg_Stack_Top).S /= null then
+            Free (Arg_Stack (Arg_Stack_Top).S);
+         end if;
+         if Arg_Stack (Arg_Stack_Top).Var_Name /= null then
+            Free (Arg_Stack (Arg_Stack_Top).Var_Name);
+         end if;
+
+         if not One_Arg then
+            if Arg_Stack (Arg_Stack_Top - 1).S /= null then
+               Free (Arg_Stack (Arg_Stack_Top - 1).S);
+            end if;
+            if Arg_Stack (Arg_Stack_Top - 1).Var_Name /= null then
+               Free (Arg_Stack (Arg_Stack_Top - 1).Var_Name);
+            end if;
+            --  remove the seconde argument when necessary
+            Arg_Stack_Top := Arg_Stack_Top - 1;
+         end if;
 
          --  push the result
-         Arg_Stack (Arg_Stack_Top) := (NUM, I, new String'(To_String (I)));
+         Arg_Stack (Arg_Stack_Top) := (NUM,
+                                       I,
+                                       new String'(To_String (I)),
+                                       null);
       end Push_Result;
+
+      -----------------
+      -- Push_Result --
+      -----------------
 
       procedure Push_Result (S : String) is
       begin
-
          Arg_Stack_Top := Arg_Stack_Top - 1;
          if S = "" then
-            Arg_Stack (Arg_Stack_Top) := (STRG, 0, new String'(S));
+            Arg_Stack (Arg_Stack_Top) := (STRG, 0, new String'(S), null);
          else
-            Arg_Stack (Arg_Stack_Top) := (STRG, 0, new String'(S));
+            Arg_Stack (Arg_Stack_Top) := (STRG, 0, new String'(S), null);
          end if;
       end Push_Result;
+
+      -----------------
+      -- Push_Result --
+      -----------------
 
       procedure Push_Result (T : Expr_Token) is
       begin
          if T.S /= Arg_Stack (Arg_Stack_Top).S then
-            Free (Arg_Stack (Arg_Stack_Top).S);
+            if Arg_Stack (Arg_Stack_Top).S /= null then
+               Free (Arg_Stack (Arg_Stack_Top).S);
+            end if;
+            if Arg_Stack (Arg_Stack_Top).Var_Name /= null then
+
+               Free (Arg_Stack (Arg_Stack_Top).Var_Name);
+            end if;
          end if;
 
          if T.S /= Arg_Stack (Arg_Stack_Top - 1).S then
-            Free (Arg_Stack (Arg_Stack_Top - 1).S);
+            if Arg_Stack (Arg_Stack_Top - 1).S /= null then
+               Free (Arg_Stack (Arg_Stack_Top - 1).S);
+            end if;
+            if Arg_Stack (Arg_Stack_Top - 1).Var_Name /= null then
+
+               Free (Arg_Stack (Arg_Stack_Top - 1).Var_Name);
+            end if;
          end if;
 
          Arg_Stack_Top := Arg_Stack_Top - 1;
@@ -258,7 +420,9 @@ package body Posix_Shell.Subst.Arith is
 
       Op          : Expr_Token_Type;
       Left, Right : Expr_Token;
+      Opened_Par  : Natural := 0;
    begin
+
       pragma Debug (Log ("expr", "start"));
       loop
          exit when Index > Args'Last + 1;
@@ -266,16 +430,58 @@ package body Posix_Shell.Subst.Arith is
          if Index = Args'Last + 1 then
             --  We have reached the end of the expression passed as argument of
             --  expr so force evaluation of the remaining op in the stack
-            CT := (EOC, 0, null); Index := Index + 1;
+            PT := CT;
+            CT := Null_Expr_Token;
+            Index := Index + 1;
          else
+            PT := CT;
             CT := Next;
          end if;
 
          case CT.T is
-            when NUM | STRG =>
+
+            when NUM =>
+
                Arg_Stack_Top := Arg_Stack_Top + 1;
                Arg_Stack (Arg_Stack_Top) := CT;
+
+            when STRG =>
+
+               if Is_Arith_Exp then
+                  if CT.Var_Name /= null then
+                     Error (S.all,
+                            "A valid arithmetic expression is expected as"
+                            &  " value for the variable "
+                            & CT.Var_Name.all
+                            & ": " & CT.S.all & " is not valid");
+                  else
+                     Error (S.all,
+                            "A valid arithmetic expression is expected : "
+                            & CT.S.all & " is not valid");
+                  end if;
+
+                  raise Expr_Error;
+               else
+
+                  Arg_Stack_Top := Arg_Stack_Top + 1;
+                  Arg_Stack (Arg_Stack_Top) := CT;
+               end if;
+
+            when UNARY_PLUS =>
+               null;
+
+            when DOUBLE_PLUS | DOUBLE_MINUS =>
+               if Is_Arith_Exp then
+                  Error (S.all,
+                         "++ and -- operations are currently not"
+                         &  " supported in arith expr ");
+                  raise Expr_Error;
+               else
+                  raise Expr_Error;
+               end if;
+
             when others =>
+
                while Op_Stack_Top /= 0
                  and then CT.T <= Op_Stack (Op_Stack_Top).T
                loop
@@ -285,31 +491,45 @@ package body Posix_Shell.Subst.Arith is
                   exit when Op = RIGHT_PAR;
 
                   if Arg_Stack_Top > 1 then
+
                      Right := Arg_Stack (Arg_Stack_Top);
                      Left  := Arg_Stack (Arg_Stack_Top - 1);
 
                      case Op is
+
+                        when UNARY_MINUS =>
+                           if not Is_Arith_Exp or else Right.T /= NUM then
+                              raise Expr_Error;
+                           end if;
+                           Push_Result (-Right.I,
+                                        One_Arg => True);
+
                         when PLUS  =>
                            Check_Type (Left, Right, NUM);
                            Push_Result (Left.I + Right.I);
+
                         when MINUS =>
                            Check_Type (Left, Right, NUM);
                            Push_Result (Left.I - Right.I);
+
                         when STAR  =>
                            Check_Type (Left, Right, NUM);
                            Push_Result (Left.I * Right.I);
+
                         when DIV   =>
                            Check_Type (Left, Right, NUM);
                            if Right.I = 0 then
                               raise Expr_Error;
                            end if;
                            Push_Result (Left.I / Right.I);
+
                         when PERCENT =>
                            Check_Type (Left, Right, NUM);
                            if Right.I = 0 then
                               raise Expr_Error;
                            end if;
                            Push_Result (Left.I - (Left.I / Right.I) * Right.I);
+
                         when PIPE =>
                            if Left.I = 0 then
                               if Right.I = 0 then
@@ -320,26 +540,64 @@ package body Posix_Shell.Subst.Arith is
                            else
                               Push_Result (Left);
                            end if;
+
                         when CAND =>
                            if Left.I /= 0 and Right.I /= 0 then
                               Push_Result (Left);
                            else
                               Push_Result (0);
                            end if;
+
                         when EQUAL =>
-                           if Left.T = NUM and Right.T = NUM then
-                              if Left.I = Right.I then
-                                 Push_Result (1);
-                              else
-                                 Push_Result (0);
+
+                           if Is_Arith_Exp then
+                              --  in the case of arithmetic expansion
+                              --  this operator introduce an affectation.
+                              if Right.T /= NUM then
+                                 raise Expr_Error;
                               end if;
+
+                              Set_Var_Value (S.all,
+                                             Left.Var_Name.all,
+                                             Right.S.all);
+
+                              Push_Result (Right.I);
                            else
-                              if Left.S.all = Right.S.all then
-                                 Push_Result (1);
+                              if Left.T = NUM and Right.T = NUM then
+                                 if Left.I = Right.I then
+                                    Push_Result (1);
+                                 else
+                                    Push_Result (0);
+                                 end if;
                               else
-                                 Push_Result (0);
+                                 if Left.S.all = Right.S.all then
+                                    Push_Result (1);
+                                 else
+                                    Push_Result (0);
+                                 end if;
                               end if;
                            end if;
+
+                        when DOUBLE_EQUAL =>
+
+                           if Is_Arith_Exp then
+                              if Left.T = NUM and Right.T = NUM then
+                                 if Left.I = Right.I then
+                                    Push_Result (1);
+                                 else
+                                    Push_Result (0);
+                                 end if;
+                              else
+                                 if Left.S.all = Right.S.all then
+                                    Push_Result (1);
+                                 else
+                                    Push_Result (0);
+                                 end if;
+                              end if;
+                           else
+                              raise Expr_Error;
+                           end if;
+
                         when GT =>
                            if Left.T = NUM and Right.T = NUM then
                               if Left.I > Right.I then
@@ -354,6 +612,7 @@ package body Posix_Shell.Subst.Arith is
                                  Push_Result (0);
                               end if;
                            end if;
+
                         when GE =>
                            if Left.T = NUM and Right.T = NUM then
                               if Left.I >= Right.I then
@@ -368,6 +627,7 @@ package body Posix_Shell.Subst.Arith is
                                  Push_Result (0);
                               end if;
                            end if;
+
                         when LT =>
                            if Left.T = NUM and Right.T = NUM then
                               if Left.I < Right.I then
@@ -382,6 +642,7 @@ package body Posix_Shell.Subst.Arith is
                                  Push_Result (0);
                               end if;
                            end if;
+
                         when LE =>
                            if Left.T = NUM and Right.T = NUM then
                               if Left.I <= Right.I then
@@ -396,6 +657,7 @@ package body Posix_Shell.Subst.Arith is
                                  Push_Result (0);
                               end if;
                            end if;
+
                         when DIFF =>
                            if Left.T = NUM and Right.T = NUM then
                               if Left.I /= Right.I then
@@ -410,7 +672,13 @@ package body Posix_Shell.Subst.Arith is
                                  Push_Result (0);
                               end if;
                            end if;
+
                         when COLON =>
+
+                           if Is_Arith_Exp then
+                              raise Expr_Error;
+                           end if;
+
                            declare
                               Pattern      : String (1 .. Right.S'Length * 2);
                               Pattern_Last : Integer := 0;
@@ -498,8 +766,10 @@ package body Posix_Shell.Subst.Arith is
                                  end if;
                               end;
                            end;
+
                         when others => raise Expr_Error;
                      end case;
+
                   else
                      raise Expr_Error;
                   end if;
@@ -511,7 +781,7 @@ package body Posix_Shell.Subst.Arith is
                   --  it just triggers the evaluation of the all parenthesis
                   --  block because RIGHT_PAR is the operator with the lowest
                   --  priority
-                  null;
+                  Opened_Par := Opened_Par - 1;
                elsif CT.T = LEFT_PAR then
                   --  left parenthesis has a priority superior to all operators
                   --  this means that when CT is LEFT_PAR no evaluation occurs
@@ -519,8 +789,9 @@ package body Posix_Shell.Subst.Arith is
                   --  lowest priority. This mean that when we are between
                   --  parenthesis, this op will be poped only when a RIGHT_PAR
                   --  is encountered.
+                  Opened_Par := Opened_Par + 1;
                   Op_Stack_Top := Op_Stack_Top + 1;
-                  Op_Stack (Op_Stack_Top) := (RIGHT_PAR, 0, null);
+                  Op_Stack (Op_Stack_Top) := (RIGHT_PAR, 0, null, null);
                else
                   Op_Stack_Top := Op_Stack_Top + 1;
                   Op_Stack (Op_Stack_Top) := CT;
@@ -529,7 +800,13 @@ package body Posix_Shell.Subst.Arith is
 
       end loop;
 
-      return Arg_Stack (1).S.all;
+      if Opened_Par /= 0 then
+         Error (S.all,
+                "')' expected");
+         raise Expr_Error;
+      else
+         return Arg_Stack (1).S.all;
+      end if;
 
    exception
       when Expr_Error =>

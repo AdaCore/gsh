@@ -20,9 +20,11 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with GNAT.OS_Lib; use GNAT.OS_Lib;
+with Dyn_String_Lists;
+
+with GNAT.OS_Lib;            use GNAT.OS_Lib;
 with Posix_Shell.Variables;  use Posix_Shell.Variables;
-with Posix_Shell.Tree; use Posix_Shell.Tree;
+with Posix_Shell.Tree;       use Posix_Shell.Tree;
 with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 
 package Posix_Shell.Subst is
@@ -51,5 +53,16 @@ package Posix_Shell.Subst is
       T  : Shell_Tree;
       S  : Token_List)
       return String_List;
+
+   procedure Split_Arithmetic_String
+     (SS                  : Shell_State_Access;
+      Str                 : String;
+      Previous_Was_Number : in out Boolean;
+      Args_List           : in out Dyn_String_Lists.Dyn_String_List);
+   --  Split the string Str into a list of elements that are either
+   --  numbers, symbole names, operators, or parantheses.
+   --  Previous_Was_Number is the boolean that gets and updates accordingly
+   --  the 'nature' of the previous token. True when previous token was
+   --  a number or a symbole name, False otherwise.
 
 end Posix_Shell.Subst;

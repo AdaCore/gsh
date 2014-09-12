@@ -41,7 +41,7 @@ package body Posix_Shell.Builtins.Expr is
       pragma Debug (Log ("expr", "start"));
 
       declare
-         Result : constant String := Eval_Expr (Args);
+         Result : constant String := Eval_Expr (S, Args);
       begin
          Put (S.all, 1, Result & ASCII.LF);
          if Result = "0" or else Result = "" then

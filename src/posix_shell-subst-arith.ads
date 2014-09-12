@@ -26,7 +26,9 @@
 
 package Posix_Shell.Subst.Arith is
 
-   function Eval_Expr (Args : String_List) return String;
+   function Eval_Expr (S            : Shell_State_Access;
+                       Args         : String_List;
+                       Is_Arith_Exp : Boolean := False) return String;
 
    Expr_Error : exception;
 
