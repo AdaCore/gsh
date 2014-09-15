@@ -69,7 +69,6 @@ package body Posix_Shell.Lexer is
       Deallocate (B.B);
    end Deallocate;
 
-
    ------------------
    -- Expect_Token --
    ------------------
