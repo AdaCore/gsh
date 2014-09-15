@@ -46,43 +46,86 @@ package body Posix_Shell.Builtins.Cp is
    function Cp_Builtin
      (S : Shell_State_Access; Args : String_List) return Integer
    is
-
+      On_Windows      : constant Boolean := Directory_Separator = '\';
+      Exec_Extension  : constant String := ".exe";
       File_List_Start : Integer := Args'First;
       File_List_End   : constant Integer := Args'Last - 1;
+      Recursive       : Boolean   := False;
+      Force           : Boolean   := False;
+      Preserve        : Attribute := Time_Stamps;
+      Got_Errors      : Boolean   := False;
 
-      Target_Name     : constant String := (if File_List_End < File_List_Start
-         then "" else
-         GNAT.OS_Lib.Normalize_Pathname (Resolve_Path (S.all,
-                                                       Args (Args'Last).all),
-                                         Resolve_Links => False));
-
-      Target_Dir_Exists : Boolean   := False;
-      Recursive         : Boolean   := False;
-      Force             : Boolean   := False;
-      Preserve          : Attribute := Time_Stamps;
-      Got_Errors        : Boolean   := False;
-
-      procedure Cp_Tree (Filename : String);
+      procedure Cp_Tree
+        (Filename            : String;
+         Target_Name         : String;
+         Target_Is_Directory : Boolean);
 
       -------------
       -- Cp_Tree --
       -------------
 
-      procedure Cp_Tree (Filename : String) is
+      procedure Cp_Tree
+        (Filename            : String;
+         Target_Name         : String;
+         Target_Is_Directory : Boolean)
+      is
          Search  : Ada.Directories.Search_Type;
          Dir_Ent : Ada.Directories.Directory_Entry_Type;
-         Success : Boolean := False;
-         Status  : long := 0;
+
+         Target_Path : constant String :=
+           (if Target_Is_Directory then
+               Target_Name &
+               GNAT.Directory_Operations.Dir_Separator &
+               GNAT.Directory_Operations.Base_Name (Filename)
+            else
+               Target_Name);
 
          procedure Recursive_Copy (Source_Path : String;
                                    Target_Path : String);
+
+         procedure Simple_Copy (Source_Path : String;
+                                Target_Path : String);
+
+         -----------------
+         -- Simple_Copy --
+         -----------------
+
+         procedure Simple_Copy (Source_Path : String;
+                                Target_Path : String)
+         is
+            Status  : long := 0;
+            Success : Boolean := False;
+         begin
+            if GNAT.OS_Lib.Is_Regular_File (Target_Path) then
+               Status := Posix_Shell.Rm.Delete_File (Target_Path);
+            end if;
+
+            if Status /= 0 then
+               Error (S.all, "cp: cannot remove '" &
+                        Target_Path & "': windows error " & Status'Img);
+               Got_Errors := Force;
+            end if;
+
+            Copy_File (Name     => Source_Path,
+                       Pathname => Target_Path,
+                       Success  => Success,
+                       Preserve => Preserve);
+
+            if not Success then
+               Error (S.all,
+                      "cp: '"  & Source_Path & "' not copied to '" &
+                        Target_Path & "'");
+               Got_Errors := True;
+            end if;
+         end Simple_Copy;
+
          --------------------
          -- Recursive_Copy --
          --------------------
 
          procedure Recursive_Copy (Source_Path : String;
                                    Target_Path : String) is
-            Success : Boolean := False;
+
          begin
             --  Check if target_path is a directory and it exists
             if GNAT.OS_Lib.Is_Regular_File (Target_Path) then
@@ -114,27 +157,7 @@ package body Posix_Shell.Builtins.Cp is
                   --  copy ignoring '.' and '..' entries
                   if Base_Name /= "." and then Base_Name /= ".." then
                      if GNAT.OS_Lib.Is_Regular_File (Source) then
-                        if GNAT.OS_Lib.Is_Regular_File (Target) then
-                           Status := Posix_Shell.Rm.Delete_File (Target);
-                        end if;
-
-                        if Status /= 0 then
-                           Error (S.all, "cp: cannot remove '" &
-                                    Target & "': windows error " & Status'Img);
-                           Got_Errors := Force;
-                        end if;
-
-                        Copy_File (Name     => Source,
-                                   Pathname => Target,
-                                   Success  => Success,
-                                   Preserve => Preserve);
-
-                        if not Success then
-                           Error (S.all,
-                                  "cp: '"  & Source & "' not copied to '" &
-                                    Target & "'");
-                           Got_Errors := True;
-                        end if;
+                        Simple_Copy (Source, Target);
 
                      elsif GNAT.OS_Lib.Is_Directory (Source) then
                         Recursive_Copy (Source,
@@ -154,52 +177,7 @@ package body Posix_Shell.Builtins.Cp is
 
       begin
 
-         if GNAT.OS_Lib.Is_Regular_File (Filename) then
-            if not Target_Dir_Exists then
-
-               if GNAT.OS_Lib.Is_Regular_File (Target_Name) then
-                  Status := Posix_Shell.Rm.Delete_File (Target_Name);
-               end if;
-
-               if Status /= 0 then
-                  Error (S.all, "cp: cannot remove '" &
-                           Target_Name & "': windows error " & Status'Img);
-                  Got_Errors := Force;
-               end if;
-
-            else
-               declare
-                  Target : constant String := Target_Name &
-                         GNAT.Directory_Operations.Dir_Separator &
-                         GNAT.Directory_Operations.Base_Name (Filename);
-               begin
-                  if GNAT.OS_Lib.Is_Regular_File (Target) then
-                     Status :=
-                       Posix_Shell.Rm.Delete_File (Target);
-                  end if;
-
-                  if Status /= 0 then
-                     Error (S.all, "cp: cannot remove '" &
-                              Target & "': windows error " & Status'Img);
-                     Got_Errors := Force;
-                  end if;
-
-               end;
-            end if;
-
-            Copy_File (Name     => Filename,
-                       Pathname => Target_Name,
-                       Success  => Success,
-                       Preserve => Preserve);
-
-            if not Success then
-               Error (S.all,
-                      "cp: '"  & Filename & "' not copied to '" &
-                        Target_Name & "'");
-               Got_Errors := True;
-            end if;
-
-         elsif GNAT.OS_Lib.Is_Directory (Filename) then
+         if GNAT.OS_Lib.Is_Directory (Filename) then
 
             if not Recursive then
                Got_Errors := True;
@@ -208,17 +186,22 @@ package body Posix_Shell.Builtins.Cp is
                       &  "' is a directory (not copied)");
                return;
             end if;
+            Recursive_Copy (Filename, Target_Path);
 
-            if not Target_Dir_Exists then
-               Recursive_Copy (Filename,
-                               Target_Name);
-            else
-               Recursive_Copy (Filename,
-                               Target_Name &
-                                 GNAT.Directory_Operations.Dir_Separator &
-                                 GNAT.Directory_Operations.Base_Name (Filename)
-                                 );
-            end if;
+         elsif GNAT.OS_Lib.Is_Regular_File (Filename) then
+            Simple_Copy (Filename, Target_Path);
+
+         elsif On_Windows and then
+           GNAT.OS_Lib.Is_Regular_File (Filename & Exec_Extension)
+         then
+             --  Workaround for windows executables:
+             --  In the following, when on a windows platform,
+             --  If the source file does not exist then the source file with
+             --  the exectension '.exe' is looked for.
+             --  In this case, the target will also be extended by '.exe'
+            Simple_Copy (Filename & Exec_Extension,
+                         Target_Path & Exec_Extension);
+
          else
             --  File or directory to copy does not exist
             Got_Errors := True;
@@ -228,11 +211,6 @@ package body Posix_Shell.Builtins.Cp is
       end Cp_Tree;
 
    begin
-
-      if Target_Name = "" then
-         Error (S.all, "cp: missing operand");
-         return 1;
-      end if;
 
       --  Parse options
       for Index in Args'Range loop
@@ -268,30 +246,40 @@ package body Posix_Shell.Builtins.Cp is
          return 1;
       end if;
 
-      Target_Dir_Exists := GNAT.OS_Lib.Is_Directory (Target_Name);
+      declare
+         Target_Path : constant String :=
+           GNAT.OS_Lib.Normalize_Pathname
+             (Resolve_Path (S.all,
+                            Args (Args'Last).all),
+              Resolve_Links => False);
+         Target_Is_Directory : constant Boolean :=
+           GNAT.OS_Lib.Is_Directory (Target_Path);
+      begin
 
-      if File_List_Start /= File_List_End then
-         --  When a list of elements is to be copied, args'last must be an
-         --  existing directory.
-         if not Target_Dir_Exists then
-            Error (S.all, "cp: no such directory '" & Target_Name & "'");
-            return 1;
+         if File_List_Start /= File_List_End then
+            --  When a list of elements is to be copied, args'last must be an
+            --  existing directory.
+            if not Target_Is_Directory then
+               Error (S.all, "cp: no such directory '" & Target_Path & "'");
+               return 1;
+            end if;
          end if;
-      end if;
 
-      --  Iterate the files
-      for Index in File_List_Start .. File_List_End loop
-         Cp_Tree (GNAT.OS_Lib.Normalize_Pathname
-                  (Resolve_Path (S.all, Args (Index).all),
-                     Resolve_Links => False));
-      end loop;
+         --  Iterate the files
+         for Index in File_List_Start .. File_List_End loop
+            Cp_Tree (GNAT.OS_Lib.Normalize_Pathname
+                     (Resolve_Path (S.all, Args (Index).all),
+                        Resolve_Links => False),
+                     Target_Path,
+                     Target_Is_Directory);
+         end loop;
 
-      if Got_Errors then
-         return 1;
-      else
-         return 0;
-      end if;
-
+         if Got_Errors then
+            return 1;
+         else
+            return 0;
+         end if;
+      end;
    end Cp_Builtin;
 
 end Posix_Shell.Builtins.Cp;
