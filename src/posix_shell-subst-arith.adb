@@ -557,6 +557,13 @@ package body Posix_Shell.Subst.Arith is
                                  raise Expr_Error;
                               end if;
 
+                              if Left.Var_Name = null then
+                                 Error (S.all,
+                                        "affectation expects variable symbole:"
+                                        & " '" & Left.S.all & "'");
+                                 raise Expr_Error;
+                              end if;
+
                               Set_Var_Value (S.all,
                                              Left.Var_Name.all,
                                              Right.S.all);

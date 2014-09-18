@@ -36,6 +36,12 @@ y=$(( 1 ~ 21))
 )
 
 echo ""
+echo "no variable in affectation"
+(
+y=$(( 3 = 4 ))
+)
+
+echo ""
 echo "unhandled operators"
 (
 x=$((3 ++ 4))
