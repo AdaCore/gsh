@@ -17,3 +17,17 @@ ${#param}: 4
 expansion with ?
 ${param:?myword}: abcd
 ${empty_str:?myword}: myword
+
+expansion with %
+${x%.c}.o: file.o
+
+expansion with %%
+${x%%/*}: posix
+${x%%*/}: posix
+
+expansion with #
+${x#$HOME}: /src/cmd
+${x#*/}: Users/vreboul/src/cmd
+
+expansion with ##
+${x##*/}: three

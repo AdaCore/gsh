@@ -30,6 +30,7 @@ with GNAT.Directory_Operations;     use GNAT.Directory_Operations;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Posix_Shell.Buffers;           use Posix_Shell.Buffers;
 with Posix_Shell.Exec;              use Posix_Shell.Exec;
+with Posix_Shell.GNULib;            use Posix_Shell.GNULib;
 with Posix_Shell.Lexer;             use Posix_Shell.Lexer;
 with Posix_Shell.Parser;            use Posix_Shell.Parser;
 with Posix_Shell.Subst.Arith;       use Posix_Shell.Subst.Arith;
@@ -83,6 +84,24 @@ package body Posix_Shell.Subst is
 
    function Strip (S : String) return String;
    --  Strip any CR in the string and also all trailing LF.
+
+   function Remove_Prefix
+     (S        : String;
+      Pattern  : String;
+      Smallest : Boolean) return String;
+   --  if Smallest : Retuns S with the smallest portion of the prefix
+   --  matched by the pattern deleted.
+   --  else : Retuns S with the largest portion of the prefix
+   --  matched by the pattern deleted.
+
+   function Remove_Suffix
+     (S        : String;
+      Pattern  : String;
+      Smallest : Boolean) return String;
+   --  if Smallest : Retuns S with the smallest portion of the suffix
+   --  matched by the pattern deleted.
+   --  else : Retuns S with the largest portion of the suffix
+   --  matched by the pattern deleted.
 
    -----------------
    -- Eval_String --
@@ -564,6 +583,66 @@ package body Posix_Shell.Subst is
 
    end Split_Arithmetic_String;
 
+   -------------------
+   -- Remove_Prefix --
+   -------------------
+
+   function Remove_Prefix
+     (S        : String;
+      Pattern  : String;
+      Smallest : Boolean) return String
+   is
+      Start_Index : Positive := S'First;
+      Found       : Boolean  := False;
+   begin
+
+      for I in S'Range loop
+         exit when Smallest and then Found;
+
+         if Fnmatch (Pattern, S (Start_Index .. I)) then
+            Found := True;
+            Start_Index := I + 1;
+         end if;
+
+      end loop;
+
+      if Start_Index in S'Range then
+         return S (Start_Index .. S'Last);
+      else
+         return "";
+      end if;
+
+   end Remove_Prefix;
+
+   -------------------
+   -- Remove_Suffix --
+   -------------------
+
+   function Remove_Suffix
+     (S        : String;
+      Pattern  : String;
+      Smallest : Boolean) return String
+   is
+      End_Index : Positive := S'Last;
+      Found     : Boolean  := False;
+   begin
+      for I in reverse S'Range loop
+         exit when Smallest and then Found;
+
+         if Fnmatch (Pattern, S (I .. End_Index)) then
+            Found := True;
+            End_Index := I - 1;
+         end if;
+
+      end loop;
+
+      if End_Index in S'Range then
+         return S (S'First .. End_Index);
+      else
+         return "";
+      end if;
+   end Remove_Suffix;
+
    ---------------------
    -- Eval_String_Aux --
    ---------------------
@@ -944,6 +1023,18 @@ package body Posix_Shell.Subst is
                   Append (Buffer, Str (Word));
                end if;
 
+            when '#' =>
+               Append (Buffer,
+                       Remove_Prefix (Str (Param_Value),
+                                      Str (Word),
+                                      Operator'Length = 1));
+
+            when '%' =>
+               Append (Buffer,
+                       Remove_Suffix (Str (Param_Value),
+                                      Str (Word),
+                                      Operator'Length = 1));
+
             when others =>
                null;
 
@@ -1000,11 +1091,9 @@ package body Posix_Shell.Subst is
          Param_First := Index;
          CC := S (Param_First);
 
-
          pragma Debug (Log ("paremeter_subst", Is_Brace_Expansion'Img));
 
          if Is_Brace_Expansion then
-
 
             --  This is most complex type of expansion
             if CC = '#' and then
@@ -1064,6 +1153,22 @@ package body Posix_Shell.Subst is
                            when others =>
                               Error (SS.all, "bad substitution");
                               raise Variable_Name_Error;
+                        end case;
+
+                     when '#'  | '%' =>
+                        Index := Index + 1;
+                        case S (Index) is
+                           when '#'  | '%' =>
+                              Index := Index + 1;
+                              Apply_Substitution_Op
+                                (Parameter,
+                                 S (Index - 2 .. Index - 1),
+                                 Is_Splitable);
+                           when others =>
+                              Apply_Substitution_Op
+                                (Parameter,
+                                 S (Index - 1 .. Index - 1),
+                                 Is_Splitable);
                         end case;
 
                      when others =>
