@@ -1,9 +1,19 @@
+
 expansion with -
-abcd
-myword
+${param:-myword}: abcd
+${empty_str:-myword}: myword
+
 expansion with :
-abcd
-myword
+${param:=myword}: abcd
+${empty_str:=myword}: myword
+
 expansion with +
-myword
-myword
+${param:+myword}: myword
+${empty_str:+myword}: myword
+
+expansion starting with #
+${#param}: 4
+
+expansion with ?
+${param:?myword}: abcd
+${empty_str:?myword}: myword

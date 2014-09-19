@@ -25,7 +25,6 @@
 ------------------------------------------------------------------------------
 
 with Ada.Directories;
---  with Dyn_String_Lists;
 with GNAT.Directory_Operations;     use GNAT.Directory_Operations;
 
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
@@ -785,6 +784,12 @@ package body Posix_Shell.Subst is
                    "bad math expression in "
                    & S (Arith_Start .. Arith_End));
             Shell_Exit (SS.all, 1);
+
+         when Storage_Error =>
+            Error (SS.all,
+                   "math recursion limit exceeded in "
+                   & S (Arith_Start .. Arith_End));
+            Shell_Exit (SS.all, 1);
       end Eval_Arithmetic_Expansion;
 
       -----------------------
@@ -833,42 +838,41 @@ package body Posix_Shell.Subst is
          Param_First : constant Integer := Index;
 
       begin
-            if S (Index) = '@'  --  Special parameter
-              or else S (Index) = '*'  --  Special parameter
-              or else S (Index) = '#'  --  Special parameter
-              or else S (Index) = '?'  --  Special parameter
-              or else S (Index) = '-'  --  Special parameter
-              or else S (Index) = '$'  --  Special parameter
-              or else S (Index) = '!'  --  Special parameter
-            then
-               --  Is this special parameter? In such case,
-               --  the token ends at the first character.
-               return "" & S (Index);
 
-            elsif not Is_Brace_Expansion and then S (Index) in '0' .. '9' then
-               return "" & S (Index);
+         if S (Index) = '@'  --  Special parameter
+           or else S (Index) = '*'  --  Special parameter
+           or else S (Index) = '#'  --  Special parameter
+           or else S (Index) = '?'  --  Special parameter
+           or else S (Index) = '-'  --  Special parameter
+           or else S (Index) = '$'  --  Special parameter
+           or else S (Index) = '!'  --  Special parameter
+         then
+            --  Is this special parameter? In such case,
+            --  the token ends at the first character.
+            return "" & S (Index);
 
-            else
-               --  This is neither a brace parameter expansion, neither a
-               --  special parameter. This remaining case is for $PARAMETER
-               --  where parameter is a valid variable name.
+         elsif not Is_Brace_Expansion and then S (Index) in '0' .. '9' then
+            return "" & S (Index);
+         else
+            --  This is not a special character.
+            --  This remaining case is for $PARAMETER
+            --  where parameter is a valid variable name.
+            loop
 
-               loop
+               case S (Index) is
+                  when 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' =>
+                     null;
+                  when others =>
+                     Index := Index - 1;
+                     exit;
+               end case;
+               exit when Index >= S'Last;
 
-                  case S (Index) is
-                     when 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' =>
-                        null;
-                     when others =>
-                        Index := Index - 1;
-                        exit;
-                  end case;
-                  exit when Index >= S'Last;
-
-                  Index := Index + 1;
-               end loop;
-               pragma Debug (Log ("read_parameter", S (Param_First .. Index)));
-               return S (Param_First .. Index);
-            end if;
+               Index := Index + 1;
+            end loop;
+            pragma Debug (Log ("read_parameter", S (Param_First .. Index)));
+            return S (Param_First .. Index);
+         end if;
       end Read_Parameter;
 
       procedure Apply_Substitution_Op
@@ -899,39 +903,51 @@ package body Posix_Shell.Subst is
 
          --  Then decide what to do depending on the parameter value and the
          --  operator
-         if Operator (Operator'Last) = '-' then
-            if not Is_Set then
-               Append (Buffer, Word);
-            elsif not Is_Null then
-               Append (Buffer, Param_Value);
-            end if;
-         elsif Operator (Operator'Last) = '=' then
-            if not Is_Set then
-               Set_Var_Value (SS.all,
-                              Name => Parameter,
-                              Value => Str (Word));
-               Append (Buffer, Word);
-            else
-               Append (Buffer, Param_Value);
-            end if;
-         elsif Operator (Operator'Last) = '+' then
-            if Is_Set then
-               Append (Buffer, Word);
-            end if;
-         elsif Operator (Operator'Last) = '?' then
-            if not Is_Set then
-               declare
-                  Message : constant String := Str (Word);
-               begin
-                  if Message'Length > 0 then
-                     Error (SS.all, Parameter & ": " & Message);
-                  else
-                     Error (SS.all, Parameter & ": parameter null or not set");
-                  end if;
-               end;
-               Shell_Exit (SS.all, 1);
-            end if;
-         end if;
+         case Operator (Operator'Last) is
+            when '-' =>
+               if not Is_Set then
+                  Append (Buffer, Word);
+               elsif not Is_Null then
+                  Append (Buffer, Param_Value);
+               end if;
+            when '=' =>
+               if not Is_Set then
+                  Set_Var_Value (SS.all,
+                                 Name  => Parameter,
+                                 Value => Str (Word));
+                  Append (Buffer, Word);
+               else
+                  Append (Buffer, Param_Value);
+               end if;
+            when '+' =>
+               if Is_Set then
+                  Append (Buffer, Word);
+               end if;
+            when '?' =>
+               if not Is_Set then
+                  declare
+                     Message : constant String := Str (Word);
+                  begin
+                     if Message'Length > 0 then
+                        Error (SS.all, Parameter & ": " & Message);
+                     else
+                        Error (SS.all,
+                               Parameter & ": parameter null or not set");
+                     end if;
+                  end;
+                  Shell_Exit (SS.all, 1);
+               end if;
+
+               if Str (Param_Value)'Length > 0 then
+                  Append (Buffer, Str (Param_Value));
+               else
+                  Append (Buffer, Str (Word));
+               end if;
+
+            when others =>
+               null;
+
+         end case;
       end Apply_Substitution_Op;
 
       -----------------------
@@ -984,10 +1000,13 @@ package body Posix_Shell.Subst is
          Param_First := Index;
          CC := S (Param_First);
 
+
          pragma Debug (Log ("paremeter_subst", Is_Brace_Expansion'Img));
 
          if Is_Brace_Expansion then
-            --  This is most complex type of exansion
+
+
+            --  This is most complex type of expansion
             if CC = '#' and then
               (S (Index + 1) = '_' or else
                S (Index + 1) in 'a' .. 'z' or else
@@ -1013,6 +1032,7 @@ package body Posix_Shell.Subst is
                   Append (Buffer, Length);
                end;
             else
+
                --  In all other cases we should first find a parameter
                declare
                   Parameter : constant String :=
@@ -1026,6 +1046,7 @@ package body Posix_Shell.Subst is
                           (Buffer,
                            Get_Var_Value (SS.all, Parameter, Is_Splitable));
                         return;
+
                      when '-' | '=' | '?' | '+' =>
                         Index := Index + 1;
                         Apply_Substitution_Op (Parameter,
@@ -1044,6 +1065,7 @@ package body Posix_Shell.Subst is
                               Error (SS.all, "bad substitution");
                               raise Variable_Name_Error;
                         end case;
+
                      when others =>
                         Error (SS.all, "bad substitution");
                         raise Variable_Name_Error;
