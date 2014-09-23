@@ -1020,7 +1020,7 @@ package body Posix_Shell.Subst is
                if Str (Param_Value)'Length > 0 then
                   Append (Buffer, Str (Param_Value));
                else
-                  Append (Buffer, Str (Word));
+                  Append (Buffer, "");
                end if;
 
             when '#' =>
