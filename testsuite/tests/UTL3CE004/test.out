@@ -19,5 +19,6 @@ content of c
 copy 'a.exe' in an existing folder: cp a dir_a
 * ls dir_a/*
 dir_a/a.exe
+dir_a/content
 * cat dir_a/a.exe
 content of a.exe
