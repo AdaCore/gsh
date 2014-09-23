@@ -49,6 +49,10 @@ Length (subst starting with by #)
 ${#param}:      4 / expected 4
 ${#empty_str}:  0 / expected 0
 ${#unset_var}:  0 / expected 0
+${#?}:          1 / expected 1
+${##}:          1 / expected 1
+${#@}:          2 / expected 2
+${#1}:          4 / expected 4
 
 Substrings processing
 =====================

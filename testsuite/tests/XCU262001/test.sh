@@ -91,8 +91,12 @@ empty_str=""
 unset unset_var
 echo '${#param}:     ' ${#param} / expected 4
 echo '${#empty_str}: ' ${#empty_str} / expected 0
-echo '${#unset_var}: '  ${#unset_var} / expected 0
-
+echo '${#unset_var}: ' ${#unset_var} / expected 0
+echo '${#?}:         ' ${#?} / expected 1
+echo '${##}:         ' ${##} / expected 1
+set abcc c
+echo '${#@}:         ' ${#@} / expected 2
+echo '${#1}:         ' ${#1} / expected 4
 
 echo ""
 echo "Substrings processing"

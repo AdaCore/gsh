@@ -1099,7 +1099,16 @@ package body Posix_Shell.Subst is
             if CC = '#' and then
               (S (Index + 1) = '_' or else
                S (Index + 1) in 'a' .. 'z' or else
-               S (Index + 1) in 'A' .. 'Z')
+               S (Index + 1) in 'A' .. 'Z' or else
+               S (Index + 1) = '*' or else
+               S (Index + 1) = '@' or else
+               S (Index + 1) = '#' or else
+               S (Index + 1) = '-' or else
+               S (Index + 1) = '$' or else
+               S (Index + 1) = '?' or else
+               S (Index + 1) = '!' or else
+               S (Index + 1) in '0' .. '9'
+              )
             then
                --  We should compute the length of the upcoming parameter
                Index := Index + 1;
@@ -1118,7 +1127,12 @@ package body Posix_Shell.Subst is
                      raise Variable_Name_Error;
                   end if;
                   --  The previous test ensure that there is a parameter.
-                  Append (Buffer, Length);
+                  if Parameter = "@" or else Parameter = "*" then
+                     Append (Buffer,
+                             Str (Get_Var_Value (SS.all, "#", Is_Splitable)));
+                  else
+                     Append (Buffer, Length);
+                  end if;
                end;
             else
 
