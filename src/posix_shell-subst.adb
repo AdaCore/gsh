@@ -592,7 +592,7 @@ package body Posix_Shell.Subst is
       Pattern  : String;
       Smallest : Boolean) return String
    is
-      Start_Index : Positive := S'First;
+      Start_Index : Natural := S'First;
       Found       : Boolean  := False;
    begin
 
@@ -623,7 +623,7 @@ package body Posix_Shell.Subst is
       Pattern  : String;
       Smallest : Boolean) return String
    is
-      End_Index : Positive := S'Last;
+      End_Index : Natural := S'Last;
       Found     : Boolean  := False;
    begin
       for I in reverse S'Range loop
