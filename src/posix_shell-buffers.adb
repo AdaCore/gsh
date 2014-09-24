@@ -203,7 +203,7 @@ package body Posix_Shell.Buffers is
       end if;
 
       for J in 1 .. Step loop
-         if B.Pos.Offset - J <=  B.S'Last and then
+         if B.Pos.Offset - J <  B.S'Last and then
            B.S (B.Pos.Offset - J) = ASCII.LF
          then
             B.Pos.Line := B.Pos.Line - 1;
