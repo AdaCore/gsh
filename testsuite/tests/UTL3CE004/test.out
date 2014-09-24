@@ -1,10 +1,10 @@
-when 'a' does not exist but 'a.exe' does : cp a copy_a
+when 'a' does not exist but 'a.exe' does: cp a copy_a
 * ls copy_a.exe
 copy_a.exe
 * cat copy_a.exe
 content of a.exe
 
-copy on side of an existing file : cp a b
+copy on side of an existing file: cp a b
 * ls b*
 b
 b.exe
@@ -12,6 +12,13 @@ b.exe
 content of b - must not be overwritten when `cp a b` with 'a' being actually a.exe
 content of a.exe
 
-copy c is prioritary on copy of c.exe : cp c copy_c
+copy c is prioritary on copy of c.exe: cp c copy_c
 * cat copy_c
 content of c
+
+copy 'a.exe' in an existing folder: cp a dir_a
+* ls dir_a/*
+dir_a/a.exe
+dir_a/content
+* cat dir_a/a.exe
+content of a.exe

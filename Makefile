@@ -29,7 +29,7 @@ readline/Makefile:
 
 # Launch the testsuite
 check:
-	@(PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && export PATH && cd testsuite && python ./testsuite.py -t tmp -j0)
+	@(PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && export PATH && cd testsuite && python ./testsuite.py -t tmp -j0 $(TEST))
 
 .PHONY: install
 install:

@@ -24,18 +24,20 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Variables.Output;     use Posix_Shell.Variables.Output;
-with Posix_Shell.Parser;     use Posix_Shell.Parser;
-with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
-with Posix_Shell.String_Utils;      use Posix_Shell.String_Utils;
 with Ada.Directories;
-with GNAT.Directory_Operations; use GNAT.Directory_Operations;
-with Dyn_String_Lists;
-with Posix_Shell.Lexer; use Posix_Shell.Lexer;
-with Posix_Shell.Traces; use Posix_Shell.Traces;
+with GNAT.Directory_Operations;     use GNAT.Directory_Operations;
+
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
-with Posix_Shell.Buffers; use Posix_Shell.Buffers;
-with Posix_Shell.Exec; use Posix_Shell.Exec;
+with Posix_Shell.Buffers;           use Posix_Shell.Buffers;
+with Posix_Shell.Exec;              use Posix_Shell.Exec;
+with Posix_Shell.GNULib;            use Posix_Shell.GNULib;
+with Posix_Shell.Lexer;             use Posix_Shell.Lexer;
+with Posix_Shell.Parser;            use Posix_Shell.Parser;
+with Posix_Shell.Subst.Arith;       use Posix_Shell.Subst.Arith;
+with Posix_Shell.String_Utils;      use Posix_Shell.String_Utils;
+with Posix_Shell.Traces;            use Posix_Shell.Traces;
+with Posix_Shell.Tree.Evals;        use Posix_Shell.Tree.Evals;
+with Posix_Shell.Variables.Output;  use Posix_Shell.Variables.Output;
 
 package body Posix_Shell.Subst is
 
@@ -82,6 +84,28 @@ package body Posix_Shell.Subst is
 
    function Strip (S : String) return String;
    --  Strip any CR in the string and also all trailing LF.
+
+   function Remove_Prefix
+     (S        : String;
+      Pattern  : String;
+      Smallest : Boolean) return String;
+   --  if Smallest : Retuns S with the smallest portion of the prefix
+   --  matched by the pattern deleted.
+   --  else : Retuns S with the largest portion of the prefix
+   --  matched by the pattern deleted.
+
+   function Remove_Suffix
+     (S        : String;
+      Pattern  : String;
+      Smallest : Boolean) return String;
+   --  if Smallest : Retuns S with the smallest portion of the suffix
+   --  matched by the pattern deleted.
+   --  else : Retuns S with the largest portion of the suffix
+   --  matched by the pattern deleted.
+
+   -----------------
+   -- Eval_String --
+   -----------------
 
    function Eval_String
      (SS        : Shell_State_Access;
@@ -278,6 +302,10 @@ package body Posix_Shell.Subst is
       --  end if;
    end Split_String;
 
+   ------------------
+   -- Split_String --
+   ------------------
+
    function Split_String
      (SS        : Shell_State_Access;
       S         : String;
@@ -291,6 +319,10 @@ package body Posix_Shell.Subst is
       return Content (Split_String (SS, AS, Max_Split));
    end Split_String;
 
+   -----------------
+   -- Eval_String --
+   -----------------
+
    function Eval_String
      (SS        : Shell_State_Access;
       S         : String;
@@ -301,6 +333,315 @@ package body Posix_Shell.Subst is
    begin
       return Content (Eval_String (SS, S, Max_Split));
    end Eval_String;
+
+   -----------------------------
+   -- Split_Arithmetic_String --
+   -----------------------------
+
+   procedure Split_Arithmetic_String
+     (SS                  : Shell_State_Access;
+      Str                 : String;
+      Previous_Was_Number : in out Boolean;
+      Args_List           : in out Dyn_String_Lists.Dyn_String_List)
+   is
+      use Dyn_String_Lists;
+      Internal_Word_Start : Integer := Str'First;
+      Internal_Index      : Integer := Str'First;
+   begin
+
+      loop
+         case Str (Internal_Index) is
+
+            when 'a' .. 'z' | 'A' .. 'Z' | '_' =>
+
+               if Previous_Was_Number then
+                  Error (SS.all,
+                         "operator expected at : '"
+                         & Str (Internal_Index .. Str'Last) & "'");
+                  raise Expr_Error;
+               end if;
+
+               Internal_Word_Start := Internal_Index;
+               Internal_Index := Internal_Index + 1;
+
+               while Internal_Index  <= Str'Last loop
+
+                  case Str (Internal_Index) is
+                     when 'a' .. 'z' | 'A' .. 'Z' | '_'
+                        | '0' .. '9'  =>
+                        --  still reading a variable name
+                        Internal_Index := Internal_Index + 1;
+
+                     when others =>
+                        exit;
+                  end case;
+               end loop;
+
+               Previous_Was_Number := True;
+               Internal_Index := Internal_Index - 1;
+
+               Append (Args_List,
+                       new String'(
+                         Str (Internal_Word_Start ..
+                             Internal_Index)));
+
+            when '0' .. '9' =>
+
+               if Previous_Was_Number then
+                  Error (SS.all,
+                         "operator expected at : '"
+                         & Str (Internal_Index .. Str'Last) & "'");
+                  raise Expr_Error;
+               end if;
+
+               Internal_Word_Start := Internal_Index;
+               Internal_Index := Internal_Index + 1;
+
+               while Internal_Index  <= Str'Last loop
+
+                  case Str (Internal_Index) is
+                     when '0' .. '9'  =>
+                        Internal_Index := Internal_Index + 1;
+                     when others =>
+                        exit;
+                  end case;
+               end loop;
+
+               Internal_Index := Internal_Index - 1;
+
+               Previous_Was_Number := True;
+
+               Append (Args_List,
+                       new String'(
+                         Str (Internal_Word_Start ..
+                             Internal_Index)));
+
+            when '-' =>
+               Internal_Word_Start := Internal_Index;
+
+               if Internal_Index < Str'Last then
+                  Internal_Index := Internal_Index + 1;
+
+                  case Str (Internal_Index) is
+                     when '0' .. '9' =>
+
+                        if Previous_Was_Number then
+                           --  this 'minus' is actually a binary op
+                           --  we 'unread' the current character
+                           --  and 'minus' will be added after the
+                           --  case statement.
+                           Previous_Was_Number := False;
+                        else
+                           --  this is a negative number
+                           Previous_Was_Number := True;
+
+                           Internal_Index := Internal_Index + 1;
+
+                           while Internal_Index <= Str'Last loop
+                              case Str (Internal_Index) is
+                                 when '0' .. '9'  =>
+                                    Internal_Index := Internal_Index + 1;
+                                 when others =>
+                                    --  unread current char
+                                    exit;
+                              end case;
+                           end loop;
+                        end if;
+
+                        Internal_Index := Internal_Index - 1;
+
+                     when '-' =>
+                        --  this is the operator '--'
+                        --  it will be added after this case
+                        --  statement
+                        Previous_Was_Number := False;
+
+                     when others =>
+                        --  unread the current character
+                        --  the 'minus' is an operator must be
+                        --  added to the list. it may be either
+                        --  a binary op or a unary op
+                        --  (this will be analyzed by expr_eval)
+                        Previous_Was_Number := False;
+                        Internal_Index := Internal_Index - 1;
+                  end case;
+               else
+                  --  a unique character was found and it's a '-'
+                  Previous_Was_Number := False;
+               end if;
+
+               Append (Args_List,
+                       new String'(
+                         Str (Internal_Word_Start ..
+                             Internal_Index)));
+            when '+' =>
+
+               Internal_Word_Start := Internal_Index;
+
+               if Internal_Index < Str'Last then
+                  Internal_Index := Internal_Index + 1;
+
+                  case Str (Internal_Index) is
+                     when '0' .. '9' =>
+
+                        if Previous_Was_Number then
+                           --  this 'plus' is a binary op
+                           --  we 'unread' the current character
+                           --  and 'plus' will be added to the list
+                           --  after the case statement.
+                           Previous_Was_Number := False;
+                        else
+                           --  this is a positive number
+                           --  we skip the un-necessary unary '+'
+                           Previous_Was_Number := True;
+                           Internal_Word_Start := Internal_Index;
+
+                           Internal_Index := Internal_Index + 1;
+
+                           while Internal_Index <= Str'Last loop
+                              case Str (Internal_Index) is
+                                 when '0' .. '9'  =>
+                                    Internal_Index := Internal_Index + 1;
+                                 when others =>
+                                    exit;
+                              end case;
+                           end loop;
+
+                        end if;
+                        Internal_Index := Internal_Index - 1;
+
+                     when '+' =>
+                        --  this is the operator '++'
+                        --  it will be added after this case
+                        --  statement
+                        Previous_Was_Number := False;
+
+                     when others =>
+                        --  unread the current character.
+                        --  the 'plus' is an operator, must be
+                        --  added to the list. it may be either
+                        --  a binary op or a unary op
+                        --  (this will be analyzed by expr_eval)
+                        Previous_Was_Number := False;
+                        Internal_Index := Internal_Index - 1;
+                  end case;
+               else
+                  --  a unique character was found and it's a '+'
+                  Previous_Was_Number := False;
+               end if;
+
+               Append (Args_List,
+                       new String'(
+                         Str (Internal_Word_Start ..
+                             Internal_Index)));
+
+            when '>' | '<' | '!' | '='  =>
+               Internal_Word_Start := Internal_Index;
+
+               if Internal_Index < Str'Last then
+                  Internal_Index := Internal_Index + 1;
+
+                  if Str (Internal_Index) /= '=' then
+                     --  if current char is not an equal sign then
+                     --  the actual token is an operator made of
+                     --  a unique character.
+                     --  unread the current char
+                     Internal_Index := Internal_Index - 1;
+                  end if;
+               end if;
+
+               Previous_Was_Number := False;
+
+               Append (Args_List,
+                       new String'(
+                         Str (Internal_Word_Start ..
+                             Internal_Index)));
+
+            when '*' | '/' | '%' | '(' | ')' =>
+               Internal_Word_Start := Internal_Index;
+               Previous_Was_Number := False;
+
+               Append (Args_List,
+                       new String'(
+                         Str (Internal_Word_Start ..
+                             Internal_Index)));
+
+            when ' ' =>
+               null;
+
+            when others =>
+               Error (SS.all,
+                      "unexpected character : "
+                      & Str (Internal_Index));
+               raise Expr_Error;
+         end case;
+
+         Internal_Index := Internal_Index + 1;
+
+         exit when Internal_Index > Str'Last;
+      end loop;
+
+   end Split_Arithmetic_String;
+
+   -------------------
+   -- Remove_Prefix --
+   -------------------
+
+   function Remove_Prefix
+     (S        : String;
+      Pattern  : String;
+      Smallest : Boolean) return String
+   is
+      Start_Index : Natural := S'First;
+      Found       : Boolean  := False;
+   begin
+
+      for I in S'Range loop
+         exit when Smallest and then Found;
+
+         if Fnmatch (Pattern, S (Start_Index .. I)) then
+            Found := True;
+            Start_Index := I + 1;
+         end if;
+
+      end loop;
+
+      if Start_Index in S'Range then
+         return S (Start_Index .. S'Last);
+      else
+         return "";
+      end if;
+
+   end Remove_Prefix;
+
+   -------------------
+   -- Remove_Suffix --
+   -------------------
+
+   function Remove_Suffix
+     (S        : String;
+      Pattern  : String;
+      Smallest : Boolean) return String
+   is
+      End_Index : Natural := S'Last;
+      Found     : Boolean  := False;
+   begin
+      for I in reverse S'Range loop
+         exit when Smallest and then Found;
+
+         if Fnmatch (Pattern, S (I .. End_Index)) then
+            Found := True;
+            End_Index := I - 1;
+         end if;
+
+      end loop;
+
+      if End_Index in S'Range then
+         return S (S'First .. End_Index);
+      else
+         return "";
+      end if;
+   end Remove_Suffix;
 
    ---------------------
    -- Eval_String_Aux --
@@ -333,11 +674,17 @@ package body Posix_Shell.Subst is
       procedure Eval_Command_Subst;
       --  Eval a command substitution construction
 
+      procedure Eval_Arithmetic_Expansion;
+      --  Eval an arithmetic expansion
+
       procedure Eval_Double_Quote;
       --  Eval a double quoted string
 
       procedure Eval_Escape_Sequence (In_Double_Quote : Boolean);
       --  Eval an escape sequence
+
+      procedure Eval_Dollar_Subst (Is_Splitable : Boolean);
+      --  Eval a substitution introduced by a $
 
       function Read_Parameter
         (Is_Brace_Expansion : Boolean)
@@ -427,6 +774,103 @@ package body Posix_Shell.Subst is
 
       end Eval_Command_Subst;
 
+      -------------------------------
+      -- Eval_Arithmetic_Expansion --
+      -------------------------------
+
+      procedure Eval_Arithmetic_Expansion is
+         Previous_Was_Par   : Boolean := False;
+         Opened_Paranthesis : Natural := 2;
+         Arith_Start        : constant Integer := Index + 2;
+         Arith_End          : Integer;
+         File_Expansion     : constant Boolean :=
+                                Is_File_Expansion_Enabled (SS.all);
+      begin
+         Index := Index + 2;
+         --  skip the initial parentheses. dollar has already been skipped
+
+         --  * First step: delimit arithmetic expression to be expanded
+         loop
+            case S (Index) is
+               when '(' => Opened_Paranthesis := Opened_Paranthesis + 1;
+               when ')' =>
+                  Opened_Paranthesis := Opened_Paranthesis - 1;
+                  if Opened_Paranthesis = 0 and Previous_Was_Par then
+                     Arith_End := Index - 2;
+                     exit;
+                  end if;
+               when ASCII.EOT =>
+                  Error (SS.all, "unexpected EOF");
+               when others =>
+                  null;
+            end case;
+
+            Previous_Was_Par := S (Index) = ')';
+
+            Index := Index + 1;
+         end loop;
+
+         --  In the next steps, '*' must be a multiplication operator
+         --  No expansion should be performed regarding files.
+         if File_Expansion then
+            Set_File_Expansion (SS.all, False);
+         end if;
+
+         declare
+            Delimited_Expression : constant String :=
+                                     S (Arith_Start .. Arith_End);
+
+            --  * Second step: apply the evaluation of string on the
+            --  different elemets of the arithmetict expression
+            Arith_List : constant String_List :=
+                           Eval_String (SS, Delimited_Expression);
+
+            use Dyn_String_Lists;
+            Tokenized_List      : Dyn_String_List;
+            Previous_Was_Number : Boolean := False;
+         begin
+
+            --  * Third step: Tokenize the string list
+            --  In the current string list, some elements
+            --  might not be in the format expected by the function'Eval_Expr'
+            --  (maybe no space between values and operators...)
+            --  They must be 're-splitted' when necessary.
+
+            for Elem of Arith_List loop
+               Split_Arithmetic_String (SS,
+                                        Elem.all,
+                                        Previous_Was_Number,
+                                        Tokenized_List);
+            end loop;
+
+            Append (Buffer,
+                    Eval_Expr (SS, Content (Tokenized_List), True));
+
+         exception
+            when Expr_Error =>
+               Error (SS.all,
+                      "bad math expression in "
+                      & Delimited_Expression);
+               Shell_Exit (SS.all, 1);
+         end;
+
+         --  Set back the file_expansion flag to its initial value.
+         Set_File_Expansion (SS.all, File_Expansion);
+
+      exception
+         when Expr_Error =>
+            Error (SS.all,
+                   "bad math expression in "
+                   & S (Arith_Start .. Arith_End));
+            Shell_Exit (SS.all, 1);
+
+         when Storage_Error =>
+            Error (SS.all,
+                   "math recursion limit exceeded in "
+                   & S (Arith_Start .. Arith_End));
+            Shell_Exit (SS.all, 1);
+      end Eval_Arithmetic_Expansion;
+
       -----------------------
       -- Eval_Double_Quote --
       -----------------------
@@ -444,7 +888,7 @@ package body Posix_Shell.Subst is
                when '`' =>
                   Eval_Backquoted_Command_Subst (True);
                when '$' =>
-                  Eval_Param_Subst (Is_Splitable => False);
+                  Eval_Dollar_Subst (Is_Splitable => False);
                when '\' =>
                   Eval_Escape_Sequence (In_Double_Quote => True);
                when '"' =>
@@ -473,42 +917,41 @@ package body Posix_Shell.Subst is
          Param_First : constant Integer := Index;
 
       begin
-            if S (Index) = '@'  --  Special parameter
-              or else S (Index) = '*'  --  Special parameter
-              or else S (Index) = '#'  --  Special parameter
-              or else S (Index) = '?'  --  Special parameter
-              or else S (Index) = '-'  --  Special parameter
-              or else S (Index) = '$'  --  Special parameter
-              or else S (Index) = '!'  --  Special parameter
-            then
-               --  Is this special parameter? In such case,
-               --  the token ends at the first character.
-               return "" & S (Index);
 
-            elsif not Is_Brace_Expansion and then S (Index) in '0' .. '9' then
-               return "" & S (Index);
+         if S (Index) = '@'  --  Special parameter
+           or else S (Index) = '*'  --  Special parameter
+           or else S (Index) = '#'  --  Special parameter
+           or else S (Index) = '?'  --  Special parameter
+           or else S (Index) = '-'  --  Special parameter
+           or else S (Index) = '$'  --  Special parameter
+           or else S (Index) = '!'  --  Special parameter
+         then
+            --  Is this special parameter? In such case,
+            --  the token ends at the first character.
+            return "" & S (Index);
 
-            else
-               --  This is neither a brace parameter expansion, neither a
-               --  special parameter. This remaining case is for $PARAMETER
-               --  where parameter is a valid variable name.
+         elsif not Is_Brace_Expansion and then S (Index) in '0' .. '9' then
+            return "" & S (Index);
+         else
+            --  This is not a special character.
+            --  This remaining case is for $PARAMETER
+            --  where parameter is a valid variable name.
+            loop
 
-               loop
+               case S (Index) is
+                  when 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' =>
+                     null;
+                  when others =>
+                     Index := Index - 1;
+                     exit;
+               end case;
+               exit when Index >= S'Last;
 
-                  case S (Index) is
-                     when 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' =>
-                        null;
-                     when others =>
-                        Index := Index - 1;
-                        exit;
-                  end case;
-                  exit when Index >= S'Last;
-
-                  Index := Index + 1;
-               end loop;
-               pragma Debug (Log ("read_parameter", S (Param_First .. Index)));
-               return S (Param_First .. Index);
-            end if;
+               Index := Index + 1;
+            end loop;
+            pragma Debug (Log ("read_parameter", S (Param_First .. Index)));
+            return S (Param_First .. Index);
+         end if;
       end Read_Parameter;
 
       procedure Apply_Substitution_Op
@@ -539,40 +982,92 @@ package body Posix_Shell.Subst is
 
          --  Then decide what to do depending on the parameter value and the
          --  operator
-         if Operator (Operator'Last) = '-' then
-            if not Is_Set then
-               Append (Buffer, Word);
-            elsif not Is_Null then
-               Append (Buffer, Param_Value);
-            end if;
-         elsif Operator (Operator'Last) = '=' then
-            if not Is_Set then
-               Set_Var_Value (SS.all,
-                              Name => Parameter,
-                              Value => Str (Word));
-               Append (Buffer, Word);
-            else
-               Append (Buffer, Param_Value);
-            end if;
-         elsif Operator (Operator'Last) = '+' then
-            if Is_Set then
-               Append (Buffer, Word);
-            end if;
-         elsif Operator (Operator'Last) = '?' then
-            if not Is_Set then
-               declare
-                  Message : constant String := Str (Word);
-               begin
-                  if Message'Length > 0 then
-                     Error (SS.all, Parameter & ": " & Message);
-                  else
-                     Error (SS.all, Parameter & ": parameter null or not set");
-                  end if;
-               end;
-               Shell_Exit (SS.all, 1);
-            end if;
-         end if;
+         case Operator (Operator'Last) is
+            when '-' =>
+               if not Is_Set then
+                  Append (Buffer, Word);
+               elsif not Is_Null then
+                  Append (Buffer, Param_Value);
+               end if;
+            when '=' =>
+               if not Is_Set then
+                  Set_Var_Value (SS.all,
+                                 Name  => Parameter,
+                                 Value => Str (Word));
+                  Append (Buffer, Word);
+               else
+                  Append (Buffer, Param_Value);
+               end if;
+            when '+' =>
+               if Is_Set then
+                  Append (Buffer, Word);
+               end if;
+            when '?' =>
+               if not Is_Set then
+                  declare
+                     Message : constant String := Str (Word);
+                  begin
+                     if Message'Length > 0 then
+                        Error (SS.all, Parameter & ": " & Message);
+                     else
+                        Error (SS.all,
+                               Parameter & ": parameter null or not set");
+                     end if;
+                  end;
+                  Shell_Exit (SS.all, 1);
+               end if;
+
+               if Str (Param_Value)'Length > 0 then
+                  Append (Buffer, Str (Param_Value));
+               else
+                  Append (Buffer, "");
+               end if;
+
+            when '#' =>
+               Append (Buffer,
+                       Remove_Prefix (Str (Param_Value),
+                                      Str (Word),
+                                      Operator'Length = 1));
+
+            when '%' =>
+               Append (Buffer,
+                       Remove_Suffix (Str (Param_Value),
+                                      Str (Word),
+                                      Operator'Length = 1));
+
+            when others =>
+               null;
+
+         end case;
       end Apply_Substitution_Op;
+
+      -----------------------
+      -- Eval_Dollar_Subst --
+      -----------------------
+
+      procedure Eval_Dollar_Subst (Is_Splitable : Boolean) is
+         Is_Arithmetic_Expansion : Boolean := False;
+      begin
+         --  Skip the initial '$'...
+         Index := Index + 1;
+
+         --  Check if the kind of expansion (with braces or not). Using braces
+         --  allows the use of more complex patterns for the substitution.
+
+         if S (Index) = '(' then
+            Is_Arithmetic_Expansion := S (Index + 1) = '(';
+
+            if Is_Arithmetic_Expansion then
+               Eval_Arithmetic_Expansion;
+            else
+               Eval_Command_Subst;
+            end if;
+
+         else
+            Eval_Param_Subst (Is_Splitable);
+         end if;
+
+      end Eval_Dollar_Subst;
 
       ----------------------
       -- Eval_Param_Subst --
@@ -586,18 +1081,10 @@ package body Posix_Shell.Subst is
          CC                    : Character;
 
       begin
-         --  Skip the initial '$'...
-         Index := Index + 1;
-
-         --  Check if the kind of expansion (with braces or not). Using braces
-         --  allows the use of more complex patterns for the substitution.
+         --  initial $ has been previously skipped.
          if S (Index) = '{' then
             Is_Brace_Expansion := True;
             Index := Index + 1;
-         elsif S (Index) = '(' then
-            --  This is a command substitution not a parameter one.
-            Eval_Command_Subst;
-            return;
          end if;
 
          --  All parameters expansions do start with a parameter.
@@ -607,11 +1094,21 @@ package body Posix_Shell.Subst is
          pragma Debug (Log ("paremeter_subst", Is_Brace_Expansion'Img));
 
          if Is_Brace_Expansion then
-            --  This is most complex type of exansion
+
+            --  This is most complex type of expansion
             if CC = '#' and then
               (S (Index + 1) = '_' or else
                S (Index + 1) in 'a' .. 'z' or else
-               S (Index + 1) in 'A' .. 'Z')
+               S (Index + 1) in 'A' .. 'Z' or else
+               S (Index + 1) = '*' or else
+               S (Index + 1) = '@' or else
+               S (Index + 1) = '#' or else
+               S (Index + 1) = '-' or else
+               S (Index + 1) = '$' or else
+               S (Index + 1) = '?' or else
+               S (Index + 1) = '!' or else
+               S (Index + 1) in '0' .. '9'
+              )
             then
                --  We should compute the length of the upcoming parameter
                Index := Index + 1;
@@ -630,9 +1127,15 @@ package body Posix_Shell.Subst is
                      raise Variable_Name_Error;
                   end if;
                   --  The previous test ensure that there is a parameter.
-                  Append (Buffer, Length);
+                  if Parameter = "@" or else Parameter = "*" then
+                     Append (Buffer,
+                             Str (Get_Var_Value (SS.all, "#", Is_Splitable)));
+                  else
+                     Append (Buffer, Length);
+                  end if;
                end;
             else
+
                --  In all other cases we should first find a parameter
                declare
                   Parameter : constant String :=
@@ -646,6 +1149,7 @@ package body Posix_Shell.Subst is
                           (Buffer,
                            Get_Var_Value (SS.all, Parameter, Is_Splitable));
                         return;
+
                      when '-' | '=' | '?' | '+' =>
                         Index := Index + 1;
                         Apply_Substitution_Op (Parameter,
@@ -664,6 +1168,23 @@ package body Posix_Shell.Subst is
                               Error (SS.all, "bad substitution");
                               raise Variable_Name_Error;
                         end case;
+
+                     when '#'  | '%' =>
+                        Index := Index + 1;
+                        case S (Index) is
+                           when '#'  | '%' =>
+                              Index := Index + 1;
+                              Apply_Substitution_Op
+                                (Parameter,
+                                 S (Index - 2 .. Index - 1),
+                                 Is_Splitable);
+                           when others =>
+                              Apply_Substitution_Op
+                                (Parameter,
+                                 S (Index - 1 .. Index - 1),
+                                 Is_Splitable);
+                        end case;
+
                      when others =>
                         Error (SS.all, "bad substitution");
                         raise Variable_Name_Error;
@@ -780,7 +1301,7 @@ package body Posix_Shell.Subst is
                Eval_Backquoted_Command_Subst (False);
 
             when '$' =>
-               Eval_Param_Subst (Is_Splitable);
+               Eval_Dollar_Subst (Is_Splitable);
 
             when '\' =>
                Eval_Escape_Sequence (IOHere);

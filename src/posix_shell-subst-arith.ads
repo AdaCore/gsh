@@ -2,6 +2,10 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
+--                       Posix_Shell.Subst.Arith                            --
+--                                                                          --
+--                                 S p e c                                  --
+--                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
@@ -20,49 +24,12 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Dyn_String_Lists;
+package Posix_Shell.Subst.Arith is
 
-with GNAT.OS_Lib;            use GNAT.OS_Lib;
-with Posix_Shell.Variables;  use Posix_Shell.Variables;
-with Posix_Shell.Tree;       use Posix_Shell.Tree;
-with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
+   function Eval_Expr (S            : Shell_State_Access;
+                       Args         : String_List;
+                       Is_Arith_Exp : Boolean := False) return String;
 
-package Posix_Shell.Subst is
+   Expr_Error : exception;
 
-   function Eval_String
-     (SS        : Shell_State_Access;
-      S         : String;
-      Max_Split : Integer := -1)
-      return String_List;
-
-   function Split_String
-     (SS        : Shell_State_Access;
-      S         : String;
-      Max_Split : Integer := -1)
-      return String_List;
-
-   function Eval_String_Unsplit
-     (SS                 : Shell_State_Access;
-      S                  : String;
-      Case_Pattern       : Boolean := False;
-      IOHere             : Boolean := False)
-      return String;
-
-   function Eval_String_List
-     (SS : Shell_State_Access;
-      T  : Shell_Tree;
-      S  : Token_List)
-      return String_List;
-
-   procedure Split_Arithmetic_String
-     (SS                  : Shell_State_Access;
-      Str                 : String;
-      Previous_Was_Number : in out Boolean;
-      Args_List           : in out Dyn_String_Lists.Dyn_String_List);
-   --  Split the string Str into a list of elements that are either
-   --  numbers, symbole names, operators, or parantheses.
-   --  Previous_Was_Number is the boolean that gets and updates accordingly
-   --  the 'nature' of the previous token. True when previous token was
-   --  a number or a symbole name, False otherwise.
-
-end Posix_Shell.Subst;
+end Posix_Shell.Subst.Arith;
