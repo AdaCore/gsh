@@ -40,7 +40,7 @@ package body Posix_Shell.Builtins.Cp is
    --  treatment of options:
    --  `-f` is not actually used. Files are always removed if possible.
    --      users rights are not taken into account.
-   --  `-p` changes the preservation of copy from 'Time_stamp' to 'Full'
+   --  `-p` changes the preservation of copy from 'None' to 'Full'
    --      when using runtime 'Copy_File'
 
    function Cp_Builtin
@@ -52,7 +52,7 @@ package body Posix_Shell.Builtins.Cp is
       File_List_End   : constant Integer := Args'Last - 1;
       Recursive       : Boolean   := False;
       Force           : Boolean   := False;
-      Preserve        : Attribute := Time_Stamps;
+      Preserve        : Attribute := None;
       Got_Errors      : Boolean   := False;
 
       procedure Cp_Tree
