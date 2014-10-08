@@ -69,8 +69,6 @@ package body Posix_Shell.Builtins.Cp is
          Target_Name         : String;
          Target_Is_Directory : Boolean)
       is
-         Search  : Ada.Directories.Search_Type;
-         Dir_Ent : Ada.Directories.Directory_Entry_Type;
 
          Target_Path : constant String :=
            (if Target_Is_Directory then
@@ -126,6 +124,8 @@ package body Posix_Shell.Builtins.Cp is
          procedure Recursive_Copy (Source_Path : String;
                                    Target_Path : String) is
 
+            Search  : Ada.Directories.Search_Type;
+            Dir_Ent : Ada.Directories.Directory_Entry_Type;
          begin
             --  Check if target_path is a directory and it exists
             if GNAT.OS_Lib.Is_Regular_File (Target_Path) then
@@ -146,7 +146,7 @@ package body Posix_Shell.Builtins.Cp is
                   Base_Name : constant String :=
                                 Ada.Directories.Simple_Name (Dir_Ent);
                   Source    : constant String :=
-                                Filename &
+                                Source_Path &
                                 GNAT.Directory_Operations.Dir_Separator &
                                 Base_Name;
                   Target    : constant String :=
