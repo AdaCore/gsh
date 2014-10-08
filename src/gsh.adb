@@ -24,6 +24,7 @@ with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Directories; use Ada.Directories;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
+with GNAT.Ctrl_C;
 with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 with Posix_Shell.Parser; use Posix_Shell.Parser;
 with Posix_Shell.Tree; use Posix_Shell.Tree;
@@ -46,6 +47,19 @@ function GSH return Integer is
    Status        : Integer := 0;
    State         : constant Shell_State_Access := new Shell_State;
    Script_Buffer : Buffer_Access := null;
+
+   procedure Null_Procedure;
+   --  null procedure used for the default Ctrl-C handler in interactive
+   --  mode
+
+   --------------------
+   -- Null_Procedure --
+   --------------------
+
+   procedure Null_Procedure is
+   begin
+      null;
+   end Null_Procedure;
 
 begin
    --  First register all the builtins proovided by gsh
@@ -99,6 +113,10 @@ begin
          return Status;
       end if;
 
+      if Is_Interactive then
+         GNAT.Ctrl_C.Install_Handler (Null_Procedure'Unrestricted_Access);
+      end if;
+
       --  The shell main loop
       loop
          if Is_Interactive then
@@ -106,7 +124,7 @@ begin
             declare
                Line : constant String := Readline ("$ ");
             begin
-               Deallocate (Script_Buffer);
+               --  This buffer is freed when deallocating the AST.
                Script_Buffer :=
                  new Token_Buffer'(New_Buffer (Line));
             end;
