@@ -24,8 +24,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Posix_Shell.Utils;            use Posix_Shell.Utils;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
-with Posix_Shell.Utils; use Posix_Shell.Utils;
 
 package body Posix_Shell.Builtins.Test is
 
@@ -38,6 +38,8 @@ package body Posix_Shell.Builtins.Test is
       IEQUAL_OP,             --  -eq
       GREATER_THAN_OP,       --  -gt
       GREATER_EQUAL_THAN_OP, --  -ge
+      NEWER_THAN_OP,         --  -nt
+      OLDER_THAN_OP,         --  -ot
       LESS_THAN_OP,          --  -lt
       LESS_EQUAL_THAN_OP,    --  -le
       INOT_EQUAL_OP          --  -ne
@@ -93,6 +95,16 @@ package body Posix_Shell.Builtins.Test is
    function Less_Equal (Left, Right : Long_Long_Integer) return Boolean;
    --  A wrapper around "<=". The purpose of this function is to be
    --  able to take its 'Address.
+
+   function Both_Files_Exist (Left, Right : String) return Boolean;
+   --  True if strings refer to existing files or directories.
+   --  False otherwise
+
+   function Newer_Than (Left, Right : String) return Boolean;
+   --  True if both the files exist and if Left is newer than Right.
+
+   function Older_Than (Left, Right : String) return Boolean;
+   --  True if both the files exist and if Left is older than Right.
 
    -----------
    -- Equal --
@@ -178,6 +190,47 @@ package body Posix_Shell.Builtins.Test is
       return Left /= Right;
    end Not_Equal;
 
+   ----------------------
+   -- Both_Files_Exist --
+   ----------------------
+
+   function Both_Files_Exist (Left, Right : String) return Boolean is
+      use GNAT.OS_Lib;
+   begin
+      return (Is_Regular_File (Left) or else Is_Directory (Left))
+        and (Is_Regular_File (Right) or else Is_Directory (Right));
+   end Both_Files_Exist;
+
+   ----------------
+   -- Newer_Than --
+   ----------------
+
+   function Newer_Than (Left, Right : String) return Boolean is
+      use GNAT.OS_Lib;
+   begin
+      if Both_Files_Exist (Left, Right) then
+         return File_Time_Stamp (Left) > File_Time_Stamp (Right);
+         --  Newer means the time_stamp of Left is bigger than Right's one.
+      else
+         return False;
+      end if;
+   end Newer_Than;
+
+   ----------------
+   -- Older_Than --
+   ----------------
+
+   function Older_Than (Left, Right : String) return Boolean is
+      use GNAT.OS_Lib;
+   begin
+      if Both_Files_Exist (Left, Right) then
+         return File_Time_Stamp (Left) < File_Time_Stamp (Right);
+         --  Older means the time_stamp of Left is lower than Right's one.
+      else
+         return False;
+      end if;
+   end Older_Than;
+
    ------------------
    -- Test_Builtin --
    ------------------
@@ -236,6 +289,18 @@ package body Posix_Shell.Builtins.Test is
                return Eval_Binop (S, Left, Right, Greater_Than'Access);
             when GREATER_EQUAL_THAN_OP =>
                return Eval_Binop (S, Left, Right, Greater_Equal'Access);
+            when NEWER_THAN_OP =>
+               if Newer_Than (Left.all, Right.all) then
+                  return 0;
+               else
+                  return 1;
+               end if;
+            when OLDER_THAN_OP =>
+               if Older_Than (Left.all, Right.all) then
+                  return 0;
+               else
+                  return 1;
+               end if;
             when LESS_THAN_OP =>
                return Eval_Binop (S, Left, Right, Less_Than'Access);
             when LESS_EQUAL_THAN_OP =>
@@ -406,14 +471,11 @@ package body Posix_Shell.Builtins.Test is
             return IEQUAL_OP;
          elsif Str = "-ne" then
             return INOT_EQUAL_OP;
+         elsif Str = "-nt" then
+            return NEWER_THAN_OP;
+         elsif Str = "-ot" then
+            return OLDER_THAN_OP;
          end if;
-
-         if Str = "-nt" or else Str = "-ot" then
-            Warning
-              (S.all, "test: " & Str & ": binary operator not supported yet");
-            return UNSUPPORTED_BINARY_OP;
-         end if;
-
          return NULL_BIN_OP;
       end Get_Bin_Op;
 
