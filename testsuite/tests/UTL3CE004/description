@@ -1,4 +1,4 @@
-Test for cp utility - nominal cases
+Test for cp utility - nominal cases for Windows exe
 
 This testcase tests the trick introduced for N908-044
 about .exe file on windows.
