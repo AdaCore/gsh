@@ -1,0 +1,10 @@
+/src/readline/* no-precommit-check
+/src/gnulib/* no-precommit-check
+/src/gnulib/*/* no-precommit-check
+/src/ddk/* no-precommit-check
+/src/ddk/*/* no-precommit-check
+/src/ddk/*/*/* no-precommit-check
+/maintainers/* no-precommit-check
+/maintainers/*/* no-precommit-check
+/maintainers/*/*/* no-precommit-check
+/maintainers/*/*/*/* no-precommit-check
