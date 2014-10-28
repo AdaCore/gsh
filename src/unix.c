@@ -19,58 +19,84 @@
  *                                                                          *
  ****************************************************************************/
 
+#ifndef _WIN32
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <stdlib.h>
+
 #include <stdio.h>
-extern char *readline (const char *);
-extern void add_history (const char *);
+#include <glob.h>
+#include <regex.h>
+#include <fnmatch.h>
+#include <sys/fcntl.h>
 
-/* Each of the files below is a minimal implementation of the standard
-   termcap function with the same name, suitable for use in a Windows
-   console window.  */
-
-char* internal_readline (const char *prompt)
+int
+gsh_fnmatch(const char *pattern, const char *string)
 {
-  char *result = readline(prompt);
-  if (strlen(result) > 0)
-    add_history(result);
-  return result;
+  return fnmatch(pattern, string, 0);
+}
+
+
+int
+__gsh_waitpid (void *h)
+{
+  int status;
+  pid_t pid = (pid_t) h;
+  pid_t finished;
+  finished = waitpid (pid, &status, 0);
+
+  if (finished != pid || WIFEXITED (status) == 0)
+    return -1;
+
+  return WEXITSTATUS (status);
 }
 
 int
-tgetent (char *buffer, char *termtype)
+__gsh_set_close_on_exec (int fd,
+			 int close_on_exec_p)
 {
-  return -1;
+  int flags = fcntl (fd, F_GETFD, 0);
+  if (flags < 0)
+    return flags;
+  if (close_on_exec_p)
+    flags |= FD_CLOEXEC;
+  else
+    flags &= ~FD_CLOEXEC;
+  return fcntl (fd, F_SETFD, flags);
+
 }
 
-int
-tgetnum (char *name)
+void *
+__gsh_no_block_spawn (char *args[], char *cwd, char *env[])
 {
-  return -1;
+  pid_t pid;
+  char path[4097];
+  char **cursor;
+  int result;
+
+  char *new_args[4097];
+  int index = 0;
+
+  cursor = args;
+  while (cursor[0] != NULL)
+    {
+      new_args[index] = cursor[0];
+      cursor++;
+      index ++;
+    }
+  new_args[index] = NULL;
+  getcwd(path, 4097);
+  chdir(cwd);
+  result = posix_spawn(&pid, args[0], NULL, NULL, args, env);
+  chdir(path);
+  return (void *) pid;
 }
 
-int
-tgetflag (char *name)
+unsigned long
+__gsh_unlink (char *path)
 {
-  return -1;
+  return (unsigned long) unlink path;
 }
 
-char *
-tgetstr (char *name, char **area)
-{
-  return NULL;
-}
-
-int
-tputs (char *string, int nlines, int (*outfun) ())
-{
-  while (*string)
-    outfun (*string++);
-
-  return 0;
-}
-
-char *
-tgoto (const char *cap, int col, int row)
-{
-  return NULL;
-}
+#endif
