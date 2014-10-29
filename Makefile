@@ -26,9 +26,12 @@ install:
 	if [ "$(SYS)" = "windows" ]; then cp -p -r gnutools/* $(PREFIX)/; fi
 	cp -r etc/* $(PREFIX)/etc
 	cp -p obj/$(BUILD)/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/gsh$(EXEEXT)
-	if [ "$(SYS)" = "windows" ]; then \
+	if [ "$(OS)" = "Windows_NT" ]; then \
 	  cp -p obj/$(BUILD)/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/sh$(EXEEXT) && \
-	  cp -p obj/$(BUILD)/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/bash$(EXEEXT); \
+	  cp -p obj/$(BUILD)/no-cov/no-gmem/gsh$(EXEEXT) $(PREFIX)/bin/bash$(EXEEXT) && \
+	  for u in "[" cat command cp echo expr false printf pwd recho test true which wc basename dirname head mkdir rm tail type uname; do \
+	     cp -p obj/$(BUILD)/no-cov/no-gmem/builtin$(EXEEXT) $(PREFIX)/bin/$$u$(EXEEXT); \
+	  done; \
 	fi
 
 clean:

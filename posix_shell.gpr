@@ -35,7 +35,7 @@ project Posix_Shell is
       when "false" => Build_Dir        := Build_Dir & "/no-gmem";
    end case;
 
-   for Main use ("gsh_lexer.adb", "gsh.adb");
+   for Main use ("gsh_lexer.adb", "gsh.adb", "builtin.adb");
 
    case OS is
       when "Windows_NT" =>
