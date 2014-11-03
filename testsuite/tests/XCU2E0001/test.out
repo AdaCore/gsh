@@ -1,0 +1,8 @@
+in source: VAR=PASSED1
+[builtin: .     ] expect VAR=PASSED1; got VAR=PASSED1
+in source: VAR=PASSED2
+[builtin: source] expect VAR=PASSED5; got VAR=PASSED5
+PASSED3=PASSED3
+[builtin: eval  ] expect VAR=PASSED3; got VAR=PASSED3
+echo
+[builtin: echo  ] expect VAR=PASSED3; got VAR=PASSED3

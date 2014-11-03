@@ -1,0 +1,17 @@
+++ ensure that a variable set in a sourced script is visible
++ value of $1 in sourced script: ''
+return status: 1
+$toto='hello'
+++ use of source builtin without any argument
+return status: 2
+++ sourcing inexistant script
+return status: 1
+++ sourcing a script + positional arg
++ value of $1 in sourced script: 'a'
+return status: 0
+++ return in a sourced scripts
+in test.sub1
+return status: 1
+++ exit in a sourced script
+in test.sub2
+return status: 42

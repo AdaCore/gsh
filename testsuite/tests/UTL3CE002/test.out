@@ -1,0 +1,92 @@
+duplicate and rename a file: cp a copy_a
+* ls copy_a
+copy_a
+* cat copy_a
+content of a
+
+duplicate and rename a file - use '-f': cp -f a copy_a
+* ls copy_a
+copy_a
+* cat copy_a
+content of a
+
+duplicate and rename a file - use '-p': cp -p a copy_a
+* ls copy_a
+copy_a
+* cat copy_a
+content of a
+
+copy a file into an existing directory: cp a dir_a
+* ls dir_a/
+a
+initial
+* dir dir_a/
+content of a
+
+copy and rename a file into an existing directory: cp a dir_a/copy_a
+* ls dir_a/
+copy_a
+initial
+* dir dir_a/copy_a
+content of a
+
+copy and rename a file from a dir: cp dir_a/initial copy_a
+* ls copy_a
+copy_a
+* cat copy_a
+initial file of dir_a
+
+duplicate and rename a dir with -r: cp -r dir_a copy_dir_a
+* ls copy_dir_a/*
+copy_dir_a/initial
+* cat copy_dir_a/*
+initial file of dir_a
+
+duplicate and rename a dir with -R: cp -R dir_b copy_dir_b
+* ls copy_dir_b
+initial
+initial_2
+initial_3
+nested_dir
+* cat copy_dir_b/*
+initial_content of dir b
+initial_content 2 of dir b
+
+
+initial_content 3 of dir b
+cat: copy_dir_b/nested_dir: Is a directory
+
+copy several files into an existing dir: cp a b.rst dir_a
+* ls dir_a
+a
+b.rst
+initial
+* cat dir_a/*
+content of a
+content of b
+initial file of dir_a
+
+copy a file and a dir into an existing dir: cp -r a dir_b dir_a
+* ls dir_a
+a
+dir_b
+initial
+* cat dir_a/*
+content of a
+cat: dir_a/dir_b: Is a directory
+initial file of dir_a
+
+last copy prevail: cp -r dir_a/* dir_b/* dir_c
+* ls dir_c
+content.txt
+initial
+initial_2
+initial_3
+nested_dir
+* cat dir_c
+initial_content of dir b
+initial_content 2 of dir b
+
+
+initial_content 3 of dir b
+cat: dir_c/nested_dir: Is a directory

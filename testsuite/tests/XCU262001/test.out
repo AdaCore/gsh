@@ -1,0 +1,86 @@
+Operators - = ? and +
+====================
+
+expansion with -
+${param-myword}:      abcd      / expected abcd
+${empty_str-myword}:            / expected null
+${unset_var-myword}:  myword    / expected myword
+
+expansion with =
+${param=myword}:      abcd       / expected abcd
+${empty_str=myword}:             / expected null
+${unset_var=myword}:  myword     / expected unset_var is assigned myword: myword
+
+expansion with ?
+${param?myword}:       abcd      / expected abcd
+${empty_str?myword}:             / expected null
+[error] unset_var: myword
+
+expansion with +
+${param+myword}:       myword    / expected myword
+${empty_str+myword}:   myword    / expected myword
+${unset_var+myword}:             / expected null
+
+Operators - = ? and + introduced by COLON ':'
+==============================================
+
+expansion with :-
+${param:-myword}:       abcd      / expected abcd
+${empty_str:-myword}:   myword    / expected myword
+${unset_var:-myword}:   myword    / expected myword
+
+expansion with :=
+${param:=myword}:       abcd      / expected abcd
+${empty_str:=myword}:   myword    / expected empty_str is assigned myword: myword
+${unset_var:=myword}:   myword    / expected unset_var is assigned myword: myword
+
+expansion with :?
+${param:?myword}:      abcd      / expected abcd
+[error] empty_str: myword
+[error] unset_var: myword
+
+expansion with :+
+${param:+myword}:      myword    / expected myword
+${empty_str:+myword}:            / expected null
+${unset_var:+myword}:            / expected null
+
+Length (subst starting with by #)
+=================================
+${#param}:      4 / expected 4
+${#empty_str}:  0 / expected 0
+${#unset_var}:  0 / expected 0
+${#?}:          1 / expected 1
+${##}:          1 / expected 1
+${#@}:          2 / expected 2
+${#1}:          4 / expected 4
+
+Substrings processing
+=====================
+
+expansion with %
+currently x is file.c
+${x%.c}.o:          file.o     / expected file.o
+${empty_str%.c}:               / expected null
+${unset_var%abc}:              / expected null
+
+expansion with %%
+currently x is posix/src/std
+${x%%/*}:                      posix            / expected posix
+currently x is posix/src/std
+${x%%*/}:                      posix/src/std    / expected posix/src/std
+${empty_str%%/*}:                               / expected null
+${unset_var%%abc}:                              / expected null
+
+expansion with #
+currently x is $HOME/src/cmd
+${x#$HOME}:                   /src/cmd    / expected /src/cmd
+currently x is posix/src/std
+${x#*/}:                      src/std    / expected src/std
+${empty_str#abc}:                        / expected null
+${unset_var#abc}:                        / expected null
+
+expansion with ##
+currently x is /one/two/three
+${x##*/}:           three    / expected three
+${empty_str##abc}:           / expected null
+${unset_var##abc}:           / expected null

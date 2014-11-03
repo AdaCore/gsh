@@ -1,0 +1,23 @@
+== no args ==
+Quoted *
+param: ''
+NonQuoted *
+== empty args ==
+Quoted *
+param: ''
+NonQuoted *
+== three args ==
+Quoted *
+param: 'a b c'
+NonQuoted *
+param: 'a'
+param: 'b'
+param: 'c'
+== args with space ==
+Quoted *
+param: 'a b c d'
+NonQuoted *
+param: 'a'
+param: 'b'
+param: 'c'
+param: 'd'

@@ -1,0 +1,8 @@
+*.foo
+a.search b.search
+c/c.my d/d.my
+d/*.notfound
+*/*.notfound
+c/c.my d/d.my d/e
+e/f.res
+e/f.res

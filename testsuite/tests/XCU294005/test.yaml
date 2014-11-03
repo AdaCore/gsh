@@ -1,0 +1,1 @@
+title: For construct without 'in word ...' should expand to 'in "$@"'

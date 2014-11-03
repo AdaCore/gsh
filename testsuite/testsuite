@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+"""usage: testsuite [OPTIONS]
+
+Posix Shell Testsuite
+"""
+
+from support import GSHTestsuite
+import os
+
+if __name__ == '__main__':
+    GSHTestsuite(os.path.dirname(__file__)).testsuite_main()
