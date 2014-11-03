@@ -5,8 +5,6 @@ project Posix_Shell is
 
    Build     : Build_Type   := external ("BUILD", "dev");
    Build_Dir : Build_Type   := Build;
-   Coverage  : Boolean_Type := external ("COVERAGE", "false");
-   Gnatmem   : Boolean_Type := external ("GNATMEM", "false");
    OS        := external("OS", "");
 
    Default_Switches := ("-gnat12", "-gnatwcfijklmopruvz", "-gnaty");
@@ -22,17 +20,9 @@ project Posix_Shell is
 
    Dev_Switches := ("-g", "-O0");
 
-   case Coverage is
-      when "true" =>  Default_Switches := Default_Switches & ("-fprofile-arcs", "-ftest-coverage");
-                      Default_Libs     := Default_Libs & ("-lgcov");
-                      Build_Dir        := Build_Dir & "/cov";
-      when "false" => Build_Dir        := Build_Dir & "/no-cov";
-   end case;
-
-   case Gnatmem is
-      when "true" =>  Default_Libs     := Default_Libs & ("-lgmem");
-                      Build_Dir        := Build_Dir & "/gmem";
-      when "false" => Build_Dir        := Build_Dir & "/no-gmem";
+   case Build is
+      when "dev" =>  Default_Switches := Default_Switches & ("-fprofile-arcs", "-ftest-coverage");
+                     Default_Libs     := Default_Libs & ("-lgcov");
    end case;
 
    for Main use ("gsh_lexer.adb", "gsh.adb", "builtin.adb");
