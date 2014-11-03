@@ -3,7 +3,7 @@
 # check initial status of positional parameters
 for d in 0 "" 2 25 -1; do
    echo "++ Test shift $d"
-   shift $d 2>/dev/null 
+   shift $d 2>/dev/null
    echo "shift status: $?"
    echo "\$1='$1'"
    echo "\$2='$2'"
