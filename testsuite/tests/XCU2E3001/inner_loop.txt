@@ -1,4 +1,0 @@
-This message should written 4 times in inner_loop.txt
-This message should written 4 times in inner_loop.txt
-This message should written 4 times in inner_loop.txt
-This message should written 4 times in inner_loop.txt

@@ -1,1 +1,0 @@
-gsh ./test.sh

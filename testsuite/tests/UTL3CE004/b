@@ -1,1 +1,0 @@
-content of b - must not be overwritten when `cp a b` with 'a' being actually a.exe

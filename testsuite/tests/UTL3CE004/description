@@ -1,9 +1,0 @@
-Test for cp utility - nominal cases for Windows exe
-
-This testcase tests the trick introduced for N908-044
-about .exe file on windows.
-
-When 'a' does not exist but 'a.exe' does then
-cp a b
-must be treated as 'cp a.exe b.exe'
-
