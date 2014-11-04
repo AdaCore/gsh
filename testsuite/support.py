@@ -2,7 +2,6 @@ from gnatpython.testsuite import Testsuite
 from gnatpython.testsuite.driver import TestDriver
 from gnatpython.fileutils import sync_tree
 from gnatpython.ex import Run, STDOUT
-from gnatpython.fileutils import diff
 from gnatpython.env import Env
 import os
 
@@ -13,25 +12,20 @@ class ShellDriver(TestDriver):
         self.test_tmp = os.path.join(self.global_env['working_dir'],
                                      self.test_env['test_name'])
         sync_tree(self.test_env['test_dir'], self.test_tmp)
+        self.register_path_subst(self.test_tmp, '<TEST_DIR>')
 
     def run(self):
         p = Run([os.environ['SHELL'], './test.sh'],
                 cwd=self.test_tmp, error=STDOUT)
-        self.result.actual_output = \
-            p.out.replace('\r', '').replace(self.test_tmp + os.sep, '')
+        self.result.actual_output = p.out
 
         with open(os.path.join(self.test_env['test_dir'], 'test.out'),
                   'rb') as fd:
-            self.result.expected_output = fd.read().replace('\r', '')
+            self.result.expected_output = fd.read()
 
     def analyze(self):
-
-        self.result.diff = diff(self.result.actual_output.splitlines(),
-                                self.result.expected_output.splitlines())
-        if self.result.diff:
-            self.result.set_status('FAILED', self.test_env['title'])
-        else:
-            self.result.set_status('PASSED', self.test_env['title'])
+        self.analyze_diff()
+        self.result.msg += '(%s)' % self.test_env['title']
 
 
 class GSHTestsuite(Testsuite):
@@ -43,10 +37,12 @@ class GSHTestsuite(Testsuite):
         self.main.add_option('--with-gsh',
                              metavar='FILE',
                              default=os.path.join(os.path.dirname(__file__),
-                                                  '..', 'install'))
+                                                  '..', 'install'),
+                             help="set location of gsh installation")
         self.main.add_option('--enable-coverage',
                              default=False,
-                             action="store_true")
+                             action="store_true",
+                             help="use gsh with gcov enabled to run the test")
 
     def tear_up(self):
         if self.main.options.enable_coverage:
