@@ -1240,7 +1240,7 @@ static void whilestat (LexState *ls, int line) {
   whileinit = luaK_getlabel(fs);
   condexit = cond(ls);
   enterblock(fs, &bl, 1);
-  checknext(ls, TK_DO);
+  checknext(ls, TK_LOOP);
   block(ls);
   luaK_jumpto(fs, whileinit);
   check_match(ls, TK_END, TK_WHILE, line);
@@ -1286,7 +1286,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   FuncState *fs = ls->fs;
   int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
-  checknext(ls, TK_DO);
+  checknext(ls, TK_LOOP);
   prep = isnum ? luaK_codeAsBx(fs, OP_FORPREP, base, NO_JUMP) : luaK_jump(fs);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
@@ -1314,7 +1314,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
   new_localvarliteral(ls, "(for limit)");
   new_localvarliteral(ls, "(for step)");
   new_localvar(ls, varname);
-  checknext(ls, TK_ASSIGN);
+  checknext(ls, TK_IN);
   exp1(ls);  /* initial value */
   checknext(ls, ',');
   exp1(ls);  /* limit */
@@ -1345,7 +1345,7 @@ static void forlist (LexState *ls, TString *indexname) {
     new_localvar(ls, str_checkname(ls));
     nvars++;
   }
-  checknext(ls, TK_IN);
+  checknext(ls, TK_OF);
   line = ls->linenumber;
   adjust_assign(ls, 3, explist(ls, &e), &e);
   luaK_checkstack(fs, 3);  /* extra space to call generator */
@@ -1362,9 +1362,9 @@ static void forstat (LexState *ls, int line) {
   luaX_next(ls);  /* skip `for' */
   varname = str_checkname(ls);  /* first variable name */
   switch (ls->t.token) {
-    case TK_ASSIGN: fornum(ls, varname, line); break;
-    case ',': case TK_IN: forlist(ls, varname); break;
-    default: luaX_syntaxerror(ls, LUA_QL("=") " or " LUA_QL("in") " expected");
+    case TK_IN: fornum(ls, varname, line); break;
+    case ',': case TK_OF: forlist(ls, varname); break;
+    default: luaX_syntaxerror(ls, LUA_QL("of") " or " LUA_QL("in") " expected");
   }
   check_match(ls, TK_END, TK_FOR, line);
   leaveblock(fs);  /* loop scope (`break' jumps to this point) */
@@ -1542,10 +1542,10 @@ static void statement (LexState *ls) {
       whilestat(ls, line);
       break;
     }
-    case TK_DO: {  /* stat -> DO block END */
+    case TK_BEGIN: {  /* stat -> DO block END */
       luaX_next(ls);  /* skip DO */
       block(ls);
-      check_match(ls, TK_END, TK_DO, line);
+      check_match(ls, TK_END, TK_BEGIN, line);
       break;
     }
     case TK_FOR: {  /* stat -> forstat */
