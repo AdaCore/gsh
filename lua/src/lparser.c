@@ -662,7 +662,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   else  /* ls->t.token == '[' */
     yindex(ls, &key);
   cc->nh++;
-  checknext(ls, '=');
+  checknext(ls, TK_ASSIGN);
   rkkey = luaK_exp2RK(fs, &key);
   expr(ls, &val);
   luaK_codeABC(fs, OP_SETTABLE, cc->t->u.info, rkkey, luaK_exp2RK(fs, &val));
@@ -709,7 +709,7 @@ static void field (LexState *ls, struct ConsControl *cc) {
   /* field -> listfield | recfield */
   switch(ls->t.token) {
     case TK_NAME: {  /* may be 'listfield' or 'recfield' */
-      if (luaX_lookahead(ls) != '=')  /* expression? */
+      if (luaX_lookahead(ls) != TK_ASSIGN)  /* expression? */
         listfield(ls, cc);
       else
         recfield(ls, cc);
@@ -1004,7 +1004,7 @@ static BinOpr getbinopr (int op) {
     case '^': return OPR_POW;
     case TK_CONCAT: return OPR_CONCAT;
     case TK_NE: return OPR_NE;
-    case TK_EQ: return OPR_EQ;
+    case '=': return OPR_EQ;
     case '<': return OPR_LT;
     case TK_LE: return OPR_LE;
     case '>': return OPR_GT;
@@ -1148,7 +1148,7 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   }
   else {  /* assignment -> `=' explist */
     int nexps;
-    checknext(ls, '=');
+    checknext(ls, TK_ASSIGN);
     nexps = explist(ls, &e);
     if (nexps != nvars) {
       adjust_assign(ls, nvars, nexps, &e);
@@ -1314,7 +1314,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
   new_localvarliteral(ls, "(for limit)");
   new_localvarliteral(ls, "(for step)");
   new_localvar(ls, varname);
-  checknext(ls, '=');
+  checknext(ls, TK_ASSIGN);
   exp1(ls);  /* initial value */
   checknext(ls, ',');
   exp1(ls);  /* limit */
@@ -1362,7 +1362,7 @@ static void forstat (LexState *ls, int line) {
   luaX_next(ls);  /* skip `for' */
   varname = str_checkname(ls);  /* first variable name */
   switch (ls->t.token) {
-    case '=': fornum(ls, varname, line); break;
+    case TK_ASSIGN: fornum(ls, varname, line); break;
     case ',': case TK_IN: forlist(ls, varname); break;
     default: luaX_syntaxerror(ls, LUA_QL("=") " or " LUA_QL("in") " expected");
   }
@@ -1440,7 +1440,7 @@ static void localstat (LexState *ls) {
     new_localvar(ls, str_checkname(ls));
     nvars++;
   } while (testnext(ls, ','));
-  if (testnext(ls, '='))
+  if (testnext(ls, TK_ASSIGN))
     nexps = explist(ls, &e);
   else {
     e.k = VVOID;
@@ -1482,7 +1482,7 @@ static void exprstat (LexState *ls) {
   FuncState *fs = ls->fs;
   struct LHS_assign v;
   suffixedexp(ls, &v.v);
-  if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
+  if (ls->t.token == TK_ASSIGN || ls->t.token == ',') { /* stat -> assignment ? */
     v.prev = NULL;
     assignment(ls, &v, 1);
   }
