@@ -12,10 +12,10 @@ project Posix_Shell is
 
    case OS is
       when "Windows_NT" =>
-         Default_Libs := ("-lntdll",
+         Default_Libs := ("-lntdll", "lua/src/liblua.a",
                           "-Wl,--stack=0x2000000");
       when others =>
-         Default_Libs := ("-lreadline");
+         Default_Libs := ("-lreadline", "lua/src/liblua.a");
    end case;
 
    Dev_Switches := ("-g", "-O0");
@@ -25,13 +25,13 @@ project Posix_Shell is
                      Default_Libs     := Default_Libs & ("-lgcov");
    end case;
 
-   for Main use ("gsh_lexer.adb", "gsh.adb", "builtin.adb");
+   for Main use ("gsh_lexer.adb", "gsh.adb", "builtin.adb", "gsh_unit.adb");
 
    case OS is
       when "Windows_NT" =>
-         for Source_Dirs use (".", "src", "src/builtins", "src/gnulib", "src/ddk", "src/readline");
+         for Source_Dirs use (".", "src", "src/builtins", "src/gnulib", "src/ddk", "src/readline", "src/lua");
       when others =>
-         for Source_Dirs use (".", "src", "src/builtins");
+         for Source_Dirs use (".", "src", "src/builtins", "src/lua");
    end case;
 
    for Languages use ("Ada", "C");

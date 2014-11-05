@@ -4,12 +4,17 @@ PREFIX=install
 
 # Check if we are on unix or windows system
 EXEEXT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo ".exe"; fi))
+LUA_PLAT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo "mingw"; else if test `uname` = 'Darwin'; then echo "macosx"; else echo "linux"; fi; fi))
 
 # Main build target
-all:
+all: lua/src/liblua.a
 	@echo "building gsh"
 	gprbuild -p -P posix_shell -XBUILD=prod
 	gprbuild -p -P posix_shell -XBUILD=dev 
+
+lua/src/liblua.a:
+	@echo "building lua..."
+	(cd lua; make PLAT=$(LUA_PLAT))
 
 # Launch the testsuite
 check:
