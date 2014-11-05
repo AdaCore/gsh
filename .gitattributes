@@ -4,6 +4,7 @@
 /src/ddk/* no-precommit-check
 /src/ddk/*/* no-precommit-check
 /src/ddk/*/*/* no-precommit-check
+/lua/src/* no-precommit-check
 /maintainers/* no-precommit-check
 /maintainers/*/* no-precommit-check
 /maintainers/*/*/* no-precommit-check
