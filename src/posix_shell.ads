@@ -57,11 +57,11 @@ package Posix_Shell is
       T_AND,          -- '&'
       T_OR_IF,        -- '||'
       T_PIPE,         -- '|'
-      T_DLESSDASH,    -- '>>-'
 
       --  Output redirection operators
 
       T_DGREAT,       -- '>>'
+      T_DLESSDASH,    -- '<<-'
       T_CLOBBER,      -- '>|'
       T_GREATAND,     -- '>&'
       T_GREAT,        -- '>'

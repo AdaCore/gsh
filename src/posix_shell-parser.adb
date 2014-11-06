@@ -973,7 +973,7 @@ package body Posix_Shell.Parser is
                     (T, N, Target_FD, Filename, 0, OPEN_WRITE, True);
                end if;
             end;
-         when T_DLESS =>
+         when T_DLESS | T_DLESSDASH =>
             --  This implem is not right need to fix at some point XXXX
 
             --  Parse_Redirect_List (B, C, N);
