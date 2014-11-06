@@ -96,7 +96,7 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[])
 unsigned long
 __gsh_unlink (char *path)
 {
-  return (unsigned long) unlink path;
+  return (unsigned long) unlink(path);
 }
 
 #endif
