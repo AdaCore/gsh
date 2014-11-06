@@ -7,10 +7,14 @@ EXEEXT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo ".exe"; fi))
 LUA_PLAT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo "mingw"; else if test `uname` = 'Darwin'; then echo "macosx"; else echo "linux"; fi; fi))
 
 # Main build target
-all: lua/src/liblua.a
+all: lua/src/liblua.a src/posix_shell-lua_bindings.adb
 	@echo "building gsh"
 	gprbuild -p -P posix_shell -XBUILD=prod
 	gprbuild -p -P posix_shell -XBUILD=dev 
+
+src/posix_shell-lua_bindings.adb:
+	@echo "generated unit testing bindings"
+	python ./unit_test_gen > $@
 
 lua/src/liblua.a:
 	@echo "building lua..."
@@ -18,7 +22,7 @@ lua/src/liblua.a:
 
 # Launch the testsuite
 check:
-	@(PATH=`cd $(PREFIX); pwd`/bin:$${PATH} && export PATH && cd testsuite && python ./testsuite.py -t tmp -j0 $(TEST))
+	@(cd testsuite && python ./testsuite -t tmp -j0 $(TEST))
 
 .PHONY: install
 install:

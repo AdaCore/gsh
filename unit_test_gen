@@ -1,0 +1,118 @@
+#!/usr/bin/env python
+
+ADA_MANAGED = 1
+LUA_MANAGED = 2
+
+TYPE_LIST = {
+    'Posix_Shell.Lexer.Token_Buffer': ADA_MANAGED,
+    'Posix_Shell.Lexer.Token': LUA_MANAGED
+}
+
+FUNCTION_LIST = {
+    'Posix_Shell.Lexer.New_Buffer_From_File':
+        {'args': ['String'],
+         'return': 'Posix_Shell.Lexer.Token_Buffer'},
+    'Posix_Shell.Lexer.Read_Token':
+        {'args': ['Posix_Shell.Lexer.Token_Buffer'],
+         'return': 'Posix_Shell.Lexer.Token'},
+    'Posix_Shell.Lexer.Read_Word_Token':
+        {'args': ['Posix_Shell.Lexer.Token_Buffer'],
+         'return': 'Posix_Shell.Lexer.Token'},
+    'Posix_Shell.Lexer.Image':
+        {'args': ['Posix_Shell.Lexer.Token'],
+         'return': 'String'},
+    'Posix_Shell.Lexer.Read_Command_Token':
+        {'args': ['Posix_Shell.Lexer.Token_Buffer'],
+         'return': 'Posix_Shell.Lexer.Token'}}
+
+
+if __name__ == '__main__':
+
+    packages = set([".".join(k.split('.')[:-1]) for k in TYPE_LIST])
+    packages |= set([".".join(k.split('.')[:-1]) for k in FUNCTION_LIST])
+    packages |= set(["Lua.Ada_Types", "Lua.Ada_Limited_Types"])
+
+    for package in packages:
+        print 'with %s;' % package
+    print
+
+    print 'package body Posix_Shell.Lua_Bindings is'
+    print
+
+    for ada_type in TYPE_LIST:
+        base = ada_type.split('.')[-1]
+        if TYPE_LIST[ada_type] == ADA_MANAGED:
+            print '   package Lua_%s is new Lua.Ada_Limited_Types' % base
+            print '     (%s);' % ada_type
+            print '   use Lua_%s;' % base
+            print
+        else:
+            print '   package Lua_%s is new Lua.Ada_Types' % base
+            print '     ("%s", %s);' % (ada_type, ada_type)
+            print '   use Lua_%s;' % base
+            print
+
+    for ada_fun in FUNCTION_LIST:
+        base = ada_fun.split('.')[-1]
+        print '   function Lua_%s' % base
+        print '     (State : Lua_State)'
+        print '     return Integer;'
+        print '   pragma Convention (C, Lua_%s);' % base
+        print
+
+    for ada_fun in FUNCTION_LIST:
+        base = ada_fun.split('.')[-1]
+        print '   function Lua_%s' % base
+        print '     (State : Lua_State)'
+        print '     return Integer'
+        print '   is'
+
+        index = 1
+        call_list = ''
+        for arg in FUNCTION_LIST[ada_fun]['args']:
+            if arg in TYPE_LIST and TYPE_LIST[arg] == ADA_MANAGED:
+                print '      A%s : constant access %s :=' % (index, arg)
+                print '        To_Ada (State, %s);' % index
+                call_list = 'A%s.all,' % index
+            else:
+                print '      A%s : constant %s :=' % (index, arg)
+                print '        To_Ada (State, %s);' % index
+                call_list = 'A%s,' % index
+            index += 1
+        if call_list:
+            call_list = ' (' + call_list[:-1] + ')'
+
+        ret_num = 0
+        if 'return' in FUNCTION_LIST[ada_fun]:
+            ret_num = 1
+            ret = FUNCTION_LIST[ada_fun]['return']
+            if ret in TYPE_LIST and TYPE_LIST[ret] == ADA_MANAGED:
+                print '      Result : constant access %s :=' % ret
+                print '        new %s\'' % ret
+                print '        (%s%s);' % (ada_fun, call_list)
+            else:
+                print '      Result : constant %s :=' % ret
+                print '        %s%s;' % (ada_fun, call_list)
+
+            print '   begin'
+            print '      Push (State, Result);'
+            print '      return 1;'
+        else:
+            print '   begin'
+            print '      %s%s;' % (ada_fun, call_list)
+            print '      return 0;'
+
+        print '   end Lua_%s;' % base
+        print
+
+    print '   procedure Initialize (State : Lua_State) is'
+    print '   begin'
+    for ada_fun in FUNCTION_LIST:
+        base = ada_fun.split('.')[-1]
+        print '      Lua.Register_Function'
+        print '        (State,'
+        print '         "%s",' % ada_fun
+        print '         Lua_%s\'Access);' % base
+    print '   end Initialize;'
+
+    print 'end Posix_Shell.Lua_Bindings;'
