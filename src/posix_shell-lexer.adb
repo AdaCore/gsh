@@ -1126,7 +1126,7 @@ package body Posix_Shell.Lexer is
          when T_DGREAT      => return ">>";
          when T_CLOBBER     => return ">|";
          when T_GREATAND    => return ">&";
-         when T_DLESSDASH   => return ">>-";
+         when T_DLESSDASH   => return "<<-";
          when T_LESS        => return "<";
          when T_GREAT       => return ">";
          when T_DLESS       => return "<<";

@@ -61,7 +61,6 @@ package Posix_Shell is
       --  Output redirection operators
 
       T_DGREAT,       -- '>>'
-      T_DLESSDASH,    -- '<<-'
       T_CLOBBER,      -- '>|'
       T_GREATAND,     -- '>&'
       T_GREAT,        -- '>'
@@ -70,6 +69,7 @@ package Posix_Shell is
 
       T_LESS,         -- '<'
       T_DLESS,        -- '<<'
+      T_DLESSDASH,    -- '<<-'
       T_LESSAND,      -- '<&'
       T_LESSGREAT,    -- '<>'
 
