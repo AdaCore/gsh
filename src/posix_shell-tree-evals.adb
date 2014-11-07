@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2013, AdaCore                   --
+--                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -598,9 +598,9 @@ package body Posix_Shell.Tree.Evals is
       end Eval_Task;
 
       task body Eval_Task is
-         S_Copy : constant Shell_State_Access := new Shell_State;
+         S_Copy   : constant Shell_State_Access := new Shell_State;
          Cmd_Node : Node_Id;
-         Result : File_Descriptor;
+         Result   : File_Descriptor;
          My_Input : File_Descriptor := -1;
 
       begin
@@ -623,7 +623,12 @@ package body Posix_Shell.Tree.Evals is
             GNAT.Task_Lock.Unlock;
          end Start;
 
-         Eval (S_Copy, T, Cmd_Node);
+         begin
+            Eval (S_Copy, T, Cmd_Node);
+         exception
+            when others =>
+               Ada.Text_IO.Put_Line ("got exception");
+         end;
          --  Ada.Text_IO.Put_Line ("task ends");
          --  Close the write side (will unblock main task which is doing a read
          --  of the other side of the pipe).

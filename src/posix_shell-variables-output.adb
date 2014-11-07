@@ -149,8 +149,8 @@ package body Posix_Shell.Variables.Output is
    -----------------------
 
    procedure Set_Redirections
-     (S : Shell_State_Access;
-      R : Redirection_Op_Stack;
+     (S             : Shell_State_Access;
+      R             : Redirection_Op_Stack;
       Free_Previous : Boolean := False)
    is
       Success    : Boolean := False;
@@ -268,6 +268,7 @@ package body Posix_Shell.Variables.Output is
       for J in 1 .. R.Top loop
          declare
             C : constant Redirection_Op := R.Ops (J);
+
          begin
             case C.Kind is
                when OPEN_READ =>
@@ -285,15 +286,18 @@ package body Posix_Shell.Variables.Output is
                            Append => True);
 
                when DUPLICATE =>
+
                   declare
                      FD_Str : constant String :=
-                       Eval_String_Unsplit (S, Get_Token_String (C.Filename));
+                       Eval_String_Unsplit (S, Get_Token_String (C.Source));
                      Source_FD : Integer := 0;
                      Is_Valid  : Boolean := False;
 
                   begin
                      To_Integer (FD_Str, Source_FD, Is_Valid);
-                     if Is_Valid then
+                     if Is_Valid and then
+                       New_States (Source_FD).Fd /= Invalid_FD
+                     then
                         GNAT.Task_Lock.Lock;
                         New_States (C.Dup_Target).Fd :=
                           Dup (New_States (Source_FD).Fd);
