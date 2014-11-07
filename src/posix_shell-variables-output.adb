@@ -165,6 +165,61 @@ package body Posix_Shell.Variables.Output is
 
       function Resolve_Filename (A : Token) return String;
 
+      procedure Open_FD
+         (FD              : Natural;
+          Path            : String;
+          Write           : Boolean := True;
+          Append          : Boolean := False;
+          Delete_On_Close : Boolean := False);
+      --  @ Open a file descriptor
+      --  @
+      --  @ :param Natural FD: File descriptor that needs to be created
+      --  @ :param String Path: Path to the file that should be opened
+      --  @ :param Boolean Write: If True (default) the file is open for
+      --  @     writing otherwise it is opened for reading.
+      --  @ :param Boolean Append: If True then when a file is open in write
+      --  @     mode content will be appended to the previous content.
+      --  @     Otherwise previous content is discarded. In read mode the
+      --  @     flag has no effect.
+      --  @ :param Boolean Delete_On_Close: If True the file will be deleted
+      --  @     when the file descriptor is closed
+
+      -------------
+      -- Open_FD --
+      -------------
+
+      procedure Open_FD
+         (FD              : Natural;
+          Path            : String;
+          Write           : Boolean := True;
+          Append          : Boolean := False;
+          Delete_On_Close : Boolean := False)
+      is
+      begin
+         New_States (FD).Filename := new String'(Path);
+
+         if Write and then not Append and then
+            not Is_Null_File (Path)
+         then
+            Delete_File (Path, Success);
+         end if;
+
+         GNAT.Task_Lock.Lock;
+         if Write then
+            New_States (FD).Fd := Open_Append (Path, Binary);
+         else
+            New_States (FD).Fd := Open_Read (Path, Binary);
+         end if;
+
+         Set_Close_On_Exec (New_States (FD).Fd, True, Success);
+         New_States (FD).Delete_On_Close := Delete_On_Close;
+         New_States (FD).Can_Be_Closed := True;
+         if Append and then Write then
+            Lseek (New_States (FD).Fd, 0, Seek_End);
+         end if;
+         GNAT.Task_Lock.Unlock;
+      end Open_FD;
+
       ------------------
       -- Is_Null_File --
       ------------------
@@ -216,47 +271,19 @@ package body Posix_Shell.Variables.Output is
          begin
             case C.Kind is
                when OPEN_READ =>
-                  New_States (C.Open_Target).Filename :=
-                    new String'(Resolve_Filename (C.Filename));
-                  GNAT.Task_Lock.Lock;
-                  New_States (C.Open_Target).Fd := Open_Read
-                    (New_States (C.Open_Target).Filename.all,
-                     Binary);
-                  Set_Close_On_Exec
-                    (New_States (C.Open_Target).Fd, True, Success);
-                  New_States (C.Open_Target).Delete_On_Close := False;
-                  New_States (C.Open_Target).Can_Be_Closed := True;
-                  GNAT.Task_Lock.Unlock;
+                  Open_FD (C.Open_Target,
+                           Resolve_Filename (C.Filename),
+                           Write => False);
+
                when OPEN_WRITE =>
-                  New_States (C.Open_Target).Filename :=
-                    new String'(Resolve_Filename (C.Filename));
-                  if not Is_Null_File
-                    (New_States (C.Open_Target).Filename.all)
-                  then
-                     Delete_File
-                       (New_States (C.Open_Target).Filename.all, Success);
-                  end if;
-                  GNAT.Task_Lock.Lock;
-                  New_States (C.Open_Target).Fd := Open_Append
-                    (New_States (C.Open_Target).Filename.all, Binary);
-                  Set_Close_On_Exec
-                    (New_States (C.Open_Target).Fd, True, Success);
-                  New_States (C.Open_Target).Delete_On_Close := False;
-                  Lseek (New_States (C.Open_Target).Fd, 0, 2);
-                  New_States (C.Open_Target).Can_Be_Closed := True;
-                  GNAT.Task_Lock.Unlock;
+                  Open_FD (C.Open_Target,
+                           Resolve_Filename (C.Filename));
+
                when OPEN_APPEND =>
-                  New_States (C.Open_Target).Filename :=
-                    new String'(Resolve_Filename (C.Filename));
-                  GNAT.Task_Lock.Lock;
-                  New_States (C.Open_Target).Fd := Open_Append
-                    (New_States (C.Open_Target).Filename.all, Binary);
-                  Set_Close_On_Exec
-                    (New_States (C.Open_Target).Fd, True, Success);
-                  New_States (C.Open_Target).Delete_On_Close := False;
-                  Lseek (New_States (C.Open_Target).Fd, 0, 2);
-                  New_States (C.Open_Target).Can_Be_Closed := True;
-                  GNAT.Task_Lock.Unlock;
+                  Open_FD (C.Open_Target,
+                           Resolve_Filename (C.Filename),
+                           Append => True);
+
                when DUPLICATE =>
                   declare
                      FD_Str : constant String :=
@@ -288,21 +315,15 @@ package body Posix_Shell.Variables.Output is
                           (S, Get_Token_String (C.Filename), IOHere => True)
                         else Get_Token_String (C.Filename));
                   begin
-                     GNAT.Task_Lock.Lock;
                      Create_Temp_File (Fd, Name);
                      Result := Write
                        (Fd, Result_String'Address, Result_String'Length);
                      Close (Fd);
 
-                     New_States (C.Doc_Target).Filename := new String'(Name);
-                     New_States (C.Doc_Target).Fd := Open_Read
-                       (New_States (C.Doc_Target).Filename.all,
-                        Binary);
-                     Set_Close_On_Exec
-                       (New_States (C.Doc_Target).Fd, True, Success);
-                     New_States (C.Doc_Target).Delete_On_Close := True;
-                     New_States (C.Doc_Target).Can_Be_Closed := True;
-                     GNAT.Task_Lock.Unlock;
+                     Open_FD (C.Doc_Target,
+                              Name,
+                              Write           => False,
+                              Delete_On_Close => True);
                   end;
                when others =>
                   null;
