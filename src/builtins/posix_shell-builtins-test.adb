@@ -195,7 +195,6 @@ package body Posix_Shell.Builtins.Test is
    ----------------------
 
    function Both_Files_Exist (Left, Right : String) return Boolean is
-      use GNAT.OS_Lib;
    begin
       return (Is_Regular_File (Left) or else Is_Directory (Left))
         and (Is_Regular_File (Right) or else Is_Directory (Right));
@@ -206,7 +205,6 @@ package body Posix_Shell.Builtins.Test is
    ----------------
 
    function Newer_Than (Left, Right : String) return Boolean is
-      use GNAT.OS_Lib;
    begin
       if Both_Files_Exist (Left, Right) then
          return File_Time_Stamp (Left) > File_Time_Stamp (Right);
@@ -221,7 +219,6 @@ package body Posix_Shell.Builtins.Test is
    ----------------
 
    function Older_Than (Left, Right : String) return Boolean is
-      use GNAT.OS_Lib;
    begin
       if Both_Files_Exist (Left, Right) then
          return File_Time_Stamp (Left) < File_Time_Stamp (Right);
