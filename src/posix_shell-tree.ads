@@ -147,11 +147,7 @@ package Posix_Shell.Tree is
    procedure Set_Node_Redirection
      (Tree      : Shell_Tree;
       N         : Node_Id;
-      Target_FD : Natural;
-      Filename  : Token;
-      Source_FD : Natural;
-      Cmd       : Redir_Cmd;
-      Eval      : Boolean);
+      Operator  : Redirection_Op);
 
    procedure Append_Arg
      (Tree   : in out Shell_Tree;
@@ -213,8 +209,6 @@ private
 
    type Node_Id_Array_Access is access Node_Id_Array;
    type And_Or_Node_Id_Array_Access is access And_Or_Node_Id_Array;
-
-
 
    function Get_Node (Tree : Shell_Tree; N : Node_Id) return Node;
 

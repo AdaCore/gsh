@@ -24,7 +24,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Posix_Shell.Variables.Output;
 with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 with Posix_Shell.Traces; use Posix_Shell.Traces;
@@ -951,28 +950,16 @@ package body Posix_Shell.Parser is
       case IO_Mode is
          when T_LESS =>
             Set_Node_Redirection
-              (T, N, Target_FD, Filename, 0, OPEN_READ, True);
+              (T, N, (OPEN_READ, Target_FD, Filename));
          when T_GREAT =>
             Set_Node_Redirection
-              (T, N, Target_FD, Filename, 0, OPEN_WRITE, True);
+              (T, N, (OPEN_WRITE, Target_FD, Filename));
          when T_DGREAT =>
             Set_Node_Redirection
-              (T, N, Target_FD, Filename, 0, OPEN_APPEND, True);
+              (T, N, (OPEN_APPEND, Target_FD, Filename));
          when T_GREATAND =>
-            declare
-               Source_FD : Integer := 0;
-               Is_Valid  : Boolean := False;
-            begin
-               To_Integer (Get_Token_String (Filename), Source_FD, Is_Valid);
-               if Is_Valid then
-                  Set_Node_Redirection
-                    (T, N, Target_FD, Filename, Source_FD,
-                     DUPLICATE, True);
-               else
-                  Set_Node_Redirection
-                    (T, N, Target_FD, Filename, 0, OPEN_WRITE, True);
-               end if;
-            end;
+            Set_Node_Redirection
+              (T, N, (DUPLICATE, Target_FD, Filename));
          when T_DLESS | T_DLESSDASH =>
             --  This implem is not right need to fix at some point XXXX
 
@@ -1030,11 +1017,10 @@ package body Posix_Shell.Parser is
                Set_Node_Redirection
                  (T,
                   Pending_IO_Heres (Index).N,
-                  Pending_IO_Heres (Index).Target_Fd,
-                  IOHere_Token,
-                  0,
-                  Posix_Shell.Variables.Output.IOHERE,
-                  Eval);
+                  (Posix_Shell.Variables.Output.IOHERE,
+                   Pending_IO_Heres (Index).Target_Fd,
+                   IOHere_Token,
+                   Eval));
                B.Valid_Cache := False;
             end;
          end loop;

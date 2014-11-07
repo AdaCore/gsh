@@ -32,12 +32,21 @@ package Posix_Shell.Variables.Output is
                       DUPLICATE,
                       IOHERE);
 
-   type Redirection_Op is record
-      Target_FD : Natural;
-      Cmd       : Redir_Cmd;
-      Source_FD : Natural;
-      Filename  : Token;
-      Eval      : Boolean;
+   type Redirection_Op (Kind : Redir_Cmd := NULL_REDIR) is record
+      case Kind is
+         when OPEN_READ | OPEN_WRITE | OPEN_APPEND  =>
+            Open_Target : Natural;
+            Filename    : Token;
+         when DUPLICATE =>
+            Dup_Target  : Natural;
+            Source      : Token;
+         when IOHERE =>
+            Doc_Target  : Natural;
+            Content     : Token;
+            Expand      : Boolean;
+         when NULL_REDIR =>
+            null;
+      end case;
    end record;
    --  Redirection directive. F is the name of the file. If Append is True
    --  then F will be opened in append mode (relevant only for Stdin and
@@ -51,7 +60,7 @@ package Posix_Shell.Variables.Output is
    --  Redirection directives for Stdin, Stdout and Stderr.
 
    Empty_Redirection_Op_Stack : Redirection_Op_Stack :=
-     (0, (others => (0, NULL_REDIR, 0, Null_Token, True)));
+     (0, (others => (Kind => NULL_REDIR)));
 
    procedure Set_Redirections
      (S : Shell_State_Access;

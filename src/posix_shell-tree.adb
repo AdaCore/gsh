@@ -452,6 +452,7 @@ package body Posix_Shell.Tree is
    end Free_Node;
 
    procedure Free_Node (Tree : in out Shell_Tree; N : Node_Id) is
+      pragma Unreferenced (Tree);
    begin
       if N = Null_Node then
          return;
@@ -501,18 +502,13 @@ package body Posix_Shell.Tree is
    procedure Set_Node_Redirection
      (Tree      : Shell_Tree;
       N         : Node_Id;
-      Target_FD : Natural;
-      Filename  : Token;
-      Source_FD : Natural;
-      Cmd       : Redir_Cmd;
-      Eval      : Boolean)
+      Operator  : Redirection_Op)
    is
       New_Top : constant Natural :=
         Tree.Node_Table.Table (N).Redirections.Top + 1;
    begin
       Tree.Node_Table.Table (N).Redirections.Top := New_Top;
-      Tree.Node_Table.Table (N).Redirections.Ops (New_Top) :=
-        (Target_FD, Cmd, Source_FD, Filename, Eval);
+      Tree.Node_Table.Table (N).Redirections.Ops (New_Top) := Operator;
    end Set_Node_Redirection;
 
    -----------------------

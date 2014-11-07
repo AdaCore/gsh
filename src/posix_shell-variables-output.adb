@@ -22,8 +22,11 @@
 
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
+with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Ada.Strings.Unbounded;
+pragma Warnings (Off);
 with System.CRTL;
+pragma Warnings (On);
 with GNAT.Task_Lock;
 
 package body Posix_Shell.Variables.Output is
@@ -211,57 +214,68 @@ package body Posix_Shell.Variables.Output is
          declare
             C : constant Redirection_Op := R.Ops (J);
          begin
-            case C.Cmd is
+            case C.Kind is
                when OPEN_READ =>
-                  New_States (C.Target_FD).Filename :=
+                  New_States (C.Open_Target).Filename :=
                     new String'(Resolve_Filename (C.Filename));
                   GNAT.Task_Lock.Lock;
-                  New_States (C.Target_FD).Fd := Open_Read
-                    (New_States (C.Target_FD).Filename.all,
+                  New_States (C.Open_Target).Fd := Open_Read
+                    (New_States (C.Open_Target).Filename.all,
                      Binary);
                   Set_Close_On_Exec
-                    (New_States (C.Target_FD).Fd, True, Success);
-                  New_States (C.Target_FD).Delete_On_Close := False;
-                  New_States (C.Target_FD).Can_Be_Closed := True;
+                    (New_States (C.Open_Target).Fd, True, Success);
+                  New_States (C.Open_Target).Delete_On_Close := False;
+                  New_States (C.Open_Target).Can_Be_Closed := True;
                   GNAT.Task_Lock.Unlock;
                when OPEN_WRITE =>
-                  New_States (C.Target_FD).Filename :=
+                  New_States (C.Open_Target).Filename :=
                     new String'(Resolve_Filename (C.Filename));
                   if not Is_Null_File
-                    (New_States (C.Target_FD).Filename.all)
+                    (New_States (C.Open_Target).Filename.all)
                   then
                      Delete_File
-                       (New_States (C.Target_FD).Filename.all, Success);
+                       (New_States (C.Open_Target).Filename.all, Success);
                   end if;
                   GNAT.Task_Lock.Lock;
-                  New_States (C.Target_FD).Fd := Open_Append
-                    (New_States (C.Target_FD).Filename.all, Binary);
+                  New_States (C.Open_Target).Fd := Open_Append
+                    (New_States (C.Open_Target).Filename.all, Binary);
                   Set_Close_On_Exec
-                    (New_States (C.Target_FD).Fd, True, Success);
-                  New_States (C.Target_FD).Delete_On_Close := False;
-                  Lseek (New_States (C.Target_FD).Fd, 0, 2);
-                  New_States (C.Target_FD).Can_Be_Closed := True;
+                    (New_States (C.Open_Target).Fd, True, Success);
+                  New_States (C.Open_Target).Delete_On_Close := False;
+                  Lseek (New_States (C.Open_Target).Fd, 0, 2);
+                  New_States (C.Open_Target).Can_Be_Closed := True;
                   GNAT.Task_Lock.Unlock;
                when OPEN_APPEND =>
-                  New_States (C.Target_FD).Filename :=
+                  New_States (C.Open_Target).Filename :=
                     new String'(Resolve_Filename (C.Filename));
                   GNAT.Task_Lock.Lock;
-                  New_States (C.Target_FD).Fd := Open_Append
-                    (New_States (C.Target_FD).Filename.all, Binary);
+                  New_States (C.Open_Target).Fd := Open_Append
+                    (New_States (C.Open_Target).Filename.all, Binary);
                   Set_Close_On_Exec
-                    (New_States (C.Target_FD).Fd, True, Success);
-                  New_States (C.Target_FD).Delete_On_Close := False;
-                  Lseek (New_States (C.Target_FD).Fd, 0, 2);
-                  New_States (C.Target_FD).Can_Be_Closed := True;
+                    (New_States (C.Open_Target).Fd, True, Success);
+                  New_States (C.Open_Target).Delete_On_Close := False;
+                  Lseek (New_States (C.Open_Target).Fd, 0, 2);
+                  New_States (C.Open_Target).Can_Be_Closed := True;
                   GNAT.Task_Lock.Unlock;
                when DUPLICATE =>
-                  GNAT.Task_Lock.Lock;
-                  New_States (C.Target_FD).Fd :=
-                    Dup (New_States (C.Source_FD).Fd);
-                  Set_Close_On_Exec
-                    (New_States (C.Target_FD).Fd, True, Success);
-                  New_States (C.Target_FD).Can_Be_Closed := True;
-                  GNAT.Task_Lock.Unlock;
+                  declare
+                     FD_Str : constant String :=
+                       Eval_String_Unsplit (S, Get_Token_String (C.Filename));
+                     Source_FD : Integer := 0;
+                     Is_Valid  : Boolean := False;
+
+                  begin
+                     To_Integer (FD_Str, Source_FD, Is_Valid);
+                     if Is_Valid then
+                        GNAT.Task_Lock.Lock;
+                        New_States (C.Dup_Target).Fd :=
+                          Dup (New_States (Source_FD).Fd);
+                        Set_Close_On_Exec
+                          (New_States (C.Dup_Target).Fd, True, Success);
+                        New_States (C.Dup_Target).Can_Be_Closed := True;
+                        GNAT.Task_Lock.Unlock;
+                     end if;
+                  end;
                when IOHERE =>
                   declare
                      Fd : File_Descriptor;
@@ -269,7 +283,7 @@ package body Posix_Shell.Variables.Output is
                      Result : Integer;
                      pragma Warnings (Off, Result);
                      Result_String : aliased String :=
-                       (if C.Eval
+                       (if C.Expand
                         then Eval_String_Unsplit
                           (S, Get_Token_String (C.Filename), IOHere => True)
                         else Get_Token_String (C.Filename));
@@ -280,14 +294,14 @@ package body Posix_Shell.Variables.Output is
                        (Fd, Result_String'Address, Result_String'Length);
                      Close (Fd);
 
-                     New_States (C.Target_FD).Filename := new String'(Name);
-                     New_States (C.Target_FD).Fd := Open_Read
-                       (New_States (C.Target_FD).Filename.all,
+                     New_States (C.Doc_Target).Filename := new String'(Name);
+                     New_States (C.Doc_Target).Fd := Open_Read
+                       (New_States (C.Doc_Target).Filename.all,
                         Binary);
                      Set_Close_On_Exec
-                       (New_States (C.Target_FD).Fd, True, Success);
-                     New_States (C.Target_FD).Delete_On_Close := True;
-                     New_States (C.Target_FD).Can_Be_Closed := True;
+                       (New_States (C.Doc_Target).Fd, True, Success);
+                     New_States (C.Doc_Target).Delete_On_Close := True;
+                     New_States (C.Doc_Target).Can_Be_Closed := True;
                      GNAT.Task_Lock.Unlock;
                   end;
                when others =>
@@ -453,7 +467,6 @@ package body Posix_Shell.Variables.Output is
          --  failure
          Shell_Exit (S, 127);
       end if;
-
 
       --  Save stdout
       S.Redirections (-1) := S.Redirections (1);
