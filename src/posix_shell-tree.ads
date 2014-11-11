@@ -147,7 +147,7 @@ package Posix_Shell.Tree is
    procedure Set_Node_Redirection
      (Tree      : Shell_Tree;
       N         : Node_Id;
-      Operator  : Redirection_Op);
+      Operator  : Redirection);
 
    procedure Append_Arg
      (Tree   : in out Shell_Tree;
@@ -213,7 +213,7 @@ private
    function Get_Node (Tree : Shell_Tree; N : Node_Id) return Node;
 
    type Node (Kind : Node_Kind := IF_NODE) is record
-      Redirections      : Redirection_Op_Stack := Empty_Redirection_Op_Stack;
+      Redirections      : Redirection_Stack := Empty_Redirections;
       Pos               : Text_Position := Null_Text_Position;
       case Kind is
          when IF_NODE =>

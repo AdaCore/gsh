@@ -33,11 +33,11 @@ package body Posix_Shell.Builtins.Pwd is
    -----------------
 
    function Pwd_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       pragma Unreferenced (Args);
    begin
-      Put (S.all, 1, Get_Current_Dir (S.all, True) & ASCII.LF);
+      Put (S, 1, Get_Current_Dir (S, True) & ASCII.LF);
       return 0;
    end Pwd_Builtin;
 

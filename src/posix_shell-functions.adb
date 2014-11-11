@@ -44,24 +44,24 @@ package body Posix_Shell.Functions is
    ----------------------
 
    procedure Execute_Function
-     (State : Shell_State_Access;
+     (State : in out Shell_State;
       Name  : String;
       Args : String_List)
    is
       Function_Tree : constant Shell_Tree :=
         Element (Function_Map, Name);
       Saved_Pos_Params : constant Pos_Params_State :=
-        Get_Positional_Parameters (State.all);
+        Get_Positional_Parameters (State);
 
    begin
-      Set_Positional_Parameters (State.all, Args, False);
+      Set_Positional_Parameters (State, Args, False);
 
       Eval (State, Function_Tree);
-      Restore_Positional_Parameters (State.all, Saved_Pos_Params);
+      Restore_Positional_Parameters (State, Saved_Pos_Params);
 
    exception
       when Shell_Exit_Exception =>
-         Restore_Positional_Parameters (State.all, Saved_Pos_Params);
+         Restore_Positional_Parameters (State, Saved_Pos_Params);
          raise;
    end Execute_Function;
 

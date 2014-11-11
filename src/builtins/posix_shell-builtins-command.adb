@@ -32,13 +32,13 @@ with Posix_Shell.Variables.Output;      use Posix_Shell.Variables.Output;
 package body Posix_Shell.Builtins.Command is
 
    function Identify
-     (S            : Shell_State_Access;
+     (S            : in out Shell_State;
       Command_Name : String;
       From         : String;
       Path_Only    : Boolean := True) return Boolean;
 
    function Common_to_Type_and_Which
-     (S    : Shell_State_Access;
+     (S    : in out Shell_State;
       Args : String_List;
       From : String;
       Path_Only : Boolean := True) return Integer;
@@ -48,7 +48,7 @@ package body Posix_Shell.Builtins.Command is
    --------------
 
    function Identify
-     (S            : Shell_State_Access;
+     (S            : in out Shell_State;
       Command_Name : String;
       From         : String;
       Path_Only    : Boolean := True) return Boolean is
@@ -60,28 +60,28 @@ package body Posix_Shell.Builtins.Command is
 
       if Is_Builtin (Command_Name) then
          if Path_Only then
-            Put (S.all, 1, Command_Name & ": shell built-in command");
+            Put (S, 1, Command_Name & ": shell built-in command");
          else
-            Put (S.all, 1, Command_Name & " is a shell builtin");
+            Put (S, 1, Command_Name & " is a shell builtin");
          end if;
-         New_Line (S.all, 1);
+         New_Line (S, 1);
       elsif Is_Function (Command_Name) then
-         Put (S.all, 1, Command_Name & " is a function");
-         New_Line (S.all, 1);
+         Put (S, 1, Command_Name & " is a function");
+         New_Line (S, 1);
       else
-         Exec_Path := Locate_Exec (S.all, Command_Name);
+         Exec_Path := Locate_Exec (S, Command_Name);
          if Exec_Path = null then
             if not (From = "command" and Path_Only) then
-               Error (S.all, Command_Name & " not found");
+               Error (S, Command_Name & " not found");
                Got_Error := True;
             end if;
          else
             if Path_Only then
-               Put (S.all, 1, Exec_Path.all);
+               Put (S, 1, Exec_Path.all);
             else
-               Put (S.all, 1, Command_Name & " is " & Exec_Path.all);
+               Put (S, 1, Command_Name & " is " & Exec_Path.all);
             end if;
-            New_Line (S.all, 1);
+            New_Line (S, 1);
          end if;
       end if;
 
@@ -93,7 +93,7 @@ package body Posix_Shell.Builtins.Command is
    ---------------------
 
    function Command_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       From : constant String := "command";
       Using_PATH     : Boolean := False;
@@ -123,7 +123,7 @@ package body Posix_Shell.Builtins.Command is
                      --  ??? The following is 'temporary' code
                      --  not fully sure about how option '-p' should be
                      --  treated
-                     Error (S.all,
+                     Error (S,
                             From & ": -p option is currently not handled");
                      return 1;
 
@@ -131,7 +131,7 @@ package body Posix_Shell.Builtins.Command is
                      Invoke_Command := False;
                      Path_Only      := Args (Index).all (C) = 'v';
                   when others =>
-                     Error (S.all,
+                     Error (S,
                             From & ": unknown option: " & Args (Index).all);
                      return 1;
                end case;
@@ -150,7 +150,7 @@ package body Posix_Shell.Builtins.Command is
               Args (Command_List_Start + 1 .. Args'Last);
             Result    : Integer;
          begin
-            Result := Run (S, Command, Arguments, Get_Environment (S.all));
+            Result := Run (S, Command, Arguments, Get_Environment (S));
             return Result;
          end;
 
@@ -172,7 +172,7 @@ package body Posix_Shell.Builtins.Command is
    ------------------------------
 
    function Common_to_Type_and_Which
-     (S         : Shell_State_Access;
+     (S         : in out Shell_State;
       Args      : String_List;
       From      : String;
       Path_Only : Boolean := True) return Integer
@@ -183,7 +183,7 @@ package body Posix_Shell.Builtins.Command is
       --  No options are expected
       for Index in Args'Range loop
          if Args (Index) (Args (Index)'First) = '-' then
-            Error (S.all,
+            Error (S,
                    From & ": unknown option: " & Args (Index).all);
             return 1;
          end if;
@@ -205,7 +205,7 @@ package body Posix_Shell.Builtins.Command is
    ------------------
 
    function Type_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       From       : constant String := "type";
    begin
@@ -217,7 +217,7 @@ package body Posix_Shell.Builtins.Command is
    -------------------
 
    function Which_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       From       : constant String := "which";
    begin

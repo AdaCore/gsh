@@ -33,12 +33,12 @@ package body Posix_Shell.Builtins.Dirname is
    ----------------------
 
    function Dirname_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       First : Integer := 0;
    begin
       if Args'Length = 0 then
-         Error (S.all, "dirname: need at least one operand");
+         Error (S, "dirname: need at least one operand");
          return 1;
       end if;
 
@@ -49,19 +49,19 @@ package body Posix_Shell.Builtins.Dirname is
       end if;
 
       if Args'Last - First + 1 > 1 then
-         Error (S.all, "dirname: does not accept more than one operand");
+         Error (S, "dirname: does not accept more than one operand");
          return 1;
       end if;
 
       if Args (First).all = "" then
-         Put (S.all, 1, "." & ASCII.LF);
+         Put (S, 1, "." & ASCII.LF);
          return 0;
       end if;
 
       --  Step 1. If string is "//" just preserved the // which has special
       --  meaning on windows.
       if Args (First).all = "//" or else Args (First).all = "\\" then
-         Put (S.all, 1, Args (First).all & ASCII.LF);
+         Put (S, 1, Args (First).all & ASCII.LF);
          return 0;
       end if;
 
@@ -74,7 +74,7 @@ package body Posix_Shell.Builtins.Dirname is
             Filename_End := Filename_End - 1;
             if Filename_End < Path'First then
                --  Only slashes and backslashes in the path so return a /
-               Put (S.all, 1, "/" & ASCII.LF);
+               Put (S, 1, "/" & ASCII.LF);
                return 0;
             end if;
          end loop;
@@ -91,7 +91,7 @@ package body Posix_Shell.Builtins.Dirname is
          --  No slashes remain in the string so return .
          if Filename_End < Path'First then
             --  no slashes left in path so return "."
-            Put (S.all, 1, "." & ASCII.LF);
+            Put (S, 1, "." & ASCII.LF);
             return 0;
          end if;
 
@@ -99,7 +99,7 @@ package body Posix_Shell.Builtins.Dirname is
          if Path (Path'First .. Filename_End) = "//" or else
            Path (Path'First .. Filename_End) = "\\"
          then
-            Put (S.all, 1, Path (Path'First .. Filename_End) & ASCII.LF);
+            Put (S, 1, Path (Path'First .. Filename_End) & ASCII.LF);
             return 0;
          end if;
 
@@ -114,11 +114,11 @@ package body Posix_Shell.Builtins.Dirname is
          end loop;
 
          if Filename_End < Path'First then
-            Put (S.all, 1, "/" & ASCII.LF);
+            Put (S, 1, "/" & ASCII.LF);
             return 0;
          end if;
 
-         Put (S.all, 1, Path (Path'First .. Filename_End) & ASCII.LF);
+         Put (S, 1, Path (Path'First .. Filename_End) & ASCII.LF);
          return 0;
       end;
    end Dirname_Builtin;

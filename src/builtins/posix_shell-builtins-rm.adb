@@ -38,7 +38,7 @@ package body Posix_Shell.Builtins.Rm is
    ----------------
 
    function Rm_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
 
       File_List_Start : Integer := Args'First;
@@ -56,7 +56,7 @@ package body Posix_Shell.Builtins.Rm is
          if GNAT.OS_Lib.Is_Regular_File (Filename) then
             Status := Delete_File (Filename);
             if Status /= 0 then
-               Error (S.all, "rm: cannot remove `" &
+               Error (S, "rm: cannot remove `" &
                         Filename & "': windows error " & Status'Img);
                if not Force then
                   Got_Errors := True;
@@ -65,7 +65,7 @@ package body Posix_Shell.Builtins.Rm is
          elsif GNAT.OS_Lib.Is_Directory (Filename) then
 
             if not Recursive then
-               Error (S.all, "rm: cannot remove `" &
+               Error (S, "rm: cannot remove `" &
                         Filename & "': is a directory");
                Got_Errors := True;
                return;
@@ -90,7 +90,7 @@ package body Posix_Shell.Builtins.Rm is
                   else
                      Status := Delete_File (File_Name);
                      if Status /= 0 then
-                        Error (S.all, "rm: cannot remove `" &
+                        Error (S, "rm: cannot remove `" &
                                  File_Name & "': windows error " & Status'Img);
                         if not Force then
                            Got_Errors := True;
@@ -104,7 +104,7 @@ package body Posix_Shell.Builtins.Rm is
 
             Status := Delete_File (Filename);
             if Status /= 0 then
-               Error (S.all, "rm: cannot remove `" &
+               Error (S, "rm: cannot remove `" &
                         Filename & "': windows error " & Status'Img);
                if not Force then
                   Got_Errors := True;
@@ -113,7 +113,7 @@ package body Posix_Shell.Builtins.Rm is
          elsif not Force then
             --  File does not exist emit warning if necessary
             Got_Errors := True;
-            Error (S.all, "rm: cannot remove `" & Filename &
+            Error (S, "rm: cannot remove `" & Filename &
                      "': no such file or directory");
          end if;
       end Rm_Tree;
@@ -138,7 +138,7 @@ package body Posix_Shell.Builtins.Rm is
                   when 'R' => Recursive := True;
                   when 'r' => Recursive := True;
                   when others =>
-                     Error (S.all, "rm: unknown option: " & Args (Index).all);
+                     Error (S, "rm: unknown option: " & Args (Index).all);
                      return 1;
                end case;
             end loop;
@@ -151,7 +151,7 @@ package body Posix_Shell.Builtins.Rm is
       --  Check for operands presence.
       if File_List_Start > Args'Last then
          if not Force then
-            Error (S.all, "rm: missing operand");
+            Error (S, "rm: missing operand");
             return 1;
          else
             return 0;
@@ -161,7 +161,7 @@ package body Posix_Shell.Builtins.Rm is
       --  Iterate other the files
       for Index in File_List_Start .. Args'Last loop
          Rm_Tree (GNAT.OS_Lib.Normalize_Pathname
-                  (Resolve_Path (S.all, Args (Index).all),
+                  (Resolve_Path (S, Args (Index).all),
                      Resolve_Links => False));
       end loop;
       if Got_Errors then

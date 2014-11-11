@@ -25,14 +25,14 @@ with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 
 package Posix_Shell.Variables.Output is
 
-   type Redir_Cmd is (NULL_REDIR,
-                      OPEN_READ,
-                      OPEN_WRITE,
-                      OPEN_APPEND,
-                      DUPLICATE,
-                      IOHERE);
+   type Operator is (NULL_REDIR,
+                     OPEN_READ,
+                     OPEN_WRITE,
+                     OPEN_APPEND,
+                     DUPLICATE,
+                     IOHERE);
 
-   type Redirection_Op (Kind : Redir_Cmd := NULL_REDIR) is record
+   type Redirection (Kind : Operator := NULL_REDIR) is record
       case Kind is
          when OPEN_READ | OPEN_WRITE | OPEN_APPEND  =>
             Open_Target : Natural;
@@ -52,14 +52,15 @@ package Posix_Shell.Variables.Output is
    --  then F will be opened in append mode (relevant only for Stdin and
    --  Stdout).
 
-   type Redirection_Op_Stack is private;
+   type Redirection_Stack is private;
 
-   Empty_Redirection_Op_Stack : constant Redirection_Op_Stack;
+   Empty_Redirections : constant Redirection_Stack;
 
-   procedure Set_Redirections
-     (S             : Shell_State_Access;
-      R             : Redirection_Op_Stack;
-      Free_Previous : Boolean := False);
+   function Set_Redirections
+     (S             : in out Shell_State;
+      R             : Redirection_Stack;
+      Free_Previous : Boolean := False)
+     return Boolean;
 
    function Get_Redirections
      (S : Shell_State)
@@ -81,7 +82,7 @@ package Posix_Shell.Variables.Output is
    --  Close the pipe in the current context
 
    function Read_Pipe_And_Close
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Input_Fd : File_Descriptor) return String;
    --  Read the pipe content, then close it, and return the content read.
 
@@ -113,17 +114,17 @@ package Posix_Shell.Variables.Output is
       Status        : out Boolean);
 
    procedure Push
-     (RS : in out Redirection_Op_Stack;
-      R  : Redirection_Op);
+     (RS : in out Redirection_Stack;
+      R  : Redirection);
 
 private
-   type Redirection_Op_Array is array (1 .. 16) of Redirection_Op;
-   type Redirection_Op_Stack is record
+   type Redirection_Array is array (1 .. 16) of Redirection;
+   type Redirection_Stack is record
       Top : Natural := 0;
-      Ops : Redirection_Op_Array;
+      Ops : Redirection_Array;
    end record;
    --  Redirection directives for Stdin, Stdout and Stderr.
 
-   Empty_Redirection_Op_Stack : constant Redirection_Op_Stack :=
+   Empty_Redirections : constant Redirection_Stack :=
      (0, (others => (Kind => NULL_REDIR)));
 end Posix_Shell.Variables.Output;

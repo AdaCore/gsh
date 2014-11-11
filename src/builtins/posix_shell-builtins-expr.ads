@@ -27,7 +27,7 @@
 package Posix_Shell.Builtins.Expr is
 
    function Expr_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
    --  Implement the "expr" builtin.
 
 end Posix_Shell.Builtins.Expr;

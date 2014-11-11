@@ -124,7 +124,7 @@ package body Posix_Shell.Commands_Preprocessor is
    ---------
 
    function Run
-     (S    : Shell_State_Access;
+     (S    : in out Shell_State;
       Cmd  : String;
       Args : String_List;
       Env  : String_List)
@@ -137,7 +137,7 @@ package body Posix_Shell.Commands_Preprocessor is
    begin
 
       --  Output command line if -x is set
-      if Is_Xtrace_Enabled (S.all) then
+      if Is_Xtrace_Enabled (S) then
          Ada.Text_IO.Put (Ada.Text_IO.Standard_Error, "+ " & Cmd);
          for I in Args'Range loop
             Ada.Text_IO.Put (Ada.Text_IO.Standard_Error,
@@ -149,14 +149,14 @@ package body Posix_Shell.Commands_Preprocessor is
       --  Handle builtins first.
       if Is_Builtin (Cmd) then
          Exit_Status := Execute_Builtin (S, Cmd, Args);
-         Save_Last_Exit_Status (S.all, Exit_Status);
+         Save_Last_Exit_Status (S, Exit_Status);
          return Exit_Status;
       end if;
 
       --  Next, is this a function ?
       if Is_Function (Cmd) then
          Execute_Function (S, Cmd, Args);
-         return Get_Last_Exit_Status (S.all);
+         return Get_Last_Exit_Status (S);
       end if;
 
       --  This command can only be an executable. See if we can
@@ -177,22 +177,22 @@ package body Posix_Shell.Commands_Preprocessor is
          end if;
 
       else
-         Exec_Path := Locate_Exec (S.all, Cmd);
+         Exec_Path := Locate_Exec (S, Cmd);
       end if;
 
       if Exec_Path = null then
-         Put (S.all, 2, Cmd & ": command not found"); New_Line (S.all, 2);
+         Put (S, 2, Cmd & ": command not found"); New_Line (S, 2);
          return 127;
       end if;
 
-      if Is_Xtrace_Enabled (S.all) then
+      if Is_Xtrace_Enabled (S) then
          Ada.Text_IO.Put (Ada.Text_IO.Standard_Error,
                           "+ resolve to " & Exec_Path.all);
          Ada.Text_IO.New_Line (Ada.Text_IO.Standard_Error);
       end if;
 
       declare
-         Launcher : String_List := Get_Launcher (S.all, Exec_Path);
+         Launcher : String_List := Get_Launcher (S, Exec_Path);
          Cmd_Line : constant String_List :=
            (if Opt_Args /= null then
                Launcher & Opt_Args.all & Args (Args_First .. Args'Last) else
@@ -200,12 +200,12 @@ package body Posix_Shell.Commands_Preprocessor is
       begin
 
          if Cmd_Line (Cmd_Line'First) = null then
-            Put (S.all, 2, Cmd & ": can't launch program");
-            New_Line (S.all, 2);
+            Put (S, 2, Cmd & ": can't launch program");
+            New_Line (S, 2);
             Exit_Status := 127;
          else
 
-            if Is_Xtrace_Enabled (S.all) then
+            if Is_Xtrace_Enabled (S) then
                Ada.Text_IO.Put (Ada.Text_IO.Standard_Error,
                                 "+ resolve to " &
                                   Cmd_Line (Cmd_Line'First).all);
@@ -213,11 +213,11 @@ package body Posix_Shell.Commands_Preprocessor is
             end if;
             Exit_Status := Blocking_Spawn
               (Cmd_Line,
-               Get_Current_Dir (S.all),
+               Get_Current_Dir (S),
                Env,
-               Get_Fd (S.all, 0),
-               Get_Fd (S.all, 1),
-               Get_Fd (S.all, 2));
+               Get_Fd (S, 0),
+               Get_Fd (S, 1),
+               Get_Fd (S, 2));
          end if;
          for J in Launcher'Range loop
             Free (Launcher (J));

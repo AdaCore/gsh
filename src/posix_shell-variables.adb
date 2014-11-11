@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2013, AdaCore                   --
+--                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -31,6 +31,7 @@ with Ada.Strings.Maps.Constants; use Ada.Strings.Maps.Constants;
 with Ada.Unchecked_Deallocation;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
+with Ada.Text_IO;
 
 package body Posix_Shell.Variables is
 
@@ -637,6 +638,7 @@ package body Posix_Shell.Variables is
       elsif Path = "" then
          return "";
       else
+
          return Get_Current_Dir (State) & "/" & Path;
       end if;
    end Resolve_Path;

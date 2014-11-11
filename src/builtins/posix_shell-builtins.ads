@@ -33,7 +33,7 @@ package Posix_Shell.Builtins is
    --  Return True if Cmd is a known builtin.
 
    function Execute_Builtin
-     (S : Shell_State_Access; Cmd : String; Args : String_List) return Integer;
+     (S : in out Shell_State; Cmd : String; Args : String_List) return Integer;
    --  Execute the given builtin.
 
    procedure Register_Default_Builtins;

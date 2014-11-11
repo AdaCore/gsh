@@ -21,7 +21,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Unchecked_Deallocation;
---  with Ada.Text_IO;
+with Ada.Text_IO;
 
 package body Posix_Shell.Tree is
 
@@ -67,7 +67,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => AND_OR_LIST_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           And_Or_List_Childs => Child_List));
    end Add_And_Or_List_Node;
@@ -85,7 +85,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => BRACE_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           Brace_Code   => Brace_Code));
    end Add_Brace_Node;
@@ -105,7 +105,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => CASE_LIST_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           Pattern_List => Pattern,
           Match_Code   => Case_Code,
@@ -126,7 +126,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => CASE_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           Case_Word    => Case_Value,
           First_Case   => Case_List_Code));
@@ -148,7 +148,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind                => FOR_NODE,
-          Redirections        => Empty_Redirection_Op_Stack,
+          Redirections        => Empty_Redirections,
           Pos                 => Null_Text_Position,
           Loop_Var            => Variable_Name,
           Loop_Var_Values     => Value_List,
@@ -171,7 +171,7 @@ package body Posix_Shell.Tree is
           Cond => Cond,
           True_Code => True_Code,
           False_Code => False_Code,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position));
 
    end Add_If_Node;
@@ -190,7 +190,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => LIST_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           List_Childs  => Child_List));
    end Add_List_Node;
@@ -219,7 +219,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => NULL_CMD_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position));
    end Add_Null_Node;
 
@@ -238,7 +238,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => PIPE_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           Pipe_Childs  => Child_List,
           Pipe_Negation => Pipe_Negation));
@@ -257,7 +257,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind          => SUBSHELL_NODE,
-          Redirections  => Empty_Redirection_Op_Stack,
+          Redirections  => Empty_Redirections,
           Pos           => Null_Text_Position,
           Subshell_Code => Subshell_Code));
    end Add_Subshell_Node;
@@ -273,7 +273,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind         => UNTIL_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           Until_Cond   => Cond,
           Until_Code   => Loop_Code));
@@ -290,7 +290,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => WHILE_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           While_Cond   => Cond,
           While_Code   => Loop_Code));
@@ -347,7 +347,7 @@ package body Posix_Shell.Tree is
       N    : Node_Id) return Node is
    begin
       if N = Null_Node then
-         return (NOP_NODE, Empty_Redirection_Op_Stack,
+         return (NOP_NODE, Empty_Redirections,
                  Null_Text_Position);
       else
          return Tree.Node_Table.Table (N);
@@ -502,12 +502,11 @@ package body Posix_Shell.Tree is
    procedure Set_Node_Redirection
      (Tree      : Shell_Tree;
       N         : Node_Id;
-      Operator  : Redirection_Op)
+      Operator  : Redirection)
    is
 
    begin
       Push (Tree.Node_Table.Table (N).Redirections, Operator);
-
    end Set_Node_Redirection;
 
    -----------------------

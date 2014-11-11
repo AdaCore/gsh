@@ -34,26 +34,26 @@ with Posix_Shell; use Posix_Shell;
 
 function Builtin return Integer is
    Status        : Integer := 0;
-   State         : constant Shell_State_Access := new Shell_State;
+   State         : Shell_State;
 begin
    --  First register all the builtins provided by gsh
    Register_Default_Builtins;
 
    --  Import into our state the current process environment
-   Import_Environment (State.all);
+   Import_Environment (State);
 
    declare
-      Current_Dir : constant String := Get_Current_Dir (State.all, True);
+      Current_Dir : constant String := Get_Current_Dir (State, True);
       Arguments   : String_List (1 .. Argument_Count);
       Cmd         : constant String := Base_Name
         (Ada.Command_Line.Command_Name);
    begin
       --  Reset PWD and OLDPWD in order to avoid inheriting the values
       --  from the parent process.
-      Set_Var_Value (State.all, "PWD", Current_Dir, True);
-      Set_Var_Value (State.all, "OLDPWD", Current_Dir, True);
-      Set_Var_Value (State.all, "IFS", " " & ASCII.HT & ASCII.LF);
-      Set_Var_Value (State.all, "PATH_SEPARATOR", ":");
+      Set_Var_Value (State, "PWD", Current_Dir, True);
+      Set_Var_Value (State, "OLDPWD", Current_Dir, True);
+      Set_Var_Value (State, "IFS", " " & ASCII.HT & ASCII.LF);
+      Set_Var_Value (State, "PATH_SEPARATOR", ":");
 
       for Index in 1 .. Argument_Count loop
          Arguments (Index) := new String'(Ada.Command_Line.Argument (Index));

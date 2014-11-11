@@ -30,32 +30,32 @@ with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 package Posix_Shell.Subst is
 
    function Eval_String
-     (SS        : Shell_State_Access;
+     (SS        : in out Shell_State;
       S         : String;
       Max_Split : Integer := -1)
       return String_List;
 
    function Split_String
-     (SS        : Shell_State_Access;
+     (SS        : in out Shell_State;
       S         : String;
       Max_Split : Integer := -1)
       return String_List;
 
    function Eval_String_Unsplit
-     (SS                 : Shell_State_Access;
+     (SS                 : in out Shell_State;
       S                  : String;
       Case_Pattern       : Boolean := False;
       IOHere             : Boolean := False)
       return String;
 
    function Eval_String_List
-     (SS : Shell_State_Access;
+     (SS : in out Shell_State;
       T  : Shell_Tree;
       S  : Token_List)
       return String_List;
 
    procedure Split_Arithmetic_String
-     (SS                  : Shell_State_Access;
+     (SS                  : in out Shell_State;
       Str                 : String;
       Previous_Was_Number : in out Boolean;
       Args_List           : in out Dyn_String_Lists.Dyn_String_List);

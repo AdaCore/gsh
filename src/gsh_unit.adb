@@ -30,6 +30,14 @@ begin
    Open_Libs (S);
    Posix_Shell.Lua_Bindings.Initialize (S);
    Load_File (S, Argument (1));
+
+   Create_Table (S, Argument_Count);
+   for Index in 2 .. Argument_Count loop
+      Push (S, Lua_Unsigned (Index - 1));
+      Push (S, Argument (Index));
+      Set_Table (S, -3);
+   end loop;
+   Set_Global (S, "args");
    PCall (S);
    return 0;
 end GSH_Unit;

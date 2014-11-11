@@ -38,7 +38,7 @@ package Posix_Shell.Opts is
    --  Set to False with the '-n' switch.
 
    procedure Process_Command_Line
-     (State : Shell_State_Access;
+     (State : in out Shell_State;
       B : out Buffer_Access;
       Status : out Integer;
       Is_Interactive : out Boolean);

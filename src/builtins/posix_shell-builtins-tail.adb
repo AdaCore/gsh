@@ -35,7 +35,7 @@ package body Posix_Shell.Builtins.Tail is
    ------------------
 
    function Tail_Builtin
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Args : String_List)
       return Integer
    is
@@ -89,13 +89,13 @@ package body Posix_Shell.Builtins.Tail is
 
                --  Check that we have an argument
                if Current_Arg > Args_Last then
-                  Error (S.all, "tail: option -c requires an argument");
+                  Error (S, "tail: option -c requires an argument");
                   return 1;
                end if;
 
                --  Check that the argument is an integer
                if not Parse_Number (Args (Current_Arg).all) then
-                  Error (S.all, "tail: invalid context");
+                  Error (S, "tail: invalid context");
                   return 1;
                end if;
 
@@ -107,7 +107,7 @@ package body Posix_Shell.Builtins.Tail is
                   To_Integer (CA (CA'First + 1 .. CA'Last),
                               Line_Number, Is_Valid);
                   if not Is_Valid or else not Enable_Minus_N_Opt then
-                     Error (S.all, "tail: invalid context");
+                     Error (S, "tail: invalid context");
                      return 1;
                   end if;
 
@@ -124,21 +124,21 @@ package body Posix_Shell.Builtins.Tail is
       end loop;
 
       if Current_Arg > Args'Last then
-         Buffer := new String'(Read (S.all, 0));
+         Buffer := new String'(Read (S, 0));
       else
          declare
             Fd : File_Descriptor;
             Byte_Reads : Integer;
             Length : Long_Integer;
          begin
-            Fd := Open_Read (Resolve_Path (S.all, Args (Current_Arg).all),
+            Fd := Open_Read (Resolve_Path (S, Args (Current_Arg).all),
                              Binary);
             Length := File_Length (Fd);
             Buffer := new String (1 .. Integer (Length));
             Byte_Reads := Read (Fd, Buffer.all'Address, Buffer.all'Last);
             Close (Fd);
             if Byte_Reads /= Integer (Length) then
-               Put (S.all, 2, "tail: cannot read file");
+               Put (S, 2, "tail: cannot read file");
                return 1;
             end if;
          end;
@@ -153,9 +153,9 @@ package body Posix_Shell.Builtins.Tail is
 
       else
          if Relative_To_End then
-            Put (S.all, 1, Last_Lines (Buffer.all, Line_Number));
+            Put (S, 1, Last_Lines (Buffer.all, Line_Number));
          else
-            Put (S.all, 1, From_Line (Buffer.all, Line_Number));
+            Put (S, 1, From_Line (Buffer.all, Line_Number));
          end if;
 
       end if;

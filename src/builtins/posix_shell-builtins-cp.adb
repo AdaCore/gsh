@@ -44,7 +44,7 @@ package body Posix_Shell.Builtins.Cp is
    --      when using runtime 'Copy_File'
 
    function Cp_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       On_Windows      : constant Boolean := Directory_Separator = '\';
       Exec_Extension  : constant String := ".exe";
@@ -99,7 +99,7 @@ package body Posix_Shell.Builtins.Cp is
             end if;
 
             if Status /= 0 then
-               Error (S.all, "cp: cannot remove '" &
+               Error (S, "cp: cannot remove '" &
                         Target_Path & "': windows error " & Status'Img);
                Got_Errors := Force;
             end if;
@@ -110,7 +110,7 @@ package body Posix_Shell.Builtins.Cp is
                        Preserve => Preserve);
 
             if not Success then
-               Error (S.all,
+               Error (S,
                       "cp: '"  & Source_Path & "' not copied to '" &
                         Target_Path & "'");
                Got_Errors := True;
@@ -129,7 +129,7 @@ package body Posix_Shell.Builtins.Cp is
          begin
             --  Check if target_path is a directory and it exists
             if GNAT.OS_Lib.Is_Regular_File (Target_Path) then
-               Error  (S.all, "cp: " & Target_Path & "is not a directory");
+               Error  (S, "cp: " & Target_Path & "is not a directory");
                Got_Errors := True;
             elsif not GNAT.OS_Lib.Is_Directory (Target_Path) then
                GNAT.Directory_Operations.Make_Dir (Target_Path);
@@ -170,7 +170,7 @@ package body Posix_Shell.Builtins.Cp is
          exception
             when GNAT.Directory_Operations.Directory_Error =>
                Got_Errors := True;
-               Error (S.all,
+               Error (S,
                       "cp: unable to create such directory '" &
                         Target_Path & "'");
          end Recursive_Copy;
@@ -181,7 +181,7 @@ package body Posix_Shell.Builtins.Cp is
 
             if not Recursive then
                Got_Errors := True;
-               Error (S.all,
+               Error (S,
                       "cp: '" & Filename
                       &  "' is a directory (not copied)");
                return;
@@ -205,7 +205,7 @@ package body Posix_Shell.Builtins.Cp is
          else
             --  File or directory to copy does not exist
             Got_Errors := True;
-            Error (S.all,
+            Error (S,
                    "cp: no such file or directory '" & Filename & "' ");
          end if;
       end Cp_Tree;
@@ -230,7 +230,7 @@ package body Posix_Shell.Builtins.Cp is
                   when 'r' => Recursive := True;
                   when 'p' => Preserve := Full;
                   when others =>
-                     Error (S.all, "cp: unknown option: " & Args (Index).all);
+                     Error (S, "cp: unknown option: " & Args (Index).all);
                      return 1;
                end case;
             end loop;
@@ -242,14 +242,14 @@ package body Posix_Shell.Builtins.Cp is
 
       --  Check for operands presence.
       if File_List_Start > File_List_End then
-         Error (S.all, "cp: missing operand");
+         Error (S, "cp: missing operand");
          return 1;
       end if;
 
       declare
          Target_Path : constant String :=
            GNAT.OS_Lib.Normalize_Pathname
-             (Resolve_Path (S.all,
+             (Resolve_Path (S,
                             Args (Args'Last).all),
               Resolve_Links => False);
          Target_Is_Directory : constant Boolean :=
@@ -260,7 +260,7 @@ package body Posix_Shell.Builtins.Cp is
             --  When a list of elements is to be copied, args'last must be an
             --  existing directory.
             if not Target_Is_Directory then
-               Error (S.all, "cp: no such directory '" & Target_Path & "'");
+               Error (S, "cp: no such directory '" & Target_Path & "'");
                return 1;
             end if;
          end if;
@@ -268,7 +268,7 @@ package body Posix_Shell.Builtins.Cp is
          --  Iterate the files
          for Index in File_List_Start .. File_List_End loop
             Cp_Tree (GNAT.OS_Lib.Normalize_Pathname
-                     (Resolve_Path (S.all, Args (Index).all),
+                     (Resolve_Path (S, Args (Index).all),
                         Resolve_Links => False),
                      Target_Path,
                      Target_Is_Directory);

@@ -122,8 +122,8 @@ package Posix_Shell.Variables is
    type Pos_Params_State is private;
 
    procedure Set_Positional_Parameters
-     (State : in out Shell_State;
-      Args : String_List;
+     (State         : in out Shell_State;
+      Args          : String_List;
       Free_Previous : Boolean := True);
 
    function Get_Positional_Parameters
@@ -205,7 +205,7 @@ private
    --  ???    and 3 .. 4 are pipe-in and pipe-out.
 
    --  procedure Push_Redirections
-   --  (S : Shell_State_Access; R : Redirection_Op_Stack);
+   --  (S : in out Shell_State; R : Redirection_Op_Stack);
    --  Set a new redirection context.
 
    type Trap_Action_List is array (0 .. 15) of String_Access;

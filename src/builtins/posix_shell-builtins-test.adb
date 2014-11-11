@@ -62,7 +62,7 @@ package body Posix_Shell.Builtins.Test is
    type Binop_Access is access function
      (Left, Right : Long_Long_Integer) return Boolean;
 
-   function Eval_Binop (S : Shell_State_Access;
+   function Eval_Binop (S : in out Shell_State;
                         Left, Right : String_Access;
                         Binop : Binop_Access) return Integer;
    --  A function that converts Left and Right to integers, and evaluates
@@ -119,7 +119,7 @@ package body Posix_Shell.Builtins.Test is
    -- Eval_Binop --
    ----------------
 
-   function Eval_Binop (S : Shell_State_Access;
+   function Eval_Binop (S : in out Shell_State;
                         Left, Right : String_Access;
                         Binop : Binop_Access) return Integer
    is
@@ -128,13 +128,13 @@ package body Posix_Shell.Builtins.Test is
    begin
       To_LongLong (Left.all, Left_V, Success);
       if not Success then
-         Error (S.all, "test: " & Left.all & ": integer expression expected");
+         Error (S, "test: " & Left.all & ": integer expression expected");
          return 2;
       end if;
 
       To_LongLong (Right.all, Right_V, Success);
       if not Success then
-         Error (S.all, "test: " & Right.all & ": integer expression expected");
+         Error (S, "test: " & Right.all & ": integer expression expected");
          return 2;
       end if;
 
@@ -233,7 +233,7 @@ package body Posix_Shell.Builtins.Test is
    ------------------
 
    function Test_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       Current_Pos : Integer := Args'First;
       --  Position of the string currently parsed in Args.
@@ -333,7 +333,7 @@ package body Posix_Shell.Builtins.Test is
          -------------
 
          function Is_File (Filename : String) return String is
-            Res_Path : constant String := Resolve_Path (S.all, Filename);
+            Res_Path : constant String := Resolve_Path (S, Filename);
          begin
 
             if Path_Separator = ';' and then Filename = "/dev/null" then
@@ -517,7 +517,7 @@ package body Posix_Shell.Builtins.Test is
             Str = "-u" or else
             Str = "-x"
          then
-            Warning (S.all,
+            Warning (S,
                      "test: " & Str & ": unary operator not supported yet");
             return UNSUPPORTED_UNARY_OP;
          end if;
@@ -543,7 +543,7 @@ package body Posix_Shell.Builtins.Test is
             Current_Pos := Current_Pos + 1;
 
             if Current_Pos > Args'Last then
-               Error (S.all,
+               Error (S,
                       "test: argument expected after -a binary operator");
                --  This error message is different from what bash is
                --  printing. But doing the same thing as bash is not trivial
@@ -598,7 +598,7 @@ package body Posix_Shell.Builtins.Test is
             Current_Pos := Current_Pos + 1;
 
             if Current_Pos > Args'Last then
-               Error (S.all,
+               Error (S,
                       "test: argument expected after -o binary operator");
                --  This error message is different from what bash is
                --  printing. But doing the same thing as bash is not trivial

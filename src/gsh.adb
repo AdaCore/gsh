@@ -45,7 +45,7 @@ with Posix_Shell.Tree.Dumps; use Posix_Shell.Tree.Dumps;
 function GSH return Integer is
    T             : Shell_Tree;
    Status        : Integer := 0;
-   State         : constant Shell_State_Access := new Shell_State;
+   State         : Shell_State;
    Script_Buffer : Buffer_Access := null;
 
    procedure Null_Procedure;
@@ -66,20 +66,20 @@ begin
    Register_Default_Builtins;
 
    --  Import into our state the current process environment
-   Import_Environment (State.all);
+   Import_Environment (State);
 
    declare
-      Current_Dir    : constant String := Get_Current_Dir (State.all, True);
+      Current_Dir    : constant String := Get_Current_Dir (State, True);
       Is_Interactive : Boolean;
       Should_Exit    : Boolean := False;
 
    begin
       --  Reset PWD and OLDPWD in order to avoid inheriting the values
       --  from the parent process.
-      Set_Var_Value (State.all, "PWD", Current_Dir, True);
-      Set_Var_Value (State.all, "OLDPWD", Current_Dir, True);
-      Set_Var_Value (State.all, "IFS", " " & ASCII.HT & ASCII.LF);
-      Set_Var_Value (State.all, "PATH_SEPARATOR", ":");
+      Set_Var_Value (State, "PWD", Current_Dir, True);
+      Set_Var_Value (State, "OLDPWD", Current_Dir, True);
+      Set_Var_Value (State, "IFS", " " & ASCII.HT & ASCII.LF);
+      Set_Var_Value (State, "PATH_SEPARATOR", ":");
 
       --  Disable auto expansion of parameters by the cygwin programs. Indeed
       --  when a cygwin program is called outside a cygwin shell, it will try
@@ -87,17 +87,17 @@ begin
       --  As this is provided by gsh we do not want the parameter to be
       --  expanded twice
       declare
-         Cygwin : constant String := Get_Var_Value (State.all, "CYGWIN");
+         Cygwin : constant String := Get_Var_Value (State, "CYGWIN");
 
       begin
          if Cygwin = "" then
             Set_Var_Value
-              (State.all, "CYGWIN", "noglob", True);
+              (State, "CYGWIN", "noglob", True);
 
          else
             Set_Var_Value
-              (State.all, "CYGWIN",
-               Get_Var_Value (State.all, "CYGWIN") & " noglob",
+              (State, "CYGWIN",
+               Get_Var_Value (State, "CYGWIN") & " noglob",
                True);
          end if;
       end;
@@ -105,7 +105,7 @@ begin
       --  Set the last exit status to zero, so that the first command
       --  in the script can access it (if the first command is "echo $?",
       --  for instance).
-      Save_Last_Exit_Status (State.all, 0);
+      Save_Last_Exit_Status (State, 0);
 
       --  Process the command line and in case of usage error exit
       Process_Command_Line (State, Script_Buffer, Status, Is_Interactive);
@@ -120,7 +120,7 @@ begin
       --  The shell main loop
       loop
          if Is_Interactive then
-            Set_Directory (Get_Var_Value (State.all, "PWD"));
+            Set_Directory (Get_Var_Value (State, "PWD"));
             declare
                Line : constant String := Readline ("$ ");
             begin
@@ -141,19 +141,19 @@ begin
 
             begin
                Eval (State, T);
-               Status := Get_Last_Exit_Status (State.all);
+               Status := Get_Last_Exit_Status (State);
 
             exception
                when Shell_Exit_Exception =>
-                  Status := Get_Last_Exit_Status (State.all);
+                  Status := Get_Last_Exit_Status (State);
                   Should_Exit := True;
 
                when Shell_Return_Exception =>
                   Put
-                    (State.all, 2,
+                    (State, 2,
                      "return: can only `return' from a " &
                        "function or sourced script" & ASCII.LF);
-                  Save_Last_Exit_Status (State.all, 1);
+                  Save_Last_Exit_Status (State, 1);
                   Status := 1;
 
             end;
@@ -162,7 +162,7 @@ begin
             if not Is_Interactive or else Should_Exit then
                declare
                   Exit_Trap_Action : constant String_Access :=
-                    Get_Trap_Action (State.all, 0);
+                    Get_Trap_Action (State, 0);
                   Trap_Status : Integer;
                   pragma Warnings (Off, Trap_Status);
 
@@ -177,14 +177,14 @@ begin
                   end if;
                exception
                   when Shell_Exit_Exception =>
-                     Status := Get_Last_Exit_Status (State.all);
+                     Status := Get_Last_Exit_Status (State);
                      exit;
                   when Shell_Return_Exception =>
                      Put
-                       (State.all, 2,
+                       (State, 2,
                         "return: can only `return' from a " &
                           "function or sourced script" & ASCII.LF);
-                     Save_Last_Exit_Status (State.all, 1);
+                     Save_Last_Exit_Status (State, 1);
                      Status := 1;
                end;
             end if;

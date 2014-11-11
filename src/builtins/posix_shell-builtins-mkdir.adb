@@ -36,7 +36,7 @@ package body Posix_Shell.Builtins.Mkdir is
    -------------------
 
    function Mkdir_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       File_List_Start : Integer := Args'First;
       Create_Intermediates : Boolean := False;
@@ -55,7 +55,7 @@ package body Posix_Shell.Builtins.Mkdir is
                case Args (Index).all (C) is
                   when 'p' => Create_Intermediates := True;
                   when others =>
-                     Error (S.all, "mkdir: unknown option: " &
+                     Error (S, "mkdir: unknown option: " &
                             Args (Index).all);
                      return 1;
                end case;
@@ -68,7 +68,7 @@ package body Posix_Shell.Builtins.Mkdir is
 
       --  Check for operands presence.
       if File_List_Start > Args'Last then
-         Error (S.all, "mkdir: too few arguments");
+         Error (S, "mkdir: too few arguments");
          return 1;
       end if;
 
@@ -76,7 +76,7 @@ package body Posix_Shell.Builtins.Mkdir is
       for Index in File_List_Start .. Args'Last loop
          declare
             CP : constant String := GNAT.OS_Lib.Normalize_Pathname
-              (Resolve_Path (S.all, Args (Index).all),
+              (Resolve_Path (S, Args (Index).all),
                Resolve_Links => False);
          begin
             if Create_Intermediates then
@@ -86,7 +86,7 @@ package body Posix_Shell.Builtins.Mkdir is
             end if;
          exception
             when others =>
-               Put (S.all, 2, "cannot create " & CP & ASCII.LF);
+               Put (S, 2, "cannot create " & CP & ASCII.LF);
                Got_Errors := True;
          end;
       end loop;

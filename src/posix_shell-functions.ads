@@ -34,7 +34,7 @@ package Posix_Shell.Functions is
    --  Return True if a function of the given name has been defined.
 
    procedure Execute_Function
-     (State : Shell_State_Access;
+     (State : in out Shell_State;
       Name  : String;
       Args  : String_List);
    --  Execute the given function with the provide arguments, and

@@ -29,7 +29,7 @@ package Posix_Shell.Builtins.Support is
    procedure Recursive_Make_Dir (Dir : String);
 
    function Change_Dir
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Dir_Name : String;
       Verbose : Boolean := False)
      return Integer;

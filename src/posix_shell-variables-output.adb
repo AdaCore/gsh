@@ -148,15 +148,19 @@ package body Posix_Shell.Variables.Output is
    -- Push_Redirections --
    -----------------------
 
-   procedure Set_Redirections
-     (S             : Shell_State_Access;
-      R             : Redirection_Op_Stack;
+   function Set_Redirections
+     (S             : in out Shell_State;
+      R             : Redirection_Stack;
       Free_Previous : Boolean := False)
+     return Boolean
    is
+
       Success    : Boolean := False;
       Old_States : constant Shell_Descriptors := S.Redirections;
       New_States : Shell_Descriptors;
       On_Windows : constant Boolean := Directory_Separator = '\';
+      Has_Errors : Boolean := False;
+      --  Will be set to true if some redirection were not put in place
 
       function Is_Null_File (Str : String) return Boolean;
       pragma Inline (Is_Null_File);
@@ -196,6 +200,9 @@ package body Posix_Shell.Variables.Output is
           Delete_On_Close : Boolean := False)
       is
       begin
+         if Is_Xtrace_Enabled (S) then
+            Put (S, 2, "fd:" & FD'Img & ", path: " & Path & ASCII.LF);
+         end if;
          New_States (FD).Filename := new String'(Path);
 
          if Write and then not Append and then
@@ -242,7 +249,7 @@ package body Posix_Shell.Variables.Output is
       function Resolve_Filename (A : Token) return String
       is
          Eval_Result : constant String := Resolve_Path
-           (S.all, Eval_String_Unsplit (S, Get_Token_String (A)));
+           (S, Eval_String_Unsplit (S, Get_Token_String (A)));
       begin
          if On_Windows and then Eval_Result = "/dev/null" then
             return "NUL";
@@ -253,9 +260,9 @@ package body Posix_Shell.Variables.Output is
 
    begin
 
-      null;
       --  The new redirection states inherits the unmodifed file
       --  descriptors from the old state.
+
       New_States := Old_States;
 
       --  We are not allowed to close file descriptor we are inheriting
@@ -266,8 +273,9 @@ package body Posix_Shell.Variables.Output is
       end if;
 
       for J in 1 .. R.Top loop
+
          declare
-            C : constant Redirection_Op := R.Ops (J);
+            C : constant Redirection := R.Ops (J);
 
          begin
             case C.Kind is
@@ -305,19 +313,22 @@ package body Posix_Shell.Variables.Output is
                           (New_States (C.Dup_Target).Fd, True, Success);
                         New_States (C.Dup_Target).Can_Be_Closed := True;
                         GNAT.Task_Lock.Unlock;
+                     else
+                        Has_Errors := True;
+                        exit;
                      end if;
                   end;
                when IOHERE =>
                   declare
-                     Fd : File_Descriptor;
-                     Name : Temp_File_Name;
+                     Fd     : File_Descriptor;
+                     Name   : Temp_File_Name;
                      Result : Integer;
                      pragma Warnings (Off, Result);
                      Result_String : aliased String :=
                        (if C.Expand
                         then Eval_String_Unsplit
-                          (S, Get_Token_String (C.Filename), IOHere => True)
-                        else Get_Token_String (C.Filename));
+                          (S, Get_Token_String (C.Content), IOHere => True)
+                        else Get_Token_String (C.Content));
                   begin
                      Create_Temp_File (Fd, Name);
                      Result := Write
@@ -337,6 +348,12 @@ package body Posix_Shell.Variables.Output is
 
       --  All went well, so we can now push the new states.
       --  Ada.Text_IO.Put_Line (New_States (2).Fd'Img);
+
+      if Has_Errors then
+         Put (S, 2, "bad redirections" & ASCII.LF);
+         return False;
+      end if;
+
       GNAT.Task_Lock.Lock;
 
       if Free_Previous then
@@ -355,7 +372,9 @@ package body Posix_Shell.Variables.Output is
          end loop;
       end if;
       S.Redirections := New_States;
+
       GNAT.Task_Lock.Unlock;
+      return True;
    end Set_Redirections;
 
    ----------
@@ -363,8 +382,8 @@ package body Posix_Shell.Variables.Output is
    ----------
 
    procedure Push
-     (RS : in out Redirection_Op_Stack;
-      R  : Redirection_Op)
+     (RS : in out Redirection_Stack;
+      R  : Redirection)
    is
    begin
       --  ??? missing overflow check ?
@@ -423,7 +442,7 @@ package body Posix_Shell.Variables.Output is
    -------------------------
 
    function Read_Pipe_And_Close
-     (S        : Shell_State_Access;
+     (S        : in out Shell_State;
       Input_Fd : File_Descriptor)
       return String
    is

@@ -35,7 +35,7 @@ package body Posix_Shell.Builtins.Expr is
    -------------------
 
    function Expr_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
    begin
       pragma Debug (Log ("expr", "start"));
@@ -43,7 +43,7 @@ package body Posix_Shell.Builtins.Expr is
       declare
          Result : constant String := Eval_Expr (S, Args);
       begin
-         Put (S.all, 1, Result & ASCII.LF);
+         Put (S, 1, Result & ASCII.LF);
          if Result = "0" or else Result = "" then
             return 1;
          else
@@ -53,7 +53,7 @@ package body Posix_Shell.Builtins.Expr is
 
    exception
       when Expr_Error =>
-         Put (S.all, 2, "invalid expression" & ASCII.LF);
+         Put (S, 2, "invalid expression" & ASCII.LF);
          return 2;
    end Expr_Builtin;
 
