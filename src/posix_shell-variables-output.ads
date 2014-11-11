@@ -52,29 +52,23 @@ package Posix_Shell.Variables.Output is
    --  then F will be opened in append mode (relevant only for Stdin and
    --  Stdout).
 
-   type Redirection_Op_Array is array (1 .. 16) of Redirection_Op;
-   type Redirection_Op_Stack is record
-      Top : Natural := 0;
-      Ops : Redirection_Op_Array;
-   end record;
-   --  Redirection directives for Stdin, Stdout and Stderr.
+   type Redirection_Op_Stack is private;
 
-   Empty_Redirection_Op_Stack : Redirection_Op_Stack :=
-     (0, (others => (Kind => NULL_REDIR)));
+   Empty_Redirection_Op_Stack : constant Redirection_Op_Stack;
 
    procedure Set_Redirections
-     (S : Shell_State_Access;
-      R : Redirection_Op_Stack;
+     (S             : Shell_State_Access;
+      R             : Redirection_Op_Stack;
       Free_Previous : Boolean := False);
 
    function Get_Redirections
      (S : Shell_State)
-      return Redirection_States;
+      return Shell_Descriptors;
    --  Return the current redirection set.
 
    procedure Restore_Redirections
      (S : in out Shell_State;
-      R : Redirection_States);
+      R : Shell_Descriptors);
    --  Restore the previous redirections context.
 
    procedure Set_Pipe_Out (S : in out Shell_State);
@@ -118,4 +112,18 @@ package Posix_Shell.Variables.Output is
       Close_On_Exec : Boolean;
       Status        : out Boolean);
 
+   procedure Push
+     (RS : in out Redirection_Op_Stack;
+      R  : Redirection_Op);
+
+private
+   type Redirection_Op_Array is array (1 .. 16) of Redirection_Op;
+   type Redirection_Op_Stack is record
+      Top : Natural := 0;
+      Ops : Redirection_Op_Array;
+   end record;
+   --  Redirection directives for Stdin, Stdout and Stderr.
+
+   Empty_Redirection_Op_Stack : constant Redirection_Op_Stack :=
+     (0, (others => (Kind => NULL_REDIR)));
 end Posix_Shell.Variables.Output;

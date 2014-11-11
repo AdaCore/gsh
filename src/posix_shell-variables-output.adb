@@ -122,9 +122,9 @@ package body Posix_Shell.Variables.Output is
    ----------------------
 
    procedure Restore_Redirections
-     (S : in out Shell_State; R : Redirection_States)
+     (S : in out Shell_State; R : Shell_Descriptors)
    is
-      Previous : constant Redirection_States := S.Redirections;
+      Previous : constant Shell_Descriptors := S.Redirections;
       Success : Boolean;
    begin
       GNAT.Task_Lock.Lock;
@@ -154,8 +154,8 @@ package body Posix_Shell.Variables.Output is
       Free_Previous : Boolean := False)
    is
       Success    : Boolean := False;
-      Old_States : constant Redirection_States := S.Redirections;
-      New_States : Redirection_States;
+      Old_States : constant Shell_Descriptors := S.Redirections;
+      New_States : Shell_Descriptors;
       On_Windows : constant Boolean := Directory_Separator = '\';
 
       function Is_Null_File (Str : String) return Boolean;
@@ -358,6 +358,20 @@ package body Posix_Shell.Variables.Output is
       GNAT.Task_Lock.Unlock;
    end Set_Redirections;
 
+   ----------
+   -- Push --
+   ----------
+
+   procedure Push
+     (RS : in out Redirection_Op_Stack;
+      R  : Redirection_Op)
+   is
+   begin
+      --  ??? missing overflow check ?
+      RS.Top := RS.Top + 1;
+      RS.Ops (RS.Top) := R;
+   end Push;
+
    ---------
    -- Put --
    ---------
@@ -509,12 +523,12 @@ package body Posix_Shell.Variables.Output is
    -- Get_Current_Redirections --
    ------------------------------
 
-   function Get_Redirections (S : Shell_State) return Redirection_States is
+   function Get_Redirections (S : Shell_State) return Shell_Descriptors is
    begin
       return S.Redirections;
    end Get_Redirections;
 
-   --  function Get_Current_Redirections return Redirection_States is
+   --  function Get_Current_Redirections return Shell_Descriptors is
    --  begin
    --     return Redirection_Stack (Redirection_Pos);
    --  end Get_Current_Redirections;

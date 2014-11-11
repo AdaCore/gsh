@@ -264,7 +264,7 @@ package body Posix_Shell.Tree.Evals is
    ----------------
 
    procedure Eval_Brace (S : Shell_State_Access; T : Shell_Tree; N : Node) is
-      Current : constant Redirection_States := Get_Redirections (S.all);
+      Current : constant Shell_Descriptors := Get_Redirections (S.all);
    begin
       Set_Redirections (S, N.Redirections);
       Eval (S, T, N.Brace_Code);
@@ -290,7 +290,7 @@ package body Posix_Shell.Tree.Evals is
         Eval_String_Unsplit (S, Get_Token_String (N.Case_Word));
       Current_Case   : Node := Get_Node (T, N.First_Case);
       Pattern_Found  : Boolean := False;
-      Current_Redirs : constant Redirection_States :=
+      Current_Redirs : constant Shell_Descriptors :=
         Get_Redirections (S.all);
 
       Cursor : Token_List;
@@ -349,7 +349,7 @@ package body Posix_Shell.Tree.Evals is
    is
       Exit_Status : Integer := 0;
       Env : String_List := Get_Environment (S.all);
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S.all);
    begin
       if Command = "exec" then
          Set_Redirections (S, Redirections, Free_Previous => True);
@@ -482,7 +482,7 @@ package body Posix_Shell.Tree.Evals is
          Eval_String (S, """$@"""));
       Is_Valid        : Boolean;
       Break_Number    : Integer;
-      Current_Redirs  : constant Redirection_States :=
+      Current_Redirs  : constant Shell_Descriptors :=
         Get_Redirections (S.all);
       My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S.all) + 1;
    begin
@@ -541,7 +541,7 @@ package body Posix_Shell.Tree.Evals is
 
    procedure Eval_If (S : Shell_State_Access; T : Shell_Tree; N : Node) is
       Status      : Integer := 0;
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S.all);
    begin
       Set_Redirections (S, N.Redirections);
       Eval (S, T, N.Cond);
@@ -578,7 +578,7 @@ package body Posix_Shell.Tree.Evals is
 
    procedure Eval_Null_Cmd (S : Shell_State_Access; N : Node)
    is
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S.all);
    begin
       Set_Redirections (S, N.Redirections);
       Restore_Redirections (S.all, Current_Redirs);
@@ -687,7 +687,7 @@ package body Posix_Shell.Tree.Evals is
    is
       New_State : constant Shell_State_Access :=
         new Shell_State'(Enter_Scope (S.all));
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S.all);
    begin
       Set_Redirections (New_State, N.Redirections);
       begin
@@ -744,7 +744,7 @@ package body Posix_Shell.Tree.Evals is
    is
       Is_Valid : Boolean;
       Break_Number : Integer;
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S.all);
       Result : Integer := 0;
       My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S.all) + 1;
    begin

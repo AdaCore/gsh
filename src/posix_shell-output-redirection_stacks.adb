@@ -24,7 +24,7 @@ separate (Posix_Shell.Output)
 
 package body Redirection_Stacks is
 
-   Stack : array (1 .. 128) of Redirection_States
+   Stack : array (1 .. 128) of Shell_Descriptors
      := (others =>
            ((Standin,  null, False),
             (Standout, null, False),
@@ -45,7 +45,7 @@ package body Redirection_Stacks is
    -- Get_Current_States --
    ------------------------
 
-   function Get_Current_States return Redirection_States is
+   function Get_Current_States return Shell_Descriptors is
    begin
       return Stack (Stack_Index);
    end Get_Current_States;
@@ -64,13 +64,13 @@ package body Redirection_Stacks is
    -- Push --
    ----------
 
-   procedure Push (R : Redirection_States) is
+   procedure Push (R : Shell_Descriptors) is
    begin
       Stack_Index := Stack_Index + 1;
       Stack (Stack_Index) := R;
    end Push;
 
-   procedure Set (R : Redirection_States) is
+   procedure Set (R : Shell_Descriptors) is
    begin
       Stack (Stack_Index) := R;
    end Set;

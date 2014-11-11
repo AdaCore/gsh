@@ -504,11 +504,10 @@ package body Posix_Shell.Tree is
       N         : Node_Id;
       Operator  : Redirection_Op)
    is
-      New_Top : constant Natural :=
-        Tree.Node_Table.Table (N).Redirections.Top + 1;
+
    begin
-      Tree.Node_Table.Table (N).Redirections.Top := New_Top;
-      Tree.Node_Table.Table (N).Redirections.Ops (New_Top) := Operator;
+      Push (Tree.Node_Table.Table (N).Redirections, Operator);
+
    end Set_Node_Redirection;
 
    -----------------------

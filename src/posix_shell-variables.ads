@@ -7,7 +7,7 @@
 --                                 S p e c                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2013, AdaCore                   --
+--                       Copyright (C) 2010-2014, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -33,6 +33,19 @@ package Posix_Shell.Variables is
 
    type Shell_State is private;
    type Shell_State_Access is access all Shell_State;
+   --  Due to the approach taken in the implementation to use threads instead
+   --  of processes (no fork on Windows), the shell state contains all the
+   --  state needed by a shell "process". This means:
+   --    * current directory
+   --    * file descriptors (include stdout, stderr, ...)
+   --    * environment variables,...
+   --
+   --  Inside GSH you should not rely on usual process APIs to retrieve these
+   --  elements but use the API in this unit and its children
+
+   ---------------------------
+   -- Environment Variables --
+   ---------------------------
 
    Variable_Name_Error : exception;
    --  An exception raised when an invalid variable name is used.
@@ -46,8 +59,8 @@ package Posix_Shell.Variables is
    function Get_Var_Value
      (State           : Shell_State;
       Name            : String;
-      Is_Splitable    : Boolean    := True;
-      Check_Existence : Boolean    := True)
+      Is_Splitable    : Boolean := True;
+      Check_Existence : Boolean := True)
       return Annotated_String;
 
    function Is_Var_Set (State : Shell_State; Name : String) return Boolean;
@@ -55,14 +68,6 @@ package Posix_Shell.Variables is
    procedure Import_Environment (State : in out Shell_State);
 
    function Get_Environment (State : Shell_State) return String_List;
-
-   function Get_Current_Dir
-     (State : Shell_State; Strip_Drive : Boolean := False) return String;
-
-   procedure Set_Current_Dir (State : in out Shell_State; Dir : String);
-
-   function Resolve_Path
-     (State : Shell_State; Path : String) return String;
 
    procedure Set_Var_Value
      (State        : in out Shell_State;
@@ -82,6 +87,18 @@ package Posix_Shell.Variables is
      (State : in out Shell_State; Name : String; Value : String);
    --  Export variable
 
+   -----------------------------
+   -- Paths related functions --
+   -----------------------------
+
+   function Get_Current_Dir
+     (State : Shell_State; Strip_Drive : Boolean := False) return String;
+
+   procedure Set_Current_Dir (State : in out Shell_State; Dir : String);
+
+   function Resolve_Path
+     (State : Shell_State; Path : String) return String;
+
    function Enter_Scope (Previous : Shell_State) return Shell_State;
    --  Given the current state create a new scope and return its state
 
@@ -97,6 +114,10 @@ package Posix_Shell.Variables is
 
    function Get_Last_Exit_Status (State : Shell_State) return Integer;
    --  Return the exit code returned by the last command we have run.
+
+   ---------------------------
+   -- Positional Parameters --
+   ---------------------------
 
    type Pos_Params_State is private;
 
@@ -143,7 +164,8 @@ package Posix_Shell.Variables is
      (S : Shell_State; Signal_Number : Integer)
       return String_Access;
 
-   type Redirection_States is private;
+   type Shell_Descriptors is private;
+
 private
 
    type Pos_Params_State is record
@@ -167,7 +189,7 @@ private
         Equivalent_Keys => "=");
    use String_Maps;
 
-   type Redirection_State is record
+   type Shell_Descriptor is record
       Fd              : File_Descriptor;
       Filename        : String_Access;
       Delete_On_Close : Boolean;
@@ -176,7 +198,7 @@ private
    --  State of Stdin, Stdout or Stderr (file descriptor and filename
    --  if relevant).
 
-   type Redirection_States is array (-2 .. 13) of Redirection_State;
+   type Shell_Descriptors is array (-2 .. 13) of Shell_Descriptor;
    --  State of Stdin, Stdout and Stderr.
    --  ??? brobecker/2007-04-23:
    --  ???    I think that 0 .. 2 are stdin, stdout and stderr,
@@ -189,17 +211,17 @@ private
    type Trap_Action_List is array (0 .. 15) of String_Access;
 
    type Shell_State is record
-      Var_Table        : Map;
-      Last_Exit_Status : Integer := 0;
-      Pos_Params       : Pos_Params_State;
-      Scope_Level      : Natural := 1;
-      Is_Env_Valid     : Boolean := False;
-      Redirections     : Redirection_States;
-      Current_Dir      : String_Access := null;
-      Script_Name      : String_Access := null;
-      Trap_Actions     : Trap_Action_List := (others => null);
-      Loop_Scope_Level : Natural := 0;
-      XTrace_Enabled   : Boolean := False;
+      Var_Table              : Map;
+      Last_Exit_Status       : Integer := 0;
+      Pos_Params             : Pos_Params_State;
+      Scope_Level            : Natural := 1;
+      Is_Env_Valid           : Boolean := False;
+      Redirections           : Shell_Descriptors;
+      Current_Dir            : String_Access := null;
+      Script_Name            : String_Access := null;
+      Trap_Actions           : Trap_Action_List := (others => null);
+      Loop_Scope_Level       : Natural := 0;
+      XTrace_Enabled         : Boolean := False;
       File_Expansion_Enabled : Boolean := True;
    end record;
 
