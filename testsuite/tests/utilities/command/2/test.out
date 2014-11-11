@@ -16,6 +16,7 @@ description
 test.cmd
 test.out
 test.sh
+test.yaml
 * content of copy_a
 content of a
 

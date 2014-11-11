@@ -14,4 +14,4 @@
 [error] which: unknown option: -q
 
 * command with several but no -v
-[error] cp: no such directory 'printf'
+[error] cp: no such directory '<TEST_DIR>/printf'
