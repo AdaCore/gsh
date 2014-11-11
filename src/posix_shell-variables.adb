@@ -31,7 +31,6 @@ with Ada.Strings.Maps.Constants; use Ada.Strings.Maps.Constants;
 with Ada.Unchecked_Deallocation;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
-with Ada.Text_IO;
 
 package body Posix_Shell.Variables is
 
