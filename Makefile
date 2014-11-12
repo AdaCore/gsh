@@ -12,7 +12,7 @@ all: lua/src/liblua.a src/posix_shell-lua_bindings.adb
 	gprbuild -p -P posix_shell -XBUILD=prod
 	gprbuild -p -P posix_shell -XBUILD=dev 
 
-src/posix_shell-lua_bindings.adb:
+src/posix_shell-lua_bindings.adb: unit_test_gen
 	@echo "generated unit testing bindings"
 	python ./unit_test_gen > $@
 
@@ -34,6 +34,8 @@ install:
 	cp -r etc/* $(PREFIX)/etc
 	cp -p obj/prod/gsh$(EXEEXT) $(PREFIX)/bin/gsh$(EXEEXT)
 	cp -p obj/dev/gsh$(EXEEXT) $(PREFIX)/bin_dev/gsh$(EXEEXT)
+	cp -p obj/prod/gsh_unit$(EXEEXT) $(PREFIX)/bin/gsh_unit$(EXEEXT)
+	cp -p obj/dev/gsh_unit$(EXEEXT) $(PREFIX)/bin_dev/gsh_unit$(EXEEXT)
 	if [ "$(OS)" = "Windows_NT" ]; then \
 	  cp -p obj/prod/gsh$(EXEEXT) $(PREFIX)/bin/sh$(EXEEXT) && \
 	  cp -p obj/dev/gsh$(EXEEXT) $(PREFIX)/bin_dev/sh$(EXEEXT) && \
