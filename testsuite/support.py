@@ -4,6 +4,8 @@ from gnatpython.fileutils import sync_tree
 from gnatpython.ex import Run, STDOUT
 from gnatpython.env import Env
 import os
+import yaml
+from itertools import izip_longest
 
 
 class ShellDriver(TestDriver):
@@ -19,18 +21,68 @@ class ShellDriver(TestDriver):
                 cwd=self.test_tmp, error=STDOUT)
         self.result.actual_output = p.out
 
+    def analyze(self):
+
         with open(os.path.join(self.test_env['test_dir'], 'test.out'),
                   'rb') as fd:
             self.result.expected_output = fd.read()
 
-    def analyze(self):
         self.analyze_diff()
         self.result.msg += '(%s)' % self.test_env['title']
 
 
+class UnitDriver(ShellDriver):
+    def run(self):
+        p = Run([os.path.join(os.path.dirname(os.environ['SHELL']),
+                              'gsh_unit'),
+                 './test.adas'],
+                cwd=self.test_tmp, error=STDOUT)
+        self.result.actual_output = p.out
+
+
+class TableDriver(UnitDriver):
+
+    def deep_compare(self, obj1, obj2):
+        if isinstance(obj1, list) and isinstance(obj2, list):
+            for k1, k2 in izip_longest(obj1, obj2, fillvalue=None):
+                if not self.deep_compare(k1, k2):
+                    return False
+            return True
+        elif isinstance(obj1, dict) and isinstance(obj2, dict):
+            keys = set(obj1.keys()) | set(obj2.keys())
+            for k1, k2 in izip_longest([obj1.get(k, None) for k in keys],
+                                       [obj2.get(k, None) for k in keys]):
+                if not self.deep_compare(k1, k2):
+                    return False
+            return True
+        elif isinstance(obj1, basestring) and isinstance(obj2, basestring):
+            return obj1 == obj2
+        else:
+            self.result.diff += '%s differ from %s' % (obj1, obj2)
+            return False
+
+    def run(self):
+        p = Run([os.path.join(os.path.dirname(os.environ['SHELL']),
+                              'gsh_unit'),
+                 './test.adas'] + [k['input'] for k in self.test_env['table']],
+                cwd=self.test_tmp, error=STDOUT)
+        self.result.actual_output = p.out
+
+    def analyze(self):
+        self.output_data = yaml.load(self.result.actual_output)
+        self.expected_data = self.test_env['table']
+
+        if self.deep_compare(self.output_data, self.expected_data):
+            self.result.set_status('PASSED')
+        else:
+            self.result.set_status('FAILED')
+
+
 class GSHTestsuite(Testsuite):
     TEST_SUBDIR = 'tests'
-    DRIVERS = {'runshell': ShellDriver}
+    DRIVERS = {'runshell': ShellDriver,
+               'unittest': UnitDriver,
+               'tabletest': TableDriver}
     default_driver = 'runshell'
 
     def add_options(self):
