@@ -41,9 +41,14 @@ with GNAT.Regpat; use GNAT.Regpat;
 package body Posix_Shell.Tree.Evals is
 
    Special_Builtin_Matcher : constant Pattern_Matcher := Compile
-     ("^(eval|exec|source|\.)$");
+     ("^(eval|exec|source|\.|:|break|continue|exit|export|readonly" &
+        "|return|set|shift|times|trap|unset|cd)$");
    --  Regexp used to check if a command is a special builtin (see open group
-   --  definition of special builtins).
+   --  definition of special builtins). Note that we consider cd also as a
+   --  special builtin. Indeed it comes handy to keep changes done on the shell
+   --  state by cd. Note that in a very tricky case we won't be Posix as cd
+   --  should not preserve variable changes ("a=b cd path" will preserver
+   --  change on variable a).
 
    procedure Eval_List (S : in out Shell_State; T : Shell_Tree; N : Node);
    procedure Eval_Case (S : in out Shell_State; T : Shell_Tree; N : Node);
@@ -435,11 +440,6 @@ package body Posix_Shell.Tree.Evals is
             if not Is_Empty (Pool, N.Cmd_Assign_List) and then
               not Is_Special_Builtin
             then
-               --  As stated by posix shell standard (2.14 Special Built-In
-               --  Utilities). Variable assignments specified with special
-               --  built-in utilities remain in effect after the built-in
-               --  completes. Note that most of the shell such as bash do not
-               --  respect this requirement.
 
                New_State := Enter_Scope (S);
                Eval_Assign (New_State, T, N, True);
@@ -465,8 +465,14 @@ package body Posix_Shell.Tree.Evals is
                     (Ada.Text_IO.Standard_Error,
                   "(return " & Get_Last_Exit_Status (New_State)'Img & ")");
                end if;
-               Leave_Scope (New_State, S, True);
+               Leave_Scope (New_State, S);
             else
+               --  As stated by posix shell standard (2.14 Special Built-In
+               --  Utilities). Variable assignments specified with special
+               --  built-in utilities remain in effect after the built-in
+               --  completes. Note that most of the shell such as bash do not
+               --  respect this requirement.
+
                if not Is_Empty (Pool, N.Cmd_Assign_List) then
                   Eval_Assign (S, T, N, True);
                end if;

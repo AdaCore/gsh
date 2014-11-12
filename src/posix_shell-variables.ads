@@ -104,8 +104,7 @@ package Posix_Shell.Variables is
 
    procedure Leave_Scope
      (Current  : in out Shell_State;
-      Previous : in out Shell_State;
-      Keep_Pos_Params : Boolean := False);
+      Previous : in out Shell_State);
    --  restore previous env values
 
    procedure Save_Last_Exit_Status

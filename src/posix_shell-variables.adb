@@ -563,8 +563,7 @@ package body Posix_Shell.Variables is
 
    procedure Leave_Scope
      (Current  : in out Shell_State;
-      Previous : in out Shell_State;
-      Keep_Pos_Params : Boolean := False)
+      Previous : in out Shell_State)
    is
       procedure Leave_Scope_Aux (Position : Cursor);
 
@@ -592,25 +591,9 @@ package body Posix_Shell.Variables is
 
       --  Clear positional parameters
       if Current.Pos_Params.Scope = Current.Scope_Level then
-         if Keep_Pos_Params then
-
-            --  If the pos params to be overwritten were declared in the
-            --  this state free them
-            if Previous.Pos_Params.Scope = Previous.Scope_Level then
-               for J in Previous.Pos_Params.Table'Range loop
-                  Free (Previous.Pos_Params.Table (J));
-               end loop;
-            end if;
-
-            --  Copy pos params from current to previous.
-            Previous.Pos_Params := Current.Pos_Params;
-            Previous.Pos_Params.Scope := Current.Scope_Level;
-
-         else
-            for J in Current.Pos_Params.Table'Range loop
-               Free (Current.Pos_Params.Table (J));
-            end loop;
-         end if;
+         for J in Current.Pos_Params.Table'Range loop
+            Free (Current.Pos_Params.Table (J));
+         end loop;
       end if;
 
       --  Free Trap actions
