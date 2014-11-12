@@ -5,13 +5,23 @@ LUA_MANAGED = 2
 
 TYPE_LIST = {
     'Posix_Shell.Lexer.Token_Buffer': ADA_MANAGED,
-    'Posix_Shell.Lexer.Token': LUA_MANAGED
+    'Posix_Shell.Lexer.Token': LUA_MANAGED,
+    'Posix_Shell.Token_Type': LUA_MANAGED
 }
 
 FUNCTION_LIST = {
     'Posix_Shell.Lexer.New_Buffer_From_File':
         {'args': ['String'],
          'return': 'Posix_Shell.Lexer.Token_Buffer'},
+    'Posix_Shell.Lexer.New_Buffer':
+        {'args': ['String'],
+         'return': 'Posix_Shell.Lexer.Token_Buffer'},
+    'Posix_Shell.Lexer.Get_Token_Type':
+        {'args': ['Posix_Shell.Lexer.Token'],
+         'return': 'Posix_Shell.Token_Type'},
+    'Posix_Shell.Lexer.Get_Token_String':
+        {'args': ['Posix_Shell.Lexer.Token'],
+         'return': 'String'},
     'Posix_Shell.Lexer.Read_Token':
         {'args': ['Posix_Shell.Lexer.Token_Buffer'],
          'return': 'Posix_Shell.Lexer.Token'},
@@ -21,6 +31,10 @@ FUNCTION_LIST = {
     'Posix_Shell.Lexer.Image':
         {'args': ['Posix_Shell.Lexer.Token'],
          'return': 'String'},
+    'Posix_Shell.Lexer.Token_Type_Image':
+        {'args': ['Posix_Shell.Token_Type'],
+         'return': 'String',
+         'ada_name': 'Posix_Shell.Lexer.Image'},
     'Posix_Shell.Lexer.Read_Command_Token':
         {'args': ['Posix_Shell.Lexer.Token_Buffer'],
          'return': 'Posix_Shell.Lexer.Token'}}
@@ -69,6 +83,9 @@ if __name__ == '__main__':
 
         index = 1
         call_list = ''
+
+        ada_fun_name = FUNCTION_LIST[ada_fun].get('ada_name', ada_fun)
+
         for arg in FUNCTION_LIST[ada_fun]['args']:
             if arg in TYPE_LIST and TYPE_LIST[arg] == ADA_MANAGED:
                 print '      A%s : constant access %s :=' % (index, arg)
@@ -86,20 +103,21 @@ if __name__ == '__main__':
         if 'return' in FUNCTION_LIST[ada_fun]:
             ret_num = 1
             ret = FUNCTION_LIST[ada_fun]['return']
+
             if ret in TYPE_LIST and TYPE_LIST[ret] == ADA_MANAGED:
                 print '      Result : constant access %s :=' % ret
                 print '        new %s\'' % ret
-                print '        (%s%s);' % (ada_fun, call_list)
+                print '        (%s%s);' % (ada_fun_name, call_list)
             else:
                 print '      Result : constant %s :=' % ret
-                print '        %s%s;' % (ada_fun, call_list)
+                print '        %s%s;' % (ada_fun_name, call_list)
 
             print '   begin'
             print '      Push (State, Result);'
             print '      return 1;'
         else:
             print '   begin'
-            print '      %s%s;' % (ada_fun, call_list)
+            print '      %s%s;' % (ada_fun_name, call_list)
             print '      return 0;'
 
         print '   end Lua_%s;' % base
