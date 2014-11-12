@@ -46,6 +46,8 @@ class TableDriver(UnitDriver):
         if isinstance(obj1, list) and isinstance(obj2, list):
             for k1, k2 in izip_longest(obj1, obj2, fillvalue=None):
                 if not self.deep_compare(k1, k2):
+                    self.result.diff += 'list: %s differ from %s\n' % (obj1,
+                                                                       obj2)
                     return False
             return True
         elif isinstance(obj1, dict) and isinstance(obj2, dict):
@@ -71,6 +73,8 @@ class TableDriver(UnitDriver):
     def analyze(self):
         self.output_data = yaml.load(self.result.actual_output)
         self.expected_data = self.test_env['table']
+
+        self.result.expected_output = yaml.dump(self.test_env['table'])
 
         if self.deep_compare(self.output_data, self.expected_data):
             self.result.set_status('PASSED')
