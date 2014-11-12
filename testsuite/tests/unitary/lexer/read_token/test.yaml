@@ -1,0 +1,20 @@
+title: 'Test Posix_Shell.Lexer.Read_Token function (unit)'
+
+driver: tabletest
+
+table:
+       - input: 'a'
+         output: [['word', 'a']]
+       - input: 'fefe'
+         output: [['word', 'fefe']]
+       - input: '>'
+         output: [['>', '>']]
+       - input: '<'
+         output: [['<', '<']]
+       - input: '='
+         output: [['word', '=']]
+       - input: '=='
+         output: [['word', '==']]
+       - input: 'expr'
+         output: [['word', 'expr']]
+

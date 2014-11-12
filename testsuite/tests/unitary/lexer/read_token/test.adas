@@ -11,7 +11,7 @@ for key, script of pairs(args) loop
    buffer := new_buffer (script)
    local t := read_token (buffer)
    while tk_img (tk_type(t)) /= "end of file" loop
-      print("        - ['" & tk_img(tk_type(t)) & "', '" & tk_str(t) & "']")
-      t := read_token (buffer)
+       print("        - ['" & tk_img(tk_type(t)) & "', '" & tk_str(t) & "']")
+       t := read_token (buffer)
    end
 end
