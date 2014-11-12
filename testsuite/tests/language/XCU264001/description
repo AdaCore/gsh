@@ -1,8 +1,0 @@
-Arithmetic Expansion - Nominal
-
-Arithmetic expansion provides a mechanism for evaluating an arithmetic
-expression and substituting its value.
-The format for arithmetic expansion shall be as follows:
-
-$((expression))
-
