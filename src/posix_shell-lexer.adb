@@ -535,6 +535,9 @@ package body Posix_Shell.Lexer is
                   CC := Get_Char (B);
                when '`' =>
                   exit;
+               when ASCII.EOT =>
+                  Lexer_Error
+                    (B, "unexpected EOF while looking for matchin '`'");
                when others =>
                   null;
             end case;
@@ -553,10 +556,7 @@ package body Posix_Shell.Lexer is
 
          CC := Get_Char (B);
 
-         if CC /= '(' then
-            Unget_Char (B);
-            return;
-         end if;
+         pragma Assert (CC = '(');
 
          loop
             CC := Get_Char (B);
@@ -586,20 +586,16 @@ package body Posix_Shell.Lexer is
       -------------------------------
 
       procedure Read_Arithmetic_Expansion is
-         Local_CC           : Character;
          Opened_Paranthesis : Natural := 2;
          Previous_Was_Par   : Boolean := False;
       begin
          pragma Assert (CC = '$');
 
-         Local_CC := Get_Char (B);
          CC := Get_Char (B);
+         pragma Assert (CC = '(');
 
-         if Local_CC /= '(' or else CC /= '(' then
-            Unget_Char (B);
-            Unget_Char (B);
-            return;
-         end if;
+         CC := Get_Char (B);
+         pragma Assert (CC = '(');
 
          loop
             CC := Get_Char (B);
