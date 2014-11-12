@@ -26,6 +26,7 @@
 
 with Ada.Directories;
 with GNAT.Directory_Operations;     use GNAT.Directory_Operations;
+with Ada.Exceptions;                use Ada.Exceptions;
 
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Posix_Shell.Buffers;           use Posix_Shell.Buffers;
@@ -746,8 +747,13 @@ package body Posix_Shell.Subst is
 
                T := Parse_String (Str);
                Append (Buffer, Strip (Eval (SS, T)));
-
                Free_Node (T);
+            exception
+               when E : Shell_Syntax_Error | Shell_Non_Implemented |
+                    Shell_Lexer_Error =>
+                  Error (SS,
+                         "command substitution: " & Exception_Message (E));
+                  Save_Last_Exit_Status (SS, 1);
             end;
          end if;
       end Eval_Backquoted_Command_Subst;
