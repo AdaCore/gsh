@@ -537,7 +537,7 @@ package body Posix_Shell.Lexer is
                   exit;
                when ASCII.EOT =>
                   Lexer_Error
-                    (B, "unexpected EOF while looking for matchin '`'");
+                    (B, "unexpected EOF while looking for matching '`'");
                when others =>
                   null;
             end case;
