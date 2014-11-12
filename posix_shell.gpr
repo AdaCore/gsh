@@ -15,7 +15,7 @@ project Posix_Shell is
          Default_Libs := ("-lntdll", "lua/src/liblua.a",
                           "-Wl,--stack=0x2000000");
       when others =>
-         Default_Libs := ("-lreadline", "lua/src/liblua.a");
+         Default_Libs := ("-lreadline", "lua/src/liblua.a", "-lm", "-ldl");
    end case;
 
    Dev_Switches := ("-g", "-O0");
