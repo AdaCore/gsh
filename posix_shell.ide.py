@@ -1,4 +1,5 @@
 import GPS
+from gps_utils.console_process import Console_Process
 from gi.repository import Gtk
 from setuptools.command import easy_install
 import pkg_resources
@@ -79,6 +80,12 @@ class GSHActions(object):
                                    description="Install")
         self.install_action.menu("GSH/Install")
 
+        self.console_action = GPS.Action('gsh_console_action')
+        self.console_action.create(GSHActions.console_action,
+                                   category="GSH",
+                                   description="Launch AdaLua console")
+        self.console_action.menu("GSH/Console AdaLua")
+
     @classmethod
     def build_action(cls):
         GSHCommand("make")
@@ -86,6 +93,10 @@ class GSHActions(object):
     @classmethod
     def install_action(cls):
         GSHCommand("make install")
+
+    @classmethod
+    def console_action(cls):
+        Console_Process("obj/dev/gsh_unit")
 
     @classmethod
     def test_action2(cls):

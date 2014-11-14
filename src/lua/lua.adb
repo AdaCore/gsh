@@ -259,6 +259,31 @@ package body Lua is
       end if;
    end Load_File;
 
+   procedure Load_String
+     (State : Lua_State;
+      Str   : String)
+   is
+      function Internal
+        (State : Lua_State;
+         Str   : chars_ptr)
+         return Lua_Return_Code;
+      pragma Import (C, Internal, "luaL_loadstring");
+
+      Str_Ptr      : chars_ptr := New_String (Str);
+      Result       : constant Lua_Return_Code := Internal (State, Str_Ptr);
+   begin
+      Free (Str_Ptr);
+
+      if Result /= LUA_OK then
+         declare
+            Error_Msg : constant String := To_Ada (State, -1);
+         begin
+            Pop (State);
+            raise Lua_Error with Result'Img & ": " & Error_Msg;
+         end;
+      end if;
+   end Load_String;
+
    ----------
    -- Next --
    ----------

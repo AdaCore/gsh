@@ -21,23 +21,47 @@
 ------------------------------------------------------------------------------
 
 with Posix_Shell.Lua_Bindings;
+with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Lua; use Lua;
 with Ada.Command_Line; use Ada.Command_Line;
+with Ada.Text_IO; use Ada.Text_IO;
+with Ada.Exceptions; use Ada.Exceptions;
 
 function GSH_Unit return Integer is
    S : constant Lua_State := New_State;
 begin
    Open_Libs (S);
    Posix_Shell.Lua_Bindings.Initialize (S);
-   Load_File (S, Argument (1));
 
-   Create_Table (S, Argument_Count);
-   for Index in 2 .. Argument_Count loop
-      Push (S, Lua_Unsigned (Index - 1));
-      Push (S, Argument (Index));
-      Set_Table (S, -3);
-   end loop;
-   Set_Global (S, "args");
-   PCall (S);
-   return 0;
+   if Argument_Count = 0 then
+      loop
+         declare
+            Line : constant String := Readline ("$ ");
+         begin
+            exit when Line = "exit";
+            Load_String (S, Line);
+            PCall (S);
+         exception
+            when E : Lua_Error =>
+               Put_Line (Exception_Message (E));
+         end;
+      end loop;
+      return 0;
+   elsif Argument (1) = "-c" then
+      Load_String (S, Argument (2));
+      PCall (S);
+      return 0;
+   else
+      Load_File (S, Argument (1));
+
+      Create_Table (S, Argument_Count);
+      for Index in 2 .. Argument_Count loop
+         Push (S, Lua_Unsigned (Index - 1));
+         Push (S, Argument (Index));
+         Set_Table (S, -3);
+      end loop;
+      Set_Global (S, "args");
+      PCall (S);
+      return 0;
+   end if;
 end GSH_Unit;

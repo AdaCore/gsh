@@ -112,6 +112,11 @@ package Lua is
    --  Same as previous function except that Lua_Error exception is raised in
    --  LUA_OK is not returned.
 
+   procedure Load_String
+     (State : Lua_State;
+      Str   : String);
+   --  Load a string and raise Lua_Error in case of error
+
    procedure Open_Libs (State : Lua_State);
    --  Opens all standard Lua libraries into the given state.
 
