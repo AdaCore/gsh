@@ -23,6 +23,15 @@ class ShellDriver(TestDriver):
                 cwd=self.test_tmp, error=STDOUT)
         self.result.actual_output = p.out
 
+    def analyze(self):
+
+        with open(os.path.join(self.test_env['test_dir'], 'test.out'),
+                  'rb') as fd:
+            self.result.expected_output = fd.read()
+
+        self.analyze_diff()
+        self.result.msg += '(%s)' % self.test_env['title']
+
     def tear_down(self):
         if self.global_env['options'].enable_coverage:
             src_path = os.path.abspath(
@@ -92,15 +101,6 @@ class ShellDriver(TestDriver):
                                    self.test_env['test_name'] + '.cov.json'),
                       'wb') as fd:
                 json.dump(result, fd)
-
-    def analyze(self):
-
-        with open(os.path.join(self.test_env['test_dir'], 'test.out'),
-                  'rb') as fd:
-            self.result.expected_output = fd.read()
-
-        self.analyze_diff()
-        self.result.msg += '(%s)' % self.test_env['title']
 
 
 class UnitDriver(ShellDriver):
