@@ -39,8 +39,8 @@ same time_stamp with newer status : 1
 Mixing Files and Directories
 ============================
 
-a is older than dir_a status : 0
-dir_a is newer than a status : 0
+a.txt is older than dir_a status : 0
+dir_a is newer than a.txt status : 0
 
-a is newer than dir_a status : 1
+a.txt is newer than dir_a status : 1
 dir_a is older than a.txt status : 1

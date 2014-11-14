@@ -1,5 +1,13 @@
 echo "built-in 'test': -nt and -ot operators"
 echo ""
+touch a.txt
+sleep 2
+touch b.txt
+touch sametimestamp.txt sametimestamp2.txt
+mkdir dir_a
+sleep 2
+mkdir dir_b
+mkdir sametimestamp_dir sametimestamp_dir2
 echo "Files"
 echo "====="
 echo ""
@@ -47,9 +55,9 @@ echo ""
 echo "Mixing Files and Directories"
 echo "============================"
 echo ""
-test a.txt -ot dir_a; echo "a is older than dir_a status : $?"
-test dir_a -nt a.txt; echo "dir_a is newer than a status : $?"
+test a.txt -ot dir_a; echo "a.txt is older than dir_a status : $?"
+test dir_a -nt a.txt; echo "dir_a is newer than a.txt status : $?"
 echo ""
-test a.txt -nt dir_a; echo "a is newer than dir_a status : $?"
+test a.txt -nt dir_a; echo "a.txt is newer than dir_a status : $?"
 test dir_a -ot a.txt; echo "dir_a is older than a.txt status : $?"
 
