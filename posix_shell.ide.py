@@ -90,12 +90,12 @@ class GSHActions(object):
     @classmethod
     def test_action2(cls):
         GSHTestsuite(
-            "python ./testsuite/testsuite")
+            "python ./testsuite/testsuite -t tmp")
 
     @classmethod
     def test_action(cls):
         GSHTestsuite(
-            "python ./testsuite/testsuite --enable-coverage")
+            "python ./testsuite/testsuite --enable-coverage -t tmp")
 
 
 class TestsuiteWidget(object):
@@ -177,7 +177,7 @@ class TestsuiteWidget(object):
         # Dump xml file and open the Coverage info
         with open('tmp.xml', 'wb') as fd:
             fd.write(result_xml)
-        a = GPS.CodeAnalysis.get("Coverage %s" % os.path.basename(gcov_file[:9]))
+        a = GPS.CodeAnalysis.get("Coverage")
         a.clear()
         a.load_from_file(xml=GPS.File('tmp.xml'))
         a.show_analysis_report()
