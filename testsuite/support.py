@@ -1,10 +1,12 @@
 from gnatpython.testsuite import Testsuite
 from gnatpython.testsuite.driver import TestDriver
-from gnatpython.fileutils import sync_tree
+from gnatpython.fileutils import sync_tree, ls, rm
 from gnatpython.ex import Run, STDOUT
 from gnatpython.env import Env
 import os
+import re
 import yaml
+import json
 from itertools import izip_longest
 
 
@@ -20,6 +22,76 @@ class ShellDriver(TestDriver):
         p = Run([os.environ['SHELL'], './test.sh'],
                 cwd=self.test_tmp, error=STDOUT)
         self.result.actual_output = p.out
+
+    def tear_down(self):
+        if self.global_env['options'].enable_coverage:
+            src_path = os.path.abspath(
+                os.path.join(self.global_env['root_dir'],
+                             '..', 'src'))
+            result = {}
+            for gcda in ls(os.path.join(self.global_env['root_dir'], '..',
+                                        'obj', 'dev', '*.gcda')):
+                gcov = Run(['gcov', gcda], cwd=self.global_env['working_dir'])
+                gcov_out = re.findall(
+                    r"File '([^']*)'\r?\nLines[^\r\n]*\r?\nCreating '([^']*)'",
+                    gcov.out,
+                    re.S)
+                for source, gcov_file in gcov_out:
+                    if os.path.relpath(source, src_path).startswith('..'):
+                        # skip files outside our source directory
+                        continue
+
+                    # skip also .ads files (not interested for the moment)
+                    if source.endswith('.ads'):
+                        continue
+
+                    if source not in result:
+                        result[source] = {'lines': {},
+                                          'subprogram': {},
+                                          'line_count': 0}
+
+                    cur = result[source]
+
+                    with open(os.path.join(self.global_env['working_dir'],
+                                           gcov_file), 'rb') as fd:
+                        content = fd.read()
+
+                    for l in content.splitlines():
+                        status, line, content = l.split(':', 2)
+                        status = status.strip()
+                        line = int(line.strip())
+
+                        if line != 0:
+                            cur['line_count'] += 1
+
+                        if status == '-':
+                            pass
+
+                        elif status.startswith('#') or status.startswith('='):
+                            if line not in cur['lines']:
+                                cur['lines'][line] = \
+                                    {'status': 'NOT_COVERED',
+                                     'contents': content,
+                                     'coverage': 0}
+                        else:
+                            if line in cur['lines']:
+                                cur['lines'][line]['coverage'] += int(status)
+                                cur['lines'][line]['status'] = 'COVERED'
+                            else:
+                                cur['lines'][line] = \
+                                    {'status': 'COVERED',
+                                     'contents': content,
+                                     'coverage': int(status)}
+            # cleanup gcda files
+            rm(os.path.join(self.global_env['root_dir'],
+                            '..', 'obj', 'dev', '*.gcda'))
+
+            # Dump file to json. Note that we are not using yaml here for
+            # performance issues.
+            with open(os.path.join(self.global_env['output_dir'],
+                                   self.test_env['test_name'] + '.cov.json'),
+                      'wb') as fd:
+                json.dump(result, fd)
 
     def analyze(self):
 
@@ -103,6 +175,8 @@ class GSHTestsuite(Testsuite):
     def tear_up(self):
         if self.main.options.enable_coverage:
             bin_dir = 'bin_dev'
+            # In coverage mode force jobs to 1
+            self.main.options.mainloop_jobs = 1
         else:
             bin_dir = 'bin'
         os.environ['SHELL'] = os.path.join(self.main.options.with_gsh,
