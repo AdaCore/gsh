@@ -63,7 +63,7 @@ class GSHActions(object):
                                 category="GSH",
                                 description="Run GSH testsuite")
         self.test_action.menu("GSH/Run Testsuite")
-        self.test_action2 = GPS.Action('gsh_test_action')
+        self.test_action2 = GPS.Action('gsh_test_action2')
         self.test_action2.create(GSHActions.test_action2,
                                  category="GSH",
                                  description="Run GSH testsuite")
@@ -177,7 +177,7 @@ class TestsuiteWidget(object):
         # Dump xml file and open the Coverage info
         with open('tmp.xml', 'wb') as fd:
             fd.write(result_xml)
-        a = GPS.CodeAnalysis.get("Coverage")
+        a = GPS.CodeAnalysis.get("Coverage %s" % os.path.basename(gcov_file[:9]))
         a.clear()
         a.load_from_file(xml=GPS.File('tmp.xml'))
         a.show_analysis_report()
