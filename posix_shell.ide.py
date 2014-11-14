@@ -63,6 +63,11 @@ class GSHActions(object):
                                 category="GSH",
                                 description="Run GSH testsuite")
         self.test_action.menu("GSH/Run Testsuite")
+        self.test_action2 = GPS.Action('gsh_test_action')
+        self.test_action2.create(GSHActions.test_action2,
+                                 category="GSH",
+                                 description="Run GSH testsuite")
+        self.test_action2.menu("GSH/Run Testsuite (no cov)")
         self.build_action = GPS.Action('gsh_build_action')
         self.build_action.create(GSHActions.build_action,
                                  category="GSH",
@@ -81,6 +86,11 @@ class GSHActions(object):
     @classmethod
     def install_action(cls):
         GSHCommand("make install")
+
+    @classmethod
+    def test_action2(cls):
+        GSHTestsuite(
+            "python ./testsuite/testsuite")
 
     @classmethod
     def test_action(cls):
