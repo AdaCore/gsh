@@ -500,21 +500,80 @@ package Lua is
       Name  : String);
    --  Pops a value from the stack and sets it as the new value of global name.
 
+   procedure Register_Object
+     (State : Lua_State;
+      Name  : String);
+   --  Helper function to register an Ada object inside lua state. Name is the
+   --  name in Lua global environment with which the function is associated to.
+   --  To ease creation of hierarchies in the global environment, if Name
+   --  contains '.' then a hierarchy using Lua tables is created. For example:
+   --
+   --     Register (S, "a.b.c");
+   --
+   --  will create a global table called "a". The table "a" will contain a
+   --  table at index "b" and this last table will contain one element "b" set
+   --  to the object on top of the stack. Note that an error will be raised
+   --  in case you try to register twice at the same location.
+
    procedure Register_Function
      (State : Lua_State;
       Name  : String;
       Fun   : Lua_Function);
-   --  Helper function to register a function inside lua state. Name is the
-   --  name in Lua global environment with which the function is associated to.
-   --  To ease create of hierarchies in the global environment, if Name
-   --  contains '.' then a hierarchy using Lua tables is created. For example:
-   --
-   --     Register (S, "a.b.c", My_Lua_Function'Access);
-   --
-   --  will create a global table called "a". The table "a" will contain a
-   --  table at index "b" and this last table will contain one element "b" set
-   --  to our function. Note that an error will be raised in case you try to
-   --  register twice at the same location.
+   --  Same as previous function except that the registered object is a
+   --  closure passed as argument to the function instead of using the stack
+
+   ----------------
+   -- Metatables --
+   ----------------
+
+   function Get_Metatable
+     (State : Lua_State;
+      Index : Lua_Index) return int;
+   pragma Import (C, Get_Metatable, "lua_getmetatable");
+
+   procedure Set_Metatable (State : Lua_State; Index : Lua_Index);
+   pragma Import (C, Set_Metatable, "lua_setmetatable");
+   --  Pop a table from the stack and sets it as the new metatable for
+   --  the value at the given index.
+
+   function New_Metatable (State : Lua_State; Name : String) return Boolean;
+   --  Create a new metable in the registry called Name. If the metatable is
+   --  already there return False, else True. Note that in all cases the
+   --  metatable is pushed at the top of the stack
+
+   procedure New_Metatable (State : Lua_State; Name : String);
+   --  Same as above but no status is returned
+
+   procedure Set_Metatable
+     (State : Lua_State;
+      Name  : String);
+   --  Sets the metatable of the object at the top of the stack as the
+   --  metatable associated with name Name in the registry
+
+   procedure Get_Metatable
+     (State : Lua_State;
+      Name  : String);
+   --  Push on top of the stack the metatable registered at entry Name in the
+   --  registry
+
+   function Check_User_Data
+     (State : Lua_State;
+      Index : Lua_Index;
+      Name  : String)
+      return Lua_User_Data;
+   --  Check if object at position Index has a metatable and it is the same as
+   --  metatable stored at Name entry in the registry. In case the object has
+   --  not metatable or the metatables do not correspond then return null and
+   --  set an error in the current state. Otherwise return the address of the
+   --  user data of the object.
+
+   function Test_User_Data
+     (State : Lua_State;
+      Index : Lua_Index;
+      Name  : String)
+      return Lua_User_Data;
+   --  Same as previous function except that no error object is pushed on the
+   --  stack.
 
    ------------
    -- Others --
@@ -547,11 +606,6 @@ package Lua is
       Size  : size_t)
       return System.Address;
 
-   function Get_Metatable
-     (State : Lua_State;
-      Index : Lua_Index) return int;
-   pragma Import (C, Get_Metatable, "lua_getmetatable");
-
    procedure Get_User_Value (State : Lua_State; Index : Lua_Index);
    pragma Import (C, Get_User_Value, "lua_getuservalue");
    --  Pushes onto the stack the Lua value associated with the userdata at
@@ -570,10 +624,6 @@ package Lua is
    --
    --  This function pops the value from the stack. The assignment is raw;
    --  that is, it does not invoke metamethods.
-
-   function Set_Metatable (State : Lua_State; Index : Lua_Index) return int;
-   --  Pops a table from the stack and sets it as the new metatable for
-   --  the value at the given index.
 
    procedure Set_User_Value (State : Lua_State;
                              Index : Lua_Index);
@@ -629,6 +679,8 @@ package Lua is
 
    procedure Len (State : Lua_State; Index : Lua_Index);
 
+   function Upvalue_Index (N : Positive) return Lua_Index;
+
 private
 
    pragma Convention (C, Lua_Return_Code);
@@ -651,14 +703,12 @@ private
    pragma Import (C, New_User_Data, "lua_newuserdata");
    pragma Import (C, Raw_Seti, "lua_rawseti");
    pragma Import (C, Raw_Set, "lua_rawset");
-
    pragma Import (C, Call, "lua_callk");
    pragma Import (C, Set_Table, "lua_settable");
    pragma Import (C, Create_Table, "lua_createtable");
    pragma Import (C, Raw_Geti, "lua_rawgeti");
    pragma Import (C, Raw_Get, "lua_rawget");
    pragma Import (C, Push_Closure, "lua_pushcclosure");
-   pragma Import (C, Set_Metatable, "lua_setmetatable");
    pragma Import (C, At_Panic, "lua_atpanic");
    pragma Import (C, Version, "lua_version");
    pragma Import (C, Status, "lua_status");

@@ -24,6 +24,10 @@ with Interfaces.C.Strings; use Interfaces.C.Strings;
 
 package body Lua is
 
+   LUAI_MAXSTACK : constant Lua_Index := 1000000;
+   LUAI_FIRSTPSEUDOIDX : constant Lua_Index := -LUAI_MAXSTACK - 1000;
+   LUA_REGISTRYINDEX : constant Lua_Index := LUAI_FIRSTPSEUDOIDX;
+
    -----------------
    -- Check_Stack --
    -----------------
@@ -39,6 +43,30 @@ package body Lua is
          return True;
       end if;
    end Check_Stack;
+
+   ---------------------
+   -- Check_User_Data --
+   ---------------------
+
+   function Check_User_Data
+     (State : Lua_State;
+      Index : Lua_Index;
+      Name  : String)
+      return Lua_User_Data
+   is
+      function Internal
+        (State : Lua_State;
+         Index : Lua_Index;
+         Str   : chars_ptr)
+         return Lua_User_Data;
+      pragma Import (C, Internal, "luaL_checkudata");
+
+      Str_Ptr : chars_ptr := New_String (Name);
+      Result  : constant Lua_User_Data := Internal (State, Index, Str_Ptr);
+   begin
+      Free (Str_Ptr);
+      return Result;
+   end Check_User_Data;
 
    -------------
    -- Compare --
@@ -108,6 +136,18 @@ package body Lua is
       Internal (State, Name_Ptr);
       Free (Name_Ptr);
    end Get_Global;
+
+   -------------------
+   -- Get_Metatable --
+   -------------------
+
+   procedure Get_Metatable
+     (State : Lua_State;
+      Name  : String)
+   is
+   begin
+      Get_Field (State, LUA_REGISTRYINDEX, Name);
+   end Get_Metatable;
 
    -----------------
    -- Is_Function --
@@ -259,6 +299,10 @@ package body Lua is
       end if;
    end Load_File;
 
+   -----------------
+   -- Load_String --
+   -----------------
+
    procedure Load_String
      (State : Lua_State;
       Str   : String)
@@ -283,6 +327,36 @@ package body Lua is
          end;
       end if;
    end Load_String;
+
+   -------------------
+   -- New_Metatable --
+   -------------------
+
+   function New_Metatable (State : Lua_State; Name : String) return Boolean
+   is
+      function Internal
+        (State : Lua_State;
+         Str   : chars_ptr)
+         return Integer;
+      pragma Import (C, Internal, "luaL_newmetatable");
+
+      Str_Ptr : chars_ptr := New_String (Name);
+      Result  : constant Integer := Internal (State, Str_Ptr);
+   begin
+      Free (Str_Ptr);
+      if Result = 0 then
+         return False;
+      else
+         return True;
+      end if;
+   end New_Metatable;
+
+   procedure New_Metatable (State : Lua_State; Name : String) is
+      Status : constant Boolean := New_Metatable (State, Name);
+      pragma Unreferenced (Status);
+   begin
+      null;
+   end New_Metatable;
 
    ----------
    -- Next --
@@ -442,12 +516,27 @@ package body Lua is
       Name  : String;
       Fun   : Lua_Function)
    is
+   begin
+      Push_Closure (State, Fun);
+      Register_Object (State, Name);
+   end Register_Function;
+
+   ---------------------
+   -- Register_Object --
+   ---------------------
+
+   procedure Register_Object
+     (State : Lua_State;
+      Name  : String)
+   is
       Start                     : Integer := Name'First;
       Is_First                  : Boolean := True;
       Need_Global               : Boolean := False;
       Pop_Times                 : Integer := 0;
       Set_Table_Times           : Integer := 0;
       Global_First, Global_Last : Integer := 0;
+      Obj_Index                 : constant Lua_Index :=
+        Absolute_Index (State, -1);
    begin
       --  check that name does not start or ends with . and cannot be empty
       --  ???
@@ -496,14 +585,12 @@ package body Lua is
       end loop;
 
       if Start = Name'First then
-         --  This means that the function should registered at toplevel
-         Push_Closure (State, Fun);
          Set_Global (State, Name);
-
       else
+         Push_Value (State, Obj_Index);
          --  At least one dot has been found so create a hierarchy
-         Set_Field (State, -1, Name (Start .. Name'Last),
-                    Fun, Override => False);
+         Set_Field (State, -2, Name (Start .. Name'Last),
+                    Override => False);
 
          for J in 1 .. Set_Table_Times loop
             Set_Table (State, -3);
@@ -516,8 +603,11 @@ package body Lua is
          if Need_Global then
             Set_Global (State, Name (Global_First .. Global_Last));
          end if;
+
+         --  Remove the object from the stack
+         Pop (State);
       end if;
-   end Register_Function;
+   end Register_Object;
 
    ---------------
    -- Set_Field --
@@ -593,6 +683,49 @@ package body Lua is
       Internal (State, Name_Ptr);
       Free (Name_Ptr);
    end Set_Global;
+
+   -------------------
+   -- Set_Metatable --
+   -------------------
+
+   procedure Set_Metatable
+     (State : Lua_State;
+      Name  : String)
+   is
+      procedure Internal
+        (State : Lua_State;
+         Str   : chars_ptr);
+      pragma Import (C, Internal, "luaL_setmetatable");
+
+      Str_Ptr : chars_ptr := New_String (Name);
+   begin
+      Internal (State, Str_Ptr);
+      Free (Str_Ptr);
+   end Set_Metatable;
+
+   --------------------
+   -- Test_User_Data --
+   --------------------
+
+   function Test_User_Data
+     (State : Lua_State;
+      Index : Lua_Index;
+      Name  : String)
+      return Lua_User_Data
+   is
+      function Internal
+        (State : Lua_State;
+         Index : Lua_Index;
+         Str   : chars_ptr)
+         return Lua_User_Data;
+      pragma Import (C, Internal, "luaL_testudata");
+
+      Str_Ptr : chars_ptr := New_String (Name);
+      Result  : constant Lua_User_Data := Internal (State, Index, Str_Ptr);
+   begin
+      Free (Str_Ptr);
+      return Result;
+   end Test_User_Data;
 
    ------------
    -- To_Ada --
@@ -789,4 +922,8 @@ package body Lua is
       return Value (Result);
    end Type_Name;
 
+   function Upvalue_Index (N : Positive) return Lua_Index is
+   begin
+      return LUA_REGISTRYINDEX - N;
+   end Upvalue_Index;
 end Lua;
