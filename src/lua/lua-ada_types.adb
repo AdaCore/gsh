@@ -20,46 +20,68 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Unchecked_Conversion;
+
 package body Lua.Ada_Types is
 
-   ------------
-   -- To_Ada --
-   ------------
+   function Img2Addr is new Ada.Unchecked_Conversion
+     (Image_Function, System.Address);
+   function Addr2Img is new Ada.Unchecked_Conversion
+     (System.Address, Image_Function);
 
-   function To_Ada
-     (State : Lua_State; Index : Lua_Index)
-      return Ada_Type
-   is
+   function Image_Lua_Wrapper (State : Lua_State) return Integer;
+   pragma Convention (C, Image_Lua_Wrapper);
+   --  Lua function registered as __tostring metamethod. The function is used
+   --  to implement Register_Image_Function
 
-      User_Data : constant Lua_User_Data := To_Ada (State, Index);
+   function Equal_To (State : Lua_State) return Integer;
+   pragma Convention (C, Equal_To);
+   --  Lua function used to implement the __eq metamethod
+
+   procedure Create_Metatable (State : Lua_State);
+   --  Initialize the metatable associated with Ada_Type object in Lua
+
+   ----------------------
+   -- Create_Metatable --
+   ----------------------
+
+   procedure Create_Metatable (State : Lua_State) is
+   begin
+      --  We assume that the metatable is the top of the stack at the beginning
+      --  of the procedure.
+      Push (State, "__eq");
+      Push_Closure (State, Equal_To'Unrestricted_Access);
+      Set_Table (State, -3);
+   end Create_Metatable;
+
+   --------------
+   -- Equal_To --
+   --------------
+
+   function Equal_To (State : Lua_State) return Integer is
+      Left  : constant Ada_Type := To_Ada (State, 1);
+      Right : constant Ada_Type := To_Ada (State, 2);
 
    begin
-      Get_User_Value (State, Index);
-      if Get_Type (State, -1) /= LUA_TTABLE then
-         raise Lua_Type_Error with "not an ada type";
-      end if;
+      Push (State, Left = Right);
+      return 1;
+   end Equal_To;
 
-      Get_Field (State, -1, "ada_type");
+   -----------------------
+   -- Image_Lua_Wrapper --
+   -----------------------
 
-      declare
-         Ada_Type_Name : constant String := To_Ada (State, -1);
-      begin
-         if Ada_Type_Name /= Name then
-            raise Lua_Type_Error
-              with "expect type " & Name & " but found " & Ada_Type_Name;
-         end if;
-      end;
-
-      Pop (State, 2);
-
-      declare
-         Result : Ada_Type;
-         for Result'Address use System.Address (User_Data);
-         pragma Import (C, Result);
-      begin
-         return Result;
-      end;
-   end To_Ada;
+   function Image_Lua_Wrapper (State : Lua_State) return Integer is
+      --  Get the argument
+      Arg       : constant Ada_Type := To_Ada (State, 1);
+      User_Data : constant Lua_User_Data := To_Ada (State, Upvalue_Index (1));
+      Fun       : Image_Function;
+   begin
+      --  The Ada image function is an upvalue in the closure of our wrapper.
+      Fun := Addr2Img (System.Address (User_Data));
+      Push (State, Fun (Arg));
+      return 1;
+   end Image_Lua_Wrapper;
 
    ----------
    -- Push --
@@ -72,12 +94,68 @@ package body Lua.Ada_Types is
       Result      : Ada_Type;
       pragma Import (C, Result);
       for Result'Address use Result_Addr;
+      Ada_Type_Exists : constant Boolean := New_Metatable (State, Name);
    begin
+      if not Ada_Type_Exists then
+         Create_Metatable (State);
+      end if;
       Result := Data;
-      Create_Table (State);
-      Push (State, Name);
-      Set_Field (State, -2, "ada_type");
-      Set_User_Value (State, -2);
+      Set_Metatable (State, -2);
    end Push;
+
+   --------------------
+   -- Register_Image --
+   --------------------
+
+   procedure Register_Image (State : Lua_State; Fun : Image_Function) is
+      Ada_Type_Exists : constant Boolean := New_Metatable (State, Name);
+   begin
+      if not Ada_Type_Exists then
+         Create_Metatable (State);
+      end if;
+      Push (State, "__tostring");
+      Push (State, Lua_Light_User_Data (Img2Addr (Fun)));
+      Push_Closure (State, Image_Lua_Wrapper'Unrestricted_Access, 1);
+      Set_Table (State, -3);
+      Pop (State);
+   end Register_Image;
+
+   ---------------------
+   -- Register_Object --
+   ---------------------
+
+   procedure Register_Object
+     (State : Lua_State; Name : String; Obj : Ada_Type)
+   is
+   begin
+      Push (State, Obj);
+      Register_Object (State, Name);
+   end Register_Object;
+
+   ------------
+   -- To_Ada --
+   ------------
+
+   function To_Ada
+     (State : Lua_State; Index : Lua_Index)
+      return Ada_Type
+   is
+      User_Data : constant Lua_User_Data :=
+        Test_User_Data (State, Index, Name);
+
+   begin
+      if User_Data = Lua_User_Data (System.Null_Address) then
+         raise Lua_Type_Error
+           with "expect type " & Name;
+      end if;
+
+      declare
+         Result : Ada_Type;
+         for Result'Address use System.Address (User_Data);
+         pragma Import (C, Result);
+      begin
+         return Result;
+      end;
+   end To_Ada;
 
 end Lua.Ada_Types;
