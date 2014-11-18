@@ -24,7 +24,6 @@ def open_coverage(gcov_file):
         result = json.load(fd)
 
     for source in result:
-        print source
         total = len(result[source]['lines'])
         covered = len([k for k in result[source]['lines']
                        if result[source]['lines'][k]['status'] ==
@@ -42,9 +41,8 @@ def open_coverage(gcov_file):
 
         # sort the lines. necessary ?
         lines = [int(k) for k in result[source]['lines'].keys()]
-        lines.sort()
 
-        for line in lines:
+        for line in sorted(lines):
             l = result[source]['lines'][str(line)]
             # how to interpret negative coverage ?
             if l['coverage'] < 0:
