@@ -232,45 +232,51 @@ class GSHTestsuite(Testsuite):
         Env().add_path(os.path.join(self.main.options.with_gsh, 'bin'))
         Env().add_path(os.path.dirname(os.environ['SHELL']))
 
+        GCDA_DEFAULT_DIR = os.path.join(self.global_env['root_dir'],
+                                        '..', 'obj', 'dev')
+        # clean coverage info if existing
+        rm(os.path.join(GCDA_DEFAULT_DIR, 'global.cov.json'))
+
     def tear_down(self):
 
-        result = {}
-        for elem in ls(os.path.join(self.global_env['output_dir'],
-                                    '*' + '.cov.json')):
-            with open(elem, 'rb') as fd:
-                json_test = json.loads(fd.read())
+        if self.global_env['options'].enable_coverage:
+            result = {}
+            for elem in ls(os.path.join(self.global_env['output_dir'],
+                                        '*' + '.cov.json')):
+                with open(elem, 'rb') as fd:
+                    json_test = json.loads(fd.read())
 
-            for source in json_test:
-                cur_test = json_test[source]
+                for source in json_test:
+                    cur_test = json_test[source]
 
-                if source not in result:
-                    result[source] = {'lines': {},
-                                      'subprogram': cur_test['subprogram'],
-                                      'line_count': cur_test['line_count']}
+                    if source not in result:
+                        result[source] = {'lines': {},
+                                          'subprogram': cur_test['subprogram'],
+                                          'line_count': cur_test['line_count']}
 
-                global_cur = result[source]
+                    global_cur = result[source]
 
-                for line in cur_test['lines']:
+                    for line in cur_test['lines']:
 
-                    test_line = cur_test['lines'][line]
+                        test_line = cur_test['lines'][line]
 
-                    # a line is only interesting either if not existing in
-                    # actual accumulated result or if covered in cur_test
-                    if line not in global_cur['lines']:
-                        global_cur['lines'][line] = \
-                            {'status': test_line['status'],
-                             'contents': test_line['contents'],
-                             'coverage': test_line['coverage']}
+                        # a line is only interesting either if not existing in
+                        # actual accumulated result or if covered in cur_test
+                        if line not in global_cur['lines']:
+                            global_cur['lines'][line] = \
+                                {'status': test_line['status'],
+                                 'contents': test_line['contents'],
+                                 'coverage': test_line['coverage']}
 
-                    elif test_line['status'] == 'COVERED':
-                        global_line = global_cur['lines'][line]
-                        global_line['status'] = test_line['status']
-                        global_line['coverage'] += test_line['coverage']
+                        elif test_line['status'] == 'COVERED':
+                            global_line = global_cur['lines'][line]
+                            global_line['status'] = test_line['status']
+                            global_line['coverage'] += test_line['coverage']
 
-        gcda_default_dir = os.path.join(self.global_env['root_dir'],
-                                        '..', 'obj', 'dev')
-        # Dump file to json. Note that we are not using yaml here for
-        # performance issues.
-        with open(os.path.join(gcda_default_dir, 'global.cov.json'),
-                  'wb') as fd:
-            json.dump(result, fd)
+            # Dump file to json. Note that we are not using yaml here for
+            # performance issues.
+            GCDA_DEFAULT_DIR = os.path.join(self.global_env['root_dir'],
+                                            '..', 'obj', 'dev')
+            with open(os.path.join(GCDA_DEFAULT_DIR, 'global.cov.json'),
+                      'wb') as fd:
+                json.dump(result, fd)
