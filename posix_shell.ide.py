@@ -191,7 +191,7 @@ class TestsuiteWidget(object):
             (total_child, total_coverage, result_xml)
 
         # Dump xml file and open the Coverage info
-        tmp_file = '%s/tmp.xml' % (TS_DIR)
+        tmp_file = os.path.join(TS_DIR, 'tmp.xml')
         with open(tmp_file, 'wb') as fd:
             fd.write(result_xml)
         a = GPS.CodeAnalysis.get("Coverage")
