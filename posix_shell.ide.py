@@ -18,8 +18,8 @@ class GSHCommand(GPS.Process):
 
     regexp = ".+"
 
-    def __init__(self, command):
-        self.report_widget = TestsuiteWidget()
+    def __init__(self, command, exit_fun=None):
+        self.exit_fun = exit_fun
         GPS.Process.__init__(self, command,
                              on_exit=self.on_exit,
                              show_command=True,
@@ -36,6 +36,8 @@ class GSHCommand(GPS.Process):
     def on_exit(self, status, remaining_output):
         console = GPS.Console("GSH")
         console.write("exit with status: %s\n" % status)
+        if status == 0 and self.exit_fun is not None:
+            self.exit_fun()
 
 
 class GSHTestsuite(GSHCommand):
@@ -88,7 +90,7 @@ class GSHActions(object):
 
     @classmethod
     def build_action(cls):
-        GSHCommand("make")
+        GSHCommand("make", exit_fun=GSHActions.install_action)
 
     @classmethod
     def install_action(cls):
