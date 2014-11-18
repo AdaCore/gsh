@@ -12,8 +12,6 @@ cp: shell built-in command
 * ls to see the creation of copy_a
 a
 copy_a
-description
-test.cmd
 test.out
 test.sh
 test.yaml
