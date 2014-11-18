@@ -52,10 +52,14 @@ class ShellDriver(TestDriver):
 
     def tear_down(self):
         if self.global_env['options'].enable_coverage:
+
             src_path = os.path.abspath(
                 os.path.join(self.global_env['root_dir'],
                              '..', 'src'))
             result = {}
+
+            cov_objs = self.test_env.get('coverage_objectives', None)
+
             for gcda in ls(os.path.join(self.gcov_dir, '*.gcda')):
                 gcov = Run(['gcov', gcda], cwd=self.gcov_dir)
                 gcov_out = re.findall(
@@ -71,6 +75,12 @@ class ShellDriver(TestDriver):
                     if source.endswith('.ads'):
                         continue
 
+                    # if we have coverage objectives consider only the listed
+                    # sources.
+                    if cov_objs is not None:
+                        if os.path.basename(source) not in cov_objs.keys():
+                            continue
+
                     if source not in result:
                         result[source] = {'lines': {},
                                           'subprogram': {},
@@ -81,13 +91,34 @@ class ShellDriver(TestDriver):
                     with open(os.path.join(self.gcov_dir,
                                            gcov_file), 'rb') as fd:
                         content = fd.read()
+
+                    cur_fun = ''
+
                     for l in content.splitlines():
+
                         status, line, content = l.split(':', 2)
                         status = status.strip()
                         line = int(line.strip())
+                        if len(cur_fun) == 0:
+                            m = re.match(
+                                r' *(function|procedure) *([a-zA-Z0-9_]+)',
+                                content)
+                            if m:
+                                cur_fun = m.group(2)
+                        else:
+                            m = re.match(r' *end *' + cur_fun, content)
+                            if m:
+                                cur_fun = ''
 
                         if line != 0:
                             cur['line_count'] += 1
+
+                        if cov_objs and \
+                                (not cur_fun or
+                                 not re.match(
+                                     cov_objs[os.path.basename(source)],
+                                     cur_fun)):
+                            continue
 
                         if status == '-':
                             pass

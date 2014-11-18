@@ -1,6 +1,7 @@
 title: 'Test Posix_Shell.Lexer.Read_Token function (unit)'
-
 driver: tabletest
+coverage_objectives:
+    posix_shell-lexer.adb: "Read_Token_Aux"
 
 table:
        - input: 'a'
