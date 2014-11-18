@@ -15,13 +15,79 @@ ROOT_DIR = os.path.dirname(__file__)
 TS_DIR = './testsuite'
 
 
+def open_coverage(gcov_file):
+    result_xml = ""
+    total_child = 0
+    total_coverage = 0
+
+    with open(gcov_file, 'rb') as fd:
+        result = json.load(fd)
+
+    for source in result:
+        print source
+        total = len(result[source]['lines'])
+        covered = len([k for k in result[source]['lines']
+                       if result[source]['lines'][k]['status'] ==
+                       'COVERED'])
+
+        result_xml += '<File status="VALID" children=' + \
+            '"%s" coverage="%s" line_count="%s">\n' % \
+            (total,
+             total - covered,
+             result[source]['line_count'])
+        total_child += total
+        total_coverage += total - covered
+
+        result_xml += '    <vfs_name>%s</vfs_name>\n' % source
+
+        # sort the lines. necessary ?
+        lines = [int(k) for k in result[source]['lines'].keys()]
+        lines.sort()
+
+        for line in lines:
+            l = result[source]['lines'][str(line)]
+            # how to interpret negative coverage ?
+            if l['coverage'] < 0:
+                l['coverage'] = 0 - l['coverage']
+
+            l['line'] = line
+            l['contents'] = cgi.escape(l['contents'], quote=True)
+            l['contents'] = l['contents'].encode('ascii',
+                                                 'xmlcharrefreplace')
+
+            result_xml += '    <Line status="%(status)s" ' % l
+            result_xml += 'coverage="%(coverage)s" ' % l
+            result_xml += 'number="%(line)s" ' % l
+            result_xml += 'contents="%(contents)s" />\n' % l
+
+        result_xml += '</File>\n'
+
+    result_xml = """<?xml version="1.0"?>
+    <?xml-stylesheet href='show_coverage.xsl' type='text/xsl'?>
+    <Code_Analysis_Tree name="Coverage" >
+    <Project status="VALID" name="Posix_Shell" children="%s" coverage="%s">
+    %s</Project></Code_Analysis_Tree>""" % \
+        (total_child, total_coverage, result_xml)
+
+    # Dump xml file and open the Coverage info
+    tmp_file = os.path.join(TS_DIR, 'tmp.xml')
+
+    with open(tmp_file, 'wb') as fd:
+        fd.write(result_xml)
+    a = GPS.CodeAnalysis.get("Coverage")
+    a.clear()
+    a.load_from_file(xml=GPS.File(tmp_file))
+    a.show_analysis_report()
+
+
 class GSHCommand(GPS.Process):
 
     regexp = ".+"
 
     def __init__(self, command, exit_fun=None):
         self.exit_fun = exit_fun
-        GPS.Process.__init__(self, command,
+        GPS.Process.__init__(self,
+                             command,
                              on_exit=self.on_exit,
                              show_command=True,
                              regexp=self.regexp,
@@ -61,33 +127,66 @@ class GSHTestsuite(GSHCommand):
 
 
 class GSHActions(object):
+
     def __init__(self):
-        self.test_action = GPS.Action('gsh_test_action')
-        self.test_action.create(GSHActions.test_action,
-                                category="GSH",
-                                description="Run GSH testsuite")
-        self.test_action.menu("GSH/Run Testsuite")
-        self.test_action2 = GPS.Action('gsh_test_action2')
-        self.test_action2.create(GSHActions.test_action2,
-                                 category="GSH",
-                                 description="Run GSH testsuite")
-        self.test_action2.menu("GSH/Run Testsuite (no cov)")
+        # Menu Run Testsuite with coverage
+        self.runtest_action = GPS.Action('gsh_runtest_action')
+        self.runtest_action.create(GSHActions.runtest_action,
+                                   category="GSH",
+                                   description="Run GSH testsuite")
+        self.runtest_action.menu("GSH/Run Testsuite")
+
+        # Menu show full coverage
+        self.showcov_action = GPS.Action('gsh_showcov_action')
+        self.showcov_action.create(GSHActions.showcov_action,
+                                   category="GSH",
+                                   description="Display full coverage")
+        self.showcov_action.menu("GSH/Show Full Coverage")
+
+        # Menu Run Testsuite without coverage
+        self.runtestnocov_action = GPS.Action('gsh_runtestnocov_action')
+        self.runtestnocov_action.create(GSHActions.runtestnocov_action,
+                                        category="GSH",
+                                        description="Run GSH testsuite")
+        self.runtestnocov_action.menu("GSH/Run Testsuite (no cov)")
+
+        # Menu Build
         self.build_action = GPS.Action('gsh_build_action')
         self.build_action.create(GSHActions.build_action,
                                  category="GSH",
                                  description="Build")
         self.build_action.menu("GSH/Build")
-        self.install_action = GPS.Action('gsh_install_action')
-        self.install_action.create(GSHActions.install_action,
-                                   category="GSH",
-                                   description="Install")
-        self.install_action.menu("GSH/Install")
 
+        # Menu Console AdaLua
         self.console_action = GPS.Action('gsh_console_action')
         self.console_action.create(GSHActions.console_action,
                                    category="GSH",
                                    description="Launch AdaLua console")
         self.console_action.menu("GSH/Console AdaLua")
+
+    @classmethod
+    def runtest_action(cls):
+        GSHTestsuite(
+            "python %s/testsuite -o %s/out --enable-coverage -t %s/tmp" %
+            (TS_DIR, TS_DIR, TS_DIR))
+
+    @classmethod
+    def showcov_action(cls):
+
+        glob_cov_file = os.path.join('.', 'obj', 'dev', 'global.cov.json')
+        print glob_cov_file
+
+        if not os.path.isfile(glob_cov_file):
+            console = GPS.Console("GSH")
+            console.write("no glob file %s " % glob_cov_file + '\n')
+            return
+        open_coverage(glob_cov_file)
+
+    @classmethod
+    def runtestnocov_action(cls):
+        GSHTestsuite(
+            "python %s/testsuite -o %s/out -t %s/tmp" %
+            (TS_DIR, TS_DIR, TS_DIR))
 
     @classmethod
     def build_action(cls):
@@ -100,18 +199,6 @@ class GSHActions(object):
     @classmethod
     def console_action(cls):
         Console_Process("obj/dev/gsh_unit")
-
-    @classmethod
-    def test_action2(cls):
-        GSHTestsuite(
-            "python %s/testsuite -o %s/out -t %s/tmp" %
-            (TS_DIR, TS_DIR, TS_DIR))
-
-    @classmethod
-    def test_action(cls):
-        GSHTestsuite(
-            "python %s/testsuite -o %s/out --enable-coverage -t %s/tmp" %
-            (TS_DIR, TS_DIR, TS_DIR))
 
 
 class TestsuiteWidget(object):
@@ -137,68 +224,6 @@ class TestsuiteWidget(object):
         self.view.append_column(col)
         self.view.connect("button_press_event", self.on_click)
 
-    def open_coverage(self, gcov_file):
-        result_xml = ""
-        total_child = 0
-        total_coverage = 0
-
-        with open(gcov_file, 'rb') as fd:
-            result = json.load(fd)
-
-        for source in result:
-            total = len(result[source]['lines'])
-            covered = len([k for k in result[source]['lines']
-                           if result[source]['lines'][k]['status'] ==
-                           'COVERED'])
-
-            result_xml += '<File status="VALID" children=' + \
-                '"%s" coverage="%s" line_count="%s">\n' % \
-                (total,
-                 total - covered,
-                 result[source]['line_count'])
-            total_child += total
-            total_coverage += total - covered
-
-            result_xml += '    <vfs_name>%s</vfs_name>\n' % source
-
-            # sort the lines. necessary ?
-            lines = [int(k) for k in result[source]['lines'].keys()]
-            lines.sort()
-
-            for line in lines:
-                l = result[source]['lines'][str(line)]
-                # how to interpret negative coverage ?
-                if l['coverage'] < 0:
-                    l['coverage'] = 0 - l['coverage']
-
-                l['line'] = line
-                l['contents'] = cgi.escape(l['contents'], quote=True)
-                l['contents'] = l['contents'].encode('ascii',
-                                                     'xmlcharrefreplace')
-
-                result_xml += '    <Line status="%(status)s" ' % l
-                result_xml += 'coverage="%(coverage)s" ' % l
-                result_xml += 'number="%(line)s" ' % l
-                result_xml += 'contents="%(contents)s" />\n' % l
-
-            result_xml += '</File>\n'
-
-        result_xml = """<?xml version="1.0"?>
-        <?xml-stylesheet href='show_coverage.xsl' type='text/xsl'?>
-        <Code_Analysis_Tree name="Coverage" >
-        <Project status="VALID" name="Posix_Shell" children="%s" coverage="%s">
-        %s</Project></Code_Analysis_Tree>""" % \
-            (total_child, total_coverage, result_xml)
-
-        # Dump xml file and open the Coverage info
-        tmp_file = os.path.join(TS_DIR, 'tmp.xml')
-        with open(tmp_file, 'wb') as fd:
-            fd.write(result_xml)
-        a = GPS.CodeAnalysis.get("Coverage")
-        a.clear()
-        a.load_from_file(xml=GPS.File(tmp_file))
-        a.show_analysis_report()
-
     def on_click(self, view, event):
         if event.button == 1:
             results = self.view.get_path_at_pos(event.x, event.y)
@@ -210,7 +235,7 @@ class TestsuiteWidget(object):
                     gcov_file = self.store[path][6][:-5] + '.cov.json'
                     if not os.path.isfile(gcov_file):
                         return
-                    self.open_coverage(gcov_file)
+                    open_coverage(gcov_file)
 
     def find_all_results(self):
         pass
