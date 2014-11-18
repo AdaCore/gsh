@@ -61,11 +61,8 @@ package body Posix_Shell.Builtins.Uname is
                         return 0;
 
                      elsif Arg = "--" then
-                        if Index /= Args'Last then
-                           Put (S, 2, "uname: extra operand" & ASCII.LF);
+                           Put (S, 2, "uname: unexpected operand" & ASCII.LF);
                            return 1;
-                        end if;
-
                      else
                         for Index2 in Arg'First + 1 .. Arg'Last loop
                            case Arg (Index2) is
@@ -159,6 +156,8 @@ package body Posix_Shell.Builtins.Uname is
          end if;
          Put (S, 1, "Cygwin");
       end if;
+
+      Put (S, 1, "" & ASCII.LF);
 
       return 0;
    end Uname_Builtin;
