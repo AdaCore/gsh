@@ -12,6 +12,7 @@ TEST_COLOR = {'PASSED': '#494',
               'PROBLEM': '#944'}
 
 ROOT_DIR = os.path.dirname(__file__)
+TS_DIR = './testsuite'
 
 
 class GSHCommand(GPS.Process):
@@ -101,12 +102,14 @@ class GSHActions(object):
     @classmethod
     def test_action2(cls):
         GSHTestsuite(
-            "python ./testsuite/testsuite -t tmp")
+            "python %s/testsuite -o %s/out -t %s/tmp" %
+            (TS_DIR, TS_DIR, TS_DIR))
 
     @classmethod
     def test_action(cls):
         GSHTestsuite(
-            "python ./testsuite/testsuite --enable-coverage -t tmp")
+            "python %s/testsuite -o %s/out --enable-coverage -t %s/tmp" %
+            (TS_DIR, TS_DIR, TS_DIR))
 
 
 class TestsuiteWidget(object):
@@ -186,11 +189,12 @@ class TestsuiteWidget(object):
             (total_child, total_coverage, result_xml)
 
         # Dump xml file and open the Coverage info
-        with open('tmp.xml', 'wb') as fd:
+        tmp_file = '%s/tmp.xml' % (TS_DIR)
+        with open(tmp_file, 'wb') as fd:
             fd.write(result_xml)
         a = GPS.CodeAnalysis.get("Coverage")
         a.clear()
-        a.load_from_file(xml=GPS.File('tmp.xml'))
+        a.load_from_file(xml=GPS.File(tmp_file))
         a.show_analysis_report()
 
     def on_click(self, view, event):
@@ -211,7 +215,8 @@ class TestsuiteWidget(object):
 
     def add_result(self, test_name):
         import yaml
-        test_yaml = os.path.join('out', 'new', test_name + ".yaml")
+        test_yaml = os.path.join(TS_DIR,
+                                 'out', 'new', test_name + ".yaml")
         if not os.path.isfile(test_yaml):
             return
 
