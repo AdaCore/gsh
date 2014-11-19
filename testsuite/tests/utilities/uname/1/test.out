@@ -17,13 +17,13 @@ option -r
 1.7.0(0.212/5/3)
 
 option -s
-CYGWIN_NT-6.0-WOW64  is equiv to option uname  CYGWIN_NT-6.0-WOW64  (true):  0
+'CYGWIN_NT-6.0-WOW64' is equiv to 'uname': 'CYGWIN_NT-6.0-WOW64' (true):  0
 
 option -v
 2009-09-11 01:25
 
-options -mnrsv
-CYGWIN_NT-6.0-WOW64 machine 1.7.0(0.212/5/3) 2009-09-11 01:25 i686  is equiv to uname -a  CYGWIN_NT-6.0-WOW64 machine 1.7.0(0.212/5/3) 2009-09-11 01:25 i686 (true):  0
+options -mnrsvo
+'CYGWIN_NT-6.0-WOW64 machine 1.7.0(0.212/5/3) 2009-09-11 01:25 i686 Cygwin' is equiv to 'uname -a': 'CYGWIN_NT-6.0-WOW64 machine 1.7.0(0.212/5/3) 2009-09-11 01:25 i686 Cygwin' (true):  0
 
 option -p
 unknown
