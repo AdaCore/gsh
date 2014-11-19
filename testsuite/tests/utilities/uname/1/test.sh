@@ -26,7 +26,7 @@ uname -r
 echo ""
 echo "option -s"
 unames=`uname -s`
-test $unamenoopt = $unames; echo $unames " is equiv to option uname " $unamenoopt " (true): " $?
+test "$unamenoopt" = "$unames"; echo $unames " is equiv to option uname " $unamenoopt " (true): " $?
 
 echo ""
 echo "option -v"
@@ -35,7 +35,7 @@ uname -v
 echo ""
 echo "options -mnrsv" # must be equiv to option -a
 unamemnrsv=`uname -mnrsv`
-test $unamea = $unamemnrsv; echo $unamemnrsv " is equiv to uname -a " $unamea " (true): " $?
+test "$unamea" = "$unamemnrsv"; echo $unamemnrsv " is equiv to uname -a " $unamea " (true): " $?
 
 echo ""
 echo "option -p"
