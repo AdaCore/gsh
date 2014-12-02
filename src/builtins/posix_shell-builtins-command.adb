@@ -95,6 +95,7 @@ package body Posix_Shell.Builtins.Command is
    function Command_Builtin
      (S : in out Shell_State; Args : String_List) return Integer
    is
+
       From : constant String := "command";
       Using_PATH     : Boolean := False;
       Invoke_Command : Boolean := True;
@@ -120,6 +121,7 @@ package body Posix_Shell.Builtins.Command is
                case Args (Index).all (C) is
                   when 'p'       =>
                      Using_PATH := True;
+                     pragma Warnings (Off, Using_PATH);
                      --  ??? The following is 'temporary' code
                      --  not fully sure about how option '-p' should be
                      --  treated

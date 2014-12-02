@@ -33,6 +33,10 @@ package body Posix_Shell.Tree.Dumps is
    procedure Dump_Pipe (N : Node);
    procedure Dump_For (N : Node);
 
+   ----------
+   -- Dump --
+   ----------
+
    procedure Dump (T : Shell_Tree) is
    begin
       for J in 1 .. Last (T.Node_Table) loop
@@ -41,6 +45,10 @@ package body Posix_Shell.Tree.Dumps is
             Dump (T, T.Node_Table.Table (J));
       end loop;
    end Dump;
+
+   ----------
+   -- Dump --
+   ----------
 
    procedure Dump
      (T : Shell_Tree;
@@ -62,6 +70,10 @@ package body Posix_Shell.Tree.Dumps is
       end case;
    end Dump;
 
+   --------------
+   -- Dump_For --
+   --------------
+
    procedure Dump_For (N : Node) is
    begin
       Put ("var: " & Get_Token_String (N.Loop_Var) & ", ");
@@ -71,6 +83,10 @@ package body Posix_Shell.Tree.Dumps is
       New_Line;
    end Dump_For;
 
+   ---------------
+   -- Dump_Pipe --
+   ---------------
+
    procedure Dump_Pipe (N : Node) is
    begin
       for J in N.Pipe_Childs'Range loop
@@ -78,6 +94,10 @@ package body Posix_Shell.Tree.Dumps is
       end loop;
       New_Line;
    end Dump_Pipe;
+
+   -----------------
+   -- Dump_Assign --
+   -----------------
 
    procedure Dump_Assign
      (T : Shell_Tree;
@@ -94,6 +114,10 @@ package body Posix_Shell.Tree.Dumps is
       New_Line;
    end Dump_Assign;
 
+   --------------
+   -- Dump_Cmd --
+   --------------
+
    procedure Dump_Cmd (T : Shell_Tree; N : Node)
    is
       Cursor : Token_List := N.Arguments;
@@ -106,6 +130,10 @@ package body Posix_Shell.Tree.Dumps is
       end loop;
       New_Line;
    end Dump_Cmd;
+
+   -------------------
+   -- Dump_Function --
+   -------------------
 
    procedure Dump_Function (N : Node) is
    begin
@@ -124,6 +152,10 @@ package body Posix_Shell.Tree.Dumps is
       New_Line;
    end Dump_If;
 
+   ---------------
+   -- Dump_List --
+   ---------------
+
    procedure Dump_List (N : Node) is
    begin
       for J in N.List_Childs'Range loop
@@ -131,6 +163,10 @@ package body Posix_Shell.Tree.Dumps is
       end loop;
       New_Line;
    end Dump_List;
+
+   -------------------
+   -- Dump_Subshell --
+   -------------------
 
    procedure Dump_Subshell (N : Node) is
    begin

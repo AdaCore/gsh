@@ -21,7 +21,6 @@
 ------------------------------------------------------------------------------
 
 with Ada.Unchecked_Deallocation;
-with Ada.Text_IO;
 
 package body Posix_Shell.Tree is
 
@@ -52,9 +51,9 @@ package body Posix_Shell.Tree is
       Append (Tree.Pool, List, T);
    end Append;
 
-   -----------------------
+   --------------------------
    -- Add_And_Or_List_Node --
-   -----------------------
+   --------------------------
 
    function Add_And_Or_List_Node
      (Tree   : in out Shell_Tree;
@@ -333,6 +332,10 @@ package body Posix_Shell.Tree is
       Tree.Node_Table.Table (N) := Current;
    end Append_Assignement;
 
+   --------------
+   -- New_Tree --
+   --------------
+
    function New_Tree (B : Buffer) return Shell_Tree is
       T : Shell_Tree;
    begin
@@ -341,6 +344,10 @@ package body Posix_Shell.Tree is
       T.Buffer := B;
       return T;
    end New_Tree;
+
+   --------------
+   -- Get_Node --
+   --------------
 
    function Get_Node
      (Tree : Shell_Tree;

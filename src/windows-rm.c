@@ -45,13 +45,14 @@ __declspec(dllimport) void WINAPI Sleep(unsigned long dwMilliseconds);
 #include "winnt.h"
 #include "ntdef.h"
 #include "shlobj.h"
-#include "stdio.h"
 
 #include "ddk/ntddk.h"
 #include "ddk/winddk.h"
 #include "ddk/ntifs.h"
 
 #endif /* _W64 */
+
+#include "stdio.h"
 
 WCHAR digit_image[] = L"0123456789ABCDEF";
 WCHAR trash_dir[] = L"\\tmp\\trash\\";

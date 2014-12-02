@@ -19,8 +19,10 @@
  *                                                                          *
  ****************************************************************************/
 
-#include <stdlib.h>
-#include <stdio.h>
+#include "stdlib.h"
+#include "stdio.h"
+#include "strings.h"
+
 extern char *readline (const char *);
 extern void add_history (const char *);
 

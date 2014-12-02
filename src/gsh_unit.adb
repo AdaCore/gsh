@@ -27,6 +27,10 @@ with Ada.Command_Line; use Ada.Command_Line;
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Exceptions; use Ada.Exceptions;
 
+--------------
+-- GSH_Unit --
+--------------
+
 function GSH_Unit return Integer is
    S : constant Lua_State := New_State;
 begin

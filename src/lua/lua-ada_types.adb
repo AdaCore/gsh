@@ -92,8 +92,9 @@ package body Lua.Ada_Types is
       Result_Addr : constant System.Address :=
                       New_User_Data (State, Data'Size);
       Result      : Ada_Type;
-      pragma Import (C, Result);
       for Result'Address use Result_Addr;
+      pragma Import (Ada, Result);
+      --  pragma Import is only to avoid initialization by the compiler
       Ada_Type_Exists : constant Boolean := New_Metatable (State, Name);
    begin
       if not Ada_Type_Exists then
@@ -152,7 +153,8 @@ package body Lua.Ada_Types is
       declare
          Result : Ada_Type;
          for Result'Address use System.Address (User_Data);
-         pragma Import (C, Result);
+         pragma Import (Ada, Result);
+         --  pragma Import is only to avoid initialization by the compiler
       begin
          return Result;
       end;

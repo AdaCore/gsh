@@ -24,6 +24,17 @@ package body Posix_Shell.Traces is
 
    function Open_Append
      (Name  : C_File_Name;
+      Fmode : Mode) return File_Descriptor;
+   function Open_Append
+     (Name  : String;
+      Fmode : Mode) return File_Descriptor;
+
+   -----------------
+   -- Open_Append --
+   -----------------
+
+   function Open_Append
+     (Name  : C_File_Name;
       Fmode : Mode) return File_Descriptor
    is
       function C_Open_Append
@@ -33,6 +44,10 @@ package body Posix_Shell.Traces is
    begin
       return C_Open_Append (Name, Fmode);
    end Open_Append;
+
+   -----------------
+   -- Open_Append --
+   -----------------
 
    function Open_Append
      (Name  : String;
@@ -44,6 +59,10 @@ package body Posix_Shell.Traces is
       C_Name (C_Name'Last)      := ASCII.NUL;
       return Open_Append (C_Name (C_Name'First)'Address, Fmode);
    end Open_Append;
+
+   ---------
+   -- Log --
+   ---------
 
    procedure Log (Logger : String; Msg : String) is
       Final : constant String := Logger & ":" & Msg & ASCII.LF;
