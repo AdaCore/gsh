@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -171,5 +171,47 @@ package body Posix_Shell.Fileutils is
    begin
       return FI.Symbolic_Link;
    end Is_Symbolic_Link;
+
+   -------------------
+   -- Relative_Path --
+   -------------------
+
+   function Relative_Path (P   : String;
+                           Dir : String;
+                           Path_Prefix : String := ".") return String is
+   begin
+
+      if P = Dir then
+         return Path_Prefix;
+
+      elsif P'Length > Dir'Length then
+
+         if P (P'First .. Dir'Length) = Dir then
+
+            if P (Dir'Length + 2 .. P'Last) = Path_Prefix then
+               return Path_Prefix;
+
+            elsif P (Dir'Length + 2 .. P'Last) = Path_Prefix & "/." then
+               return Path_Prefix;
+
+            elsif Dir'Length + 2 + Path_Prefix'Length < P'Last then
+               if P (Dir'Length + 2 ..
+                       Dir'Length + 1 + Path_Prefix'Length) = Path_Prefix
+               then
+                  return P (Dir'Length + 2 .. P'Last);
+               else
+                  return Path_Prefix & "/" & P (Dir'Length + 2 .. P'Last);
+               end if;
+            else
+               return Path_Prefix & "/" & P (Dir'Length + 2 .. P'Last);
+            end if;
+
+         else
+            return P;
+         end if;
+      else
+         return P;
+      end if;
+   end Relative_Path;
 
 end Posix_Shell.Fileutils;

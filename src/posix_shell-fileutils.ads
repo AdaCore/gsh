@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -73,6 +73,12 @@ package Posix_Shell.Fileutils is
 
    function Name (DE : Dir_Entry) return String;
    --  Get the name of the directory entry DE
+
+   function Relative_Path (P   : String;
+                           Dir : String;
+                           Path_Prefix : String  := ".") return String;
+   --  From an abosulte path, returns the relative path to a directory (full
+   --  path expected)
 
 private
 
