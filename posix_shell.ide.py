@@ -165,7 +165,7 @@ class GSHActions(object):
     @classmethod
     def runtest_action(cls):
         GSHTestsuite(
-            "python %s/testsuite -o %s/out --enable-coverage -t %s/tmp" %
+            "python %s/testsuite -j0 -o %s/out --enable-coverage -t %s/tmp" %
             (TS_DIR, TS_DIR, TS_DIR))
 
     @classmethod
@@ -183,7 +183,7 @@ class GSHActions(object):
     @classmethod
     def runtestnocov_action(cls):
         GSHTestsuite(
-            "python %s/testsuite -o %s/out -t %s/tmp" %
+            "python %s/testsuite -j0 -o %s/out -t %s/tmp" %
             (TS_DIR, TS_DIR, TS_DIR))
 
     @classmethod
