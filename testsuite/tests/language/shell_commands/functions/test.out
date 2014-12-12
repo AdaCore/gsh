@@ -1,0 +1,10 @@
+call fun_a
+a_param1
+a_param2
+call fun_b
+b_param
+
+call fun_c
+c_param
+
+call fun_d
