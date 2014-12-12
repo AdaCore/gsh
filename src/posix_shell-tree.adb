@@ -336,14 +336,40 @@ package body Posix_Shell.Tree is
    -- New_Tree --
    --------------
 
-   function New_Tree (B : Buffer) return Shell_Tree is
+   function New_Tree
+     (B       : Buffer;
+      Protect : Boolean := False)
+      return Shell_Tree
+   is
       T : Shell_Tree;
    begin
       Init (T.Node_Table);
       T.Pool := New_Pool;
       T.Buffer := B;
+      if Protect then
+         Protect_Tree (T);
+      end if;
       return T;
    end New_Tree;
+
+   ------------------
+   -- Protect_Tree --
+   ------------------
+
+   procedure Protect_Tree (T : in out Shell_Tree) is
+   begin
+      T.Protect_Tree := True;
+      T.Protect_Buffer := True;
+   end Protect_Tree;
+
+   -------------------------
+   -- Protect_Tree_Buffer --
+   -------------------------
+
+   procedure Protect_Tree_Buffer (T : in out Shell_Tree) is
+   begin
+      T.Protect_Buffer := True;
+   end Protect_Tree_Buffer;
 
    --------------
    -- Get_Node --
@@ -452,19 +478,22 @@ package body Posix_Shell.Tree is
    procedure Free_Node
      (Tree   : in out Shell_Tree) is
    begin
-      Free_Node (Tree, Tree.Toplevel_Node);
-      Free (Tree.Node_Table);
-      Deallocate (Tree.Pool);
-      Deallocate (Tree.Buffer);
+      if not Tree.Protect_Tree then
+         Free_Node (Tree, Tree.Toplevel_Node);
+         Free (Tree.Node_Table);
+         Deallocate (Tree.Pool);
+         if not Tree.Protect_Buffer then
+            Deallocate (Tree.Buffer);
+         end if;
+      end if;
    end Free_Node;
 
    procedure Free_Node (Tree : in out Shell_Tree; N : Node_Id) is
-      pragma Unreferenced (Tree);
    begin
       if N = Null_Node then
          return;
       end if;
-      --  ???? Free_Node (Tree, Tree.Node_Table.Table (N));
+      --  Free_Node (Tree, Tree.Node_Table.Table (N));
    end Free_Node;
 
    -----------------------

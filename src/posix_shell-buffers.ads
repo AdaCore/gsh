@@ -85,6 +85,7 @@ package Posix_Shell.Buffers is
    --  Return the string delimited by First and Last
 
    procedure Deallocate (B : in out Buffer);
+   --  Free the buffer
 
 private
 

@@ -72,10 +72,7 @@ package body Posix_Shell.Builtins.Source is
       begin
          Eval (S, T);
          Return_Code := Get_Last_Exit_Status (S);
-         --  Tree should be freed only when getting out of context not just
-         --  after sourcing the script. Otherwise we don't have access anymore
-         --  to functions defined in a sourced script. ??? SHOULD BE FIXED ???
-         --  Free_Node (T);
+         Free_Node (T);
       exception
          when Shell_Return_Exception =>
             Return_Code := Get_Last_Exit_Status (S);

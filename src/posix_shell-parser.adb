@@ -1335,12 +1335,17 @@ package body Posix_Shell.Parser is
             Expect_Token (B, T_RPAR);
             Parse_Linebreak (B, T, C);
             declare
-               Function_Tree : Shell_Tree := New_Tree (B.B);
+               Function_Tree : Shell_Tree := New_Tree
+                 (B.B, Protect => True);
                N : constant Node_Id := Parse_Compound_Command
                  (B, Function_Tree, C);
             begin
                Set_Tree_Toplevel (Function_Tree, N);
                Set_Function_Node (T, Cmd_Id, Cmd, Function_Tree);
+
+               --  tree associated with a function cannot be deallocated along
+               --  with the buffer that is also the buffer of the parent tree
+               Protect_Tree_Buffer (T);
             end;
          else
 

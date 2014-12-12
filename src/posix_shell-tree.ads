@@ -170,7 +170,18 @@ package Posix_Shell.Tree is
    procedure Free_Node
      (Tree   : in out Shell_Tree);
 
-   function New_Tree (B : Buffer) return Shell_Tree;
+   function New_Tree
+     (B       : Buffer;
+      Protect : Boolean := False)
+      return Shell_Tree;
+   --  Create a new tree associated with buffer B. If Protect is set to True
+   --  then Tree cannot be deallocatd (a call to Protect_Tree is done)
+
+   procedure Protect_Tree (T : in out Shell_Tree);
+   --  Ensure tree cannot be deallocated and neither its associated buffer
+
+   procedure Protect_Tree_Buffer (T : in out Shell_Tree);
+   --  Ensure that the tree buffer cannot be deallocated
 
    function Token_List_Pool (T : Shell_Tree) return List_Pool;
    procedure Append
@@ -275,10 +286,13 @@ private
    use Node_Tables;
 
    type Shell_Tree is record
-      Node_Table    : Instance;
-      Next_Node     : Node_Id := 1;
-      Toplevel_Node : Node_Id := 0;
-      Pool          : List_Pool;
-      Buffer        : Posix_Shell.Buffers.Buffer;
+      Node_Table     : Instance;
+      Next_Node      : Node_Id := 1;
+      Toplevel_Node  : Node_Id := 0;
+      Pool           : List_Pool;
+      Buffer         : Posix_Shell.Buffers.Buffer;
+      Protect_Tree   : Boolean := False;
+      Protect_Buffer : Boolean := False;
    end record;
+
 end Posix_Shell.Tree;
