@@ -29,12 +29,22 @@ package body Posix_Shell.Tree is
       N    : Node)
       return Node_Id;
 
-   procedure Free_Node (Tree : in out Shell_Tree; N : in out Node_Access);
+   procedure Free_Node (Tree : in out Shell_Tree; N : in out Node);
 
    procedure Deallocate is
-        new Ada.Unchecked_Deallocation
-          (Node,
-           Node_Access);
+     new Ada.Unchecked_Deallocation
+       (Node_Id_Array,
+        Node_Id_Array_Access);
+
+   procedure Deallocate is
+     new Ada.Unchecked_Deallocation
+       (And_Or_Node_Id_Array,
+        And_Or_Node_Id_Array_Access);
+
+   procedure Deallocate is
+     new Ada.Unchecked_Deallocation
+       (Shell_Tree,
+        Shell_Tree_Access);
 
    function Token_List_Pool (T : Shell_Tree) return List_Pool
    is
@@ -417,12 +427,8 @@ package body Posix_Shell.Tree is
    -- Free_Node --
    ---------------
 
-   procedure Free_Node (Tree : in out Shell_Tree; N : in out Node_Access) is
+   procedure Free_Node (Tree : in out Shell_Tree; N : in out Node) is
    begin
-      if N = null then
-         return;
-      end if;
-
       case N.Kind is
          when IF_NODE =>
             Free_Node (Tree, N.Cond);
@@ -432,10 +438,12 @@ package body Posix_Shell.Tree is
             for Index in N.List_Childs'Range loop
                Free_Node (Tree, N.List_Childs (Index));
             end loop;
+            Deallocate (N.List_Childs);
          when AND_OR_LIST_NODE =>
             for Index in N.And_Or_List_Childs'Range loop
                Free_Node (Tree, N.And_Or_List_Childs (Index).N);
             end loop;
+            Deallocate (N.And_Or_List_Childs);
          when BRACE_NODE =>
             Free_Node (Tree, N.Brace_Code);
          when CASE_LIST_NODE =>
@@ -445,12 +453,12 @@ package body Posix_Shell.Tree is
          when CASE_NODE =>
             Free_Node (Tree, N.First_Case);
          when FOR_NODE =>
-            Deallocate (Tree.Pool, N.Loop_Var_Values);
             Free_Node (Tree, N.Loop_Code);
          when PIPE_NODE =>
             for Index in N.Pipe_Childs'Range loop
                Free_Node (Tree, N.Pipe_Childs (Index));
             end loop;
+            Deallocate (N.Pipe_Childs);
          when SUBSHELL_NODE =>
             Free_Node (Tree, N.Subshell_Code);
          when UNTIL_NODE =>
@@ -459,16 +467,11 @@ package body Posix_Shell.Tree is
          when WHILE_NODE =>
             Free_Node (Tree, N.While_Cond);
             Free_Node (Tree, N.While_Code);
-         when CMD_NODE =>
-            Deallocate (Tree.Pool, N.Arguments);
-            Deallocate (Tree.Pool, N.Cmd_Assign_List);
-         when ASSIGN_NODE =>
-            Deallocate (Tree.Pool, N.Assign_List);
+         when FUNCTION_NODE =>
+            Deallocate (N.Function_Code);
          when others =>
             null;
       end case;
-
-      Deallocate (N);
    end Free_Node;
 
    ---------------
@@ -493,7 +496,7 @@ package body Posix_Shell.Tree is
       if N = Null_Node then
          return;
       end if;
-      --  Free_Node (Tree, Tree.Node_Table.Table (N));
+      Free_Node (Tree, Tree.Node_Table.Table (N));
    end Free_Node;
 
    -----------------------
