@@ -4,7 +4,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *                      Copyright (C) 2011-2014, AdaCore                    *
+ *                      Copyright (C) 2011-2015, AdaCore                    *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -39,6 +39,8 @@
 #include <signal.h>
 #include <io.h>
 #include <subauth.h>
+
+#include "gsh.h"
 
 extern UINT CurrentCodePage;
 #define S2WSC(wstr,str,len) \
@@ -202,28 +204,6 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[])
 
     }
 }
-
-struct gsh_file_attributes {
-  int error;
-
-  unsigned char exists;
-
-  unsigned char writable;
-  unsigned char readable;
-  unsigned char executable;
-
-  unsigned char symbolic_link;
-  unsigned char regular;
-  unsigned char directory;
-
-  long long stamp;
-  long long length;
-};
-
-struct gsh_dir_entry {
-  struct gsh_file_attributes fi;
-  char name[512];
-};
 
 struct gsh_file_attributes
 __gsh_file_information(char *path)

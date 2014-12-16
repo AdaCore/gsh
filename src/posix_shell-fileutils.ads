@@ -74,6 +74,9 @@ package Posix_Shell.Fileutils is
    function Name (DE : Dir_Entry) return String;
    --  Get the name of the directory entry DE
 
+   function Image (DE : Dir_Entry) return String;
+   --  String image of a Dir_Entry structure
+
    function Relative_Path (P   : String;
                            Dir : String;
                            Path_Prefix : String  := ".") return String;

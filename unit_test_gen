@@ -12,7 +12,15 @@ TYPE_LIST = {
     'Posix_Shell.Token_Type': {
         'kind': LUA_MANAGED,
         'image': 'Posix_Shell.Lexer.Image',
-        'constants': ['T_EOF', 'T_WORD']}
+        'constants': ['T_EOF', 'T_WORD']},
+    'Posix_Shell.Fileutils.Dir_Entry': {
+        'kind': LUA_MANAGED,
+        'image': 'Posix_Shell.Fileutils.Image'},
+    'Posix_Shell.Fileutils.File_Attributes': {
+        'kind': LUA_MANAGED,
+        'image': 'Posix_Shell.Fileutils.Image'},
+    'Posix_Shell.Fileutils.Dir_Handle': {
+        'kind': LUA_MANAGED}
 }
 
 FUNCTION_LIST = {
@@ -43,7 +51,37 @@ FUNCTION_LIST = {
          'ada_name': 'Posix_Shell.Lexer.Image'},
     'Posix_Shell.Lexer.Read_Command_Token':
         {'args': ['Posix_Shell.Lexer.Token_Buffer'],
-         'return': 'Posix_Shell.Lexer.Token'}}
+         'return': 'Posix_Shell.Lexer.Token'},
+    'Posix_Shell.Fileutils.File_Information':
+        {'args': ['String'],
+         'return': 'Posix_Shell.Fileutils.File_Attributes'},
+    'Posix_Shell.Fileutils.Exists':
+        {'args': ['Posix_Shell.Fileutils.File_Attributes'],
+         'return': 'Boolean'},
+    'Posix_Shell.Fileutils.Is_Regular_File':
+        {'args': ['Posix_Shell.Fileutils.File_Attributes'],
+         'return': 'Boolean'},
+    'Posix_Shell.Fileutils.Is_Directory':
+        {'args': ['Posix_Shell.Fileutils.File_Attributes'],
+         'return': 'Boolean'},
+    'Posix_Shell.Fileutils.Is_Symbolic_Link':
+        {'args': ['Posix_Shell.Fileutils.File_Attributes'],
+         'return': 'Boolean'},
+    'Posix_Shell.Fileutils.Open':
+        {'args': ['String'],
+         'return': 'Posix_Shell.Fileutils.Dir_Handle'},
+    'Posix_Shell.Fileutils.Close':
+        {'args': ['Posix_Shell.Fileutils.Dir_Handle']},
+    'Posix_Shell.Fileutils.Read':
+        {'args': ['Posix_Shell.Fileutils.Dir_Handle'],
+         'return': 'Posix_Shell.Fileutils.Dir_Entry'},
+    'Posix_Shell.Fileutils.Is_Null':
+        {'args': ['Posix_Shell.Fileutils.Dir_Entry'],
+         'return': 'Boolean'},
+   'Posix_Shell.Fileutils.Name':
+        {'args': ['Posix_Shell.Fileutils.Dir_Entry'],
+         'return': 'String'},
+}
 
 
 if __name__ == '__main__':

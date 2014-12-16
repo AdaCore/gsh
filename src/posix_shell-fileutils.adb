@@ -122,6 +122,17 @@ package body Posix_Shell.Fileutils is
         ", directory: " & FI.Directory'Img;
    end Image;
 
+   -----------
+   -- Image --
+   -----------
+
+   function Image (DE : Dir_Entry) return String
+   is
+   begin
+      return "name: " & Name (DE) &
+        ", info: " & Image (DE.Info);
+   end Image;
+
    -------------
    -- Is_Null --
    -------------
