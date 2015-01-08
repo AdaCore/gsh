@@ -50,7 +50,7 @@ int
 __gsh_waitpid (void *h)
 {
   int status;
-  pid_t pid = (pid_t) h;
+  pid_t pid = (pid_t) (long) h;
   pid_t finished;
   finished = waitpid (pid, &status, 0);
 
@@ -98,7 +98,7 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[])
   chdir(cwd);
   result = posix_spawn(&pid, args[0], NULL, NULL, args, env);
   chdir(path);
-  return (void *) pid;
+  return (void *) (long) pid;
 }
 
 unsigned long
@@ -133,9 +133,9 @@ __gsh_file_information(char *path)
 
   result.error = 0;
   result.exists = 1;
-  result.readable = mystat.st_mode & S_IRUSR;
-  result.writable = mystat.st_mode & S_IWUSR;
-  result.executable = mystat.st_mode & S_IXUSR;
+  result.readable = (mystat.st_mode & S_IRUSR) != 0;
+  result.writable = (mystat.st_mode & S_IWUSR) != 0;
+  result.executable = (mystat.st_mode & S_IXUSR) != 0;
   result.symbolic_link = S_ISLNK(mystat.st_mode);
   result.regular = S_ISREG(mystat.st_mode);
   result.directory = S_ISDIR(mystat.st_mode);
