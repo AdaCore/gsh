@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -36,9 +36,6 @@ function Builtin return Integer is
    Status        : Integer := 0;
    State         : Shell_State;
 begin
-   --  First register all the builtins provided by gsh
-   Register_Default_Builtins;
-
    --  Import into our state the current process environment
    Import_Environment (State);
 

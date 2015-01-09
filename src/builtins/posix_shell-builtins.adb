@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -24,8 +24,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;
 
 with Posix_Shell.Annotated_Strings;     use Posix_Shell.Annotated_Strings;
@@ -67,16 +65,9 @@ package body Posix_Shell.Builtins is
        (S : in out Shell_State; Args : String_List) return Integer;
    --  The signature of a function implementing a given builtin.
 
-   package Builtin_Maps is
-     new Ada.Containers.Indefinite_Hashed_Maps
-       (String,
-        Builtin_Function,
-        Hash => Ada.Strings.Hash,
-        Equivalent_Keys => "=");
-   use Builtin_Maps;
-
-   Builtin_Map : Map;
-   --  A map of all builtins.
+   function Get_Builtin (Name : String) return Builtin_Function;
+   --  Return function associated with a builtin. If there is no builtin
+   --  called Name then null is returned.
 
    function Return_Builtin
      (S : in out Shell_State; Args : String_List) return Integer;
@@ -283,7 +274,7 @@ package body Posix_Shell.Builtins is
       Args : String_List)
       return Integer
    is
-      Builtin : constant Builtin_Function := Element (Builtin_Map, Cmd);
+      Builtin : constant Builtin_Function := Get_Builtin (Cmd);
    begin
       return Builtin (S, Args);
    end Execute_Builtin;
@@ -361,13 +352,184 @@ package body Posix_Shell.Builtins is
       return 0;
    end Export_Builtin;
 
+   -----------------
+   -- Get_Builtin --
+   -----------------
+
+   function Get_Builtin (Name : String) return Builtin_Function
+   is
+      L : constant Natural := Name'Length;
+   begin
+      if L = 0 then
+         return null;
+      end if;
+
+      --  The case statement is divided in two part. First part handle
+      --  builtins that are working for all platforms and the second part the
+      --  builtins that are present only on the windows platform
+
+      case Name (Name'First) is
+         when '.' =>
+            if L = 1 then
+               return Source_Builtin'Access;
+            end if;
+
+         when ':' =>
+            if L = 1 then
+               return True_Builtin'Access;
+            end if;
+
+         when '[' =>
+            if L = 1 then
+               return Test_Builtin'Access;
+            end if;
+
+         when 'b' =>
+            if L = 8 and then Name = "basename" then
+               return Basename_Builtin'Access;
+            elsif L = 5 and then Name = "break" then
+               return Break_Builtin'Access;
+            end if;
+
+         when 'c' =>
+            if  L = 3 and then Name = "cat" then
+               return Cat_Builtin'Access;
+            elsif L = 2 and then Name = "cd" then
+               return Change_Dir_Builtin'Access;
+            elsif L = 7 and then Name = "command" then
+               return Command_Builtin'Access;
+            elsif L = 8 and then Name = "continue" then
+               return Continue_Builtin'Access;
+            elsif L = 2 and then Name = "cp" then
+               return Cp_Builtin'Access;
+            end if;
+
+         when 'd' =>
+            if L = 7 and then Name = "dirname" then
+               return Dirname_Builtin'Access;
+            end if;
+
+         when 'e' =>
+            if L = 4 then
+               if Name = "echo" then
+                  return Echo_Builtin'Access;
+               elsif Name = "eval" then
+                  return Eval_Builtin'Access;
+               elsif Name = "exec" then
+                  return Exec_Builtin'Access;
+               elsif Name = "exit" then
+                  return Exit_Builtin'Access;
+               elsif Name = "expr" then
+                  return Expr_Builtin'Access;
+               end if;
+            elsif L = 6 and then Name = "export" then
+               return Export_Builtin'Access;
+            end if;
+
+         when 'f' =>
+            if L = 5 and then Name = "false" then
+               return False_Builtin'Access;
+            end if;
+
+         when 'h' =>
+            if L = 4 and then Name = "head" then
+               return Head_Builtin'Access;
+            end if;
+
+         when 'l' =>
+            if L = 5 and then Name = "limit" then
+               return Limit_Builtin'Access;
+            end if;
+
+         when 'm' =>
+            if L = 5 and then Name = "mkdir" then
+               return Mkdir_Builtin'Access;
+            end if;
+
+         when 'p' =>
+            if L = 6 and then Name = "printf" then
+               return Printf_Builtin'Access;
+            elsif L = 3 and then Name = "pwd" then
+               return Pwd_Builtin'Access;
+            end if;
+
+         when 'r' =>
+            if L = 4 and then Name = "read" then
+               return Read_Builtin'Access;
+            elsif L = 5 and then Name = "recho" then
+               return REcho_Builtin'Access;
+            elsif L = 6 and then Name = "return" then
+               return Return_Builtin'Access;
+            end if;
+         when 's' =>
+            if L = 3 and then Name = "set" then
+               return Set_Builtin'Access;
+            elsif L = 6  and then Name = "setenv" then
+               return Export_Builtin'Access;
+            elsif L = 5 and then Name = "shift" then
+               return Shift_Builtin'Access;
+            end if;
+
+         when 't' =>
+            if L = 4 then
+               if Name = "tail" then
+                  return Tail_Builtin'Access;
+               elsif Name = "test" then
+                  return Test_Builtin'Access;
+               elsif Name = "trap" then
+                  return Trap_Builtin'Access;
+               elsif Name = "true" then
+                  return True_Builtin'Access;
+               elsif Name = "type" then
+                  return Type_Builtin'Access;
+               end if;
+            end if;
+
+         when 'u' =>
+            if L = 5 and then Name = "umask" then
+               return Limit_Builtin'Access;
+            elsif L = 5 and then Name = "unset" then
+               return Unset_Builtin'Access;
+            elsif L = 8 and then Name = "unsetenv" then
+               return Unsetenv_Builtin'Access;
+            end if;
+         when 'w' =>
+            if L = 2 and then Name = "wc" then
+               return Wc_Builtin'Access;
+            elsif L = 5 and then Name = "which" then
+               return Which_Builtin'Access;
+            end if;
+         when others =>
+            null;
+      end case;
+
+      if Is_Windows then
+         case Name (Name'First) is
+            when 'r' =>
+               if L = 2 and then Name = "rm" then
+                  return Rm_Builtin'Access;
+               end if;
+
+            when 'u' =>
+               if L = 5 and then Name = "uname" then
+                  return Uname_Builtin'Access;
+               end if;
+
+            when others =>
+               null;
+         end case;
+      end if;
+
+      return null;
+   end Get_Builtin;
+
    ----------------
    -- Is_Builtin --
    ----------------
 
    function Is_Builtin (Cmd : String) return Boolean is
    begin
-      return Contains (Builtin_Map, Cmd);
+      return Get_Builtin (Cmd) /= null;
    end Is_Builtin;
 
    ------------------
@@ -378,7 +540,7 @@ package body Posix_Shell.Builtins is
      (S : in out Shell_State; Args : String_List) return Integer
    is
       CC : Character := Read (S, 0);
-      Line : Annotated_String := Null_Annotated_String;
+      Line : Annotated_String;
    begin
       --  First read the complete line
       while CC /= ASCII.LF and CC /= ASCII.EOT loop
@@ -413,61 +575,6 @@ package body Posix_Shell.Builtins is
       end if;
 
    end Read_Builtin;
-
-   -------------------------------
-   -- Register_Default_Builtins --
-   -------------------------------
-
-   procedure Register_Default_Builtins is
-   begin
-      --  Register all the builtins.
-
-      Include (Builtin_Map, ".",             Source_Builtin'Access);
-      Include (Builtin_Map, ":",             True_Builtin'Access);
-      Include (Builtin_Map, "[",             Test_Builtin'Access);
-      Include (Builtin_Map, "break",         Break_Builtin'Access);
-      Include (Builtin_Map, "cat",           Cat_Builtin'Access);
-      Include (Builtin_Map, "cd",            Change_Dir_Builtin'Access);
-      Include (Builtin_Map, "command",       Command_Builtin'Access);
-      Include (Builtin_Map, "continue",      Continue_Builtin'Access);
-      Include (Builtin_Map, "cp",            Cp_Builtin'Access);
-      Include (Builtin_Map, "echo",          Echo_Builtin'Access);
-      Include (Builtin_Map, "eval",          Eval_Builtin'Access);
-      Include (Builtin_Map, "exec",          Exec_Builtin'Access);
-      Include (Builtin_Map, "exit",          Exit_Builtin'Access);
-      Include (Builtin_Map, "export",        Export_Builtin'Access);
-      Include (Builtin_Map, "expr",          Expr_Builtin'Access);
-      Include (Builtin_Map, "false",         False_Builtin'Access);
-      Include (Builtin_Map, "limit",         Limit_Builtin'Access);
-      Include (Builtin_Map, "printf",        Printf_Builtin'Access);
-      Include (Builtin_Map, "pwd",           Pwd_Builtin'Access);
-      Include (Builtin_Map, "read",          Read_Builtin'Access);
-      Include (Builtin_Map, "recho",         REcho_Builtin'Access);
-      Include (Builtin_Map, "return",        Return_Builtin'Access);
-      Include (Builtin_Map, "set",           Set_Builtin'Access);
-      Include (Builtin_Map, "setenv",        Export_Builtin'Access);
-      Include (Builtin_Map, "shift",         Shift_Builtin'Access);
-      Include (Builtin_Map, "test",          Test_Builtin'Access);
-      Include (Builtin_Map, "trap",          Trap_Builtin'Access);
-      Include (Builtin_Map, "true",          True_Builtin'Access);
-      Include (Builtin_Map, "umask",         Limit_Builtin'Access);
-      Include (Builtin_Map, "unset",         Unset_Builtin'Access);
-      Include (Builtin_Map, "unsetenv",      Unsetenv_Builtin'Access);
-      Include (Builtin_Map, "which",         Which_Builtin'Access);
-      Include (Builtin_Map, "wc",            Wc_Builtin'Access);
-
-      --  if GNAT.Directory_Operations.Dir_Separator = '\' then
-         --  No need to include these builtins on non-windows machines
-         Include (Builtin_Map, "basename",      Basename_Builtin'Access);
-         Include (Builtin_Map, "dirname",       Dirname_Builtin'Access);
-         Include (Builtin_Map, "head",          Head_Builtin'Access);
-         Include (Builtin_Map, "mkdir",         Mkdir_Builtin'Access);
-         Include (Builtin_Map, "rm",            Rm_Builtin'Access);
-         Include (Builtin_Map, "tail",          Tail_Builtin'Access);
-         Include (Builtin_Map, "type",          Type_Builtin'Access);
-         Include (Builtin_Map, "uname",         Uname_Builtin'Access);
-      --  end if;
-   end Register_Default_Builtins;
 
    --------------------
    -- Return_Builtin --
