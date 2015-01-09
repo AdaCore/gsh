@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -44,7 +44,7 @@ package body Posix_Shell.Subst is
 
    function Split_String
      (SS        : in out Shell_State;
-      S         : Annotated_String;
+      S         : in out Annotated_String;
       Max_Split : Integer := -1)
       return Dyn_String_Lists.Dyn_String_List;
 
@@ -117,7 +117,7 @@ package body Posix_Shell.Subst is
       use Dyn_String_Lists;
 
       Characters_Read : Integer := 0;
-      Result          : constant Annotated_String := Eval_String_Aux
+      Result          : Annotated_String := Eval_String_Aux
         (SS, S, Characters_Read);
    begin
       return Split_String (SS, Result, Max_Split);
@@ -129,7 +129,7 @@ package body Posix_Shell.Subst is
 
    function Split_String
      (SS        : in out Shell_State;
-      S         : Annotated_String;
+      S         : in out Annotated_String;
       Max_Split : Integer := -1)
       return Dyn_String_Lists.Dyn_String_List
    is
@@ -295,9 +295,7 @@ package body Posix_Shell.Subst is
       --  Get last characters from the buffer and delimit the last field
       Delimit_Word;
 
-      --  if Last (Result_List) = 0 then
-      --    return Null_Result;
-      --  else
+      Deallocate (S);
       return Result_List;
 
       --  end if;

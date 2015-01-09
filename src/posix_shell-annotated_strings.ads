@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -26,8 +26,6 @@
 --  Note that Annotated_String is a controlled record and its size is not
 --  static. Annotated_String indexes are always starting at index 1
 
-with Ada.Finalization;
-
 package Posix_Shell.Annotated_Strings is
 
    type Str_Element_Kind is
@@ -49,8 +47,6 @@ package Posix_Shell.Annotated_Strings is
    end record;
 
    type Annotated_String is private;
-
-   Null_Annotated_String : constant Annotated_String;
 
    function Str (Source : Annotated_String) return String;
    --  Return the Annotated_String string value
@@ -76,19 +72,15 @@ package Posix_Shell.Annotated_Strings is
       return Str_Element;
    --  Get Nth element.
 
-   function Slice
-     (Source : Annotated_String; First, Last : Natural)
-     return Annotated_String;
-   --  Return a slice of Source.
-
    function Length (Source : Annotated_String) return Natural;
    --  Return length of Source.
 
    function Image (Source : Annotated_String) return String;
    --  Return the string image of an annotated string
 
+   procedure Deallocate (Object : in out Annotated_String);
+
 private
-   use Ada.Finalization;
 
    type Boolean_Access is access Boolean;
    type Natural_Access is access Natural;
@@ -99,30 +91,9 @@ private
    type Str_Elements is array (Natural range <>) of Str_Element;
    type Str_Elements_Access is access all Str_Elements;
 
-   Null_Element : aliased Str_Element := (Kind => E_NULL);
-   Null_Elements : aliased Str_Elements :=
-     (1 .. 0 => Null_Element);
-
-   type Annotated_String is new Controlled with record
-      Buffer      : Str_Elements_Access := Null_Elements'Access;
+   type Annotated_String is record
+      Buffer      : Str_Elements_Access := null;
       Last        : Natural := 0;
-      Ref_Counter : Natural_Access := null;
-      Modified    : Boolean_Access := null;
-      Is_Modifier : Boolean := False;
    end record;
-
-   pragma Finalize_Storage_Only (Annotated_String);
-
-   procedure Initialize (Object : in out Annotated_String);
-   procedure Adjust     (Object : in out Annotated_String);
-   procedure Finalize   (Object : in out Annotated_String);
-
-   Null_Annotated_String : constant Annotated_String :=
-     (Controlled with
-      Buffer      => Null_Elements'Access,
-      Last        => 0,
-      Ref_Counter => null,
-      Modified    => null,
-      Is_Modifier => False);
 
 end Posix_Shell.Annotated_Strings;

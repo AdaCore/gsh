@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -28,22 +28,14 @@ with Ada.Unchecked_Deallocation;
 
 package body Posix_Shell.Annotated_Strings is
 
+   Null_Element : aliased constant Str_Element := (Kind => E_NULL);
+   Null_Elements : aliased Str_Elements :=
+     (1 .. 0 => Null_Element);
+
    procedure Free (X : in out Str_Elements_Access);
    procedure Realloc_For_Chunk
      (Source      : in out Annotated_String;
-      Chunk_Size  : Natural;
-      Is_Slice    : Boolean := False);
-
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Object : in out Annotated_String) is
-   begin
-      if Object.Buffer /= Null_Elements'Access then
-         Object.Ref_Counter.all := Object.Ref_Counter.all + 1;
-      end if;
-   end Adjust;
+      Chunk_Size  : Natural);
 
    ------------
    -- Append --
@@ -121,32 +113,16 @@ package body Posix_Shell.Annotated_Strings is
    -- Finalize --
    --------------
 
-   procedure Finalize (Object : in out Annotated_String) is
+   procedure Deallocate (Object : in out Annotated_String) is
       procedure Deallocate is
         new Ada.Unchecked_Deallocation (Str_Elements, Str_Elements_Access);
-
-      procedure Deallocate is
-        new Ada.Unchecked_Deallocation (Natural, Natural_Access);
-
-      procedure Deallocate is
-        new Ada.Unchecked_Deallocation (Boolean, Boolean_Access);
-
    begin
-      if Object.Buffer /= Null_Elements'Access then
-         if Object.Ref_Counter.all = 1 then
-            Deallocate (Object.Buffer);
-            Deallocate (Object.Ref_Counter);
-            Deallocate (Object.Modified);
-            Object.Buffer := Null_Annotated_String.Buffer;
-            Object.Last := 0;
-         else
-            Object.Ref_Counter.all := Object.Ref_Counter.all - 1;
-            if Object.Modified.all and then Object.Is_Modifier then
-               Object.Modified.all := False;
-            end if;
-         end if;
+      if Object.Buffer /= null then
+         Deallocate (Object.Buffer);
+         Object.Buffer := null;
+         Object.Last := 0;
       end if;
-   end Finalize;
+   end Deallocate;
 
    ----------
    -- Free --
@@ -159,7 +135,7 @@ package body Posix_Shell.Annotated_Strings is
    begin
       --  Note: Do not try to free statically allocated null string
 
-      if X /= Null_Annotated_String.Buffer then
+      if X /= Null_Elements'Access then
          Deallocate (X);
       end if;
    end Free;
@@ -184,6 +160,9 @@ package body Posix_Shell.Annotated_Strings is
       Result      : String (1 .. Source.Last * 5);
       Result_Last : Integer := 0;
    begin
+      if Source.Buffer = null then
+         return "";
+      end if;
 
       for Index in 1 .. Source.Last loop
          declare
@@ -222,19 +201,6 @@ package body Posix_Shell.Annotated_Strings is
       return Result (1 .. Result_Last);
    end Image;
 
-   ----------------
-   -- Initialize --
-   ----------------
-
-   procedure Initialize (Object : in out Annotated_String) is
-   begin
-      Object.Buffer := Null_Elements'Access;
-      Object.Last := 0;
-      Object.Ref_Counter := null;
-      Object.Modified := null;
-      Object.Is_Modifier := False;
-   end Initialize;
-
    ------------
    -- Length --
    ------------
@@ -251,96 +217,42 @@ package body Posix_Shell.Annotated_Strings is
 
    procedure Realloc_For_Chunk
      (Source      : in out Annotated_String;
-      Chunk_Size  : Natural;
-      Is_Slice    : Boolean := False)
+      Chunk_Size  : Natural)
    is
-      Growth_Factor : constant := 3;
-      --  The growth factor controls how much extra space is allocated when
-      --  we have to increase the size of an allocated unbounded string. By
-      --  allocating extra space, we avoid the need to reallocate on every
-      --  append, particularly important when a string is built up by repeated
-      --  append operations of small pieces. This is expressed as a factor so
-      --  32 means add 1/32 of the length of the string as growth space.
-
-      Min_Mul_Alloc : constant := Standard'Maximum_Alignment;
-      --  Allocation will be done by a multiple of Min_Mul_Alloc This causes
-      --  no memory loss as most (all?) malloc implementations are obliged to
-      --  align the returned memory on the maximum alignment as malloc does not
-      --  know the target alignment.
-
-      S_Length : constant Natural := Source.Buffer'Length;
-
+      Prev_Length : Natural;
+      New_Length  : Natural;
    begin
-      --  Ada.Text_IO.Put_Line
-      --   (Chunk_Size'Img & "," & S_Length'Img & "," & Source.last'Img);
-      if Chunk_Size > S_Length - Source.Last
-        or else (Source.Modified.all and then not Source.Is_Modifier)
-        or else (Is_Slice and then Source.Ref_Counter.all > 1)
-      then
+
+      if Source.Buffer = null then
+         New_Length := Standard'Maximum_Alignment;
+         Prev_Length := 0;
+      else
+         Prev_Length := Source.Buffer'Length;
+         New_Length := Prev_Length;
+      end if;
+
+      while Chunk_Size + Source.Last > New_Length loop
+         New_Length := New_Length * 2;
+      end loop;
+
+      if New_Length <= Prev_Length then
+         return;
+      end if;
+
+      if Prev_Length = 0 then
+         Source.Buffer := new Str_Elements (1 .. New_Length);
+      else
          declare
-            New_Size : constant Positive :=
-              S_Length + Chunk_Size + (S_Length / Growth_Factor);
-
-            New_Rounded_Up_Size : constant Positive :=
-              ((New_Size - 1) / Min_Mul_Alloc + 1) *
-                Min_Mul_Alloc;
-
-            Tmp_Buffer : constant Str_Elements_Access :=
-              new Str_Elements (1 .. New_Rounded_Up_Size);
-
+            New_Buffer : constant Str_Elements_Access :=
+              new Str_Elements (1 .. New_Length);
          begin
-            --  Create new string and notes
-            Tmp_Buffer (1 .. Source.Last) := Source.Buffer (1 .. Source.Last);
-
-            --  If not Null and reference counter to 1 then free
-            if Source.Buffer /= Null_Elements'Access then
-               if Source.Ref_Counter.all = 1 then
-                  Free (Source.Buffer);
-                  Source.Modified.all := False;
-                  Source.Is_Modifier := False;
-               else
-                  Source.Ref_Counter.all := Source.Ref_Counter.all - 1;
-                  Source.Ref_Counter := new Natural'(1);
-                  Source.Modified := new Boolean'(False);
-                  Source.Is_Modifier := False;
-               end if;
-            else
-               Source.Ref_Counter := new Natural'(1);
-               Source.Modified := new Boolean'(False);
-               Source.Is_Modifier := False;
-            end if;
-
-            Source.Modified.all := False;
-            Source.Buffer := Tmp_Buffer;
+            New_Buffer (1 .. Source.Last) := Source.Buffer (1 .. Source.Last);
+            Free (Source.Buffer);
+            Source.Buffer := New_Buffer;
          end;
-      else
-         Source.Is_Modifier := True;
-         Source.Modified.all := True;
       end if;
+
    end Realloc_For_Chunk;
-
-   -----------
-   -- Slice --
-   -----------
-
-   function Slice
-     (Source : Annotated_String; First, Last : Natural)
-      return Annotated_String
-   is
-      Result        : Annotated_String := Null_Annotated_String;
-      Result_Length : constant Natural := Last - First + 1;
-   begin
-      if Result_Length = 0 then
-         return Result;
-
-      else
-         Realloc_For_Chunk (Result, Result_Length, True);
-         Result.Buffer (1 .. Result_Length) := Source.Buffer (First .. Last);
-         Result.Last := Result_Length;
-
-         return Result;
-      end if;
-   end Slice;
 
    ---------
    -- Str --
@@ -350,6 +262,10 @@ package body Posix_Shell.Annotated_Strings is
       Result      : String (1 .. Source.Last);
       Result_Last : Integer := 0;
    begin
+      if Source.Buffer = null then
+         return "";
+      end if;
+
       for Index in Source.Buffer'Range loop
          case Source.Buffer (Index).Kind is
             when E_CHAR =>
