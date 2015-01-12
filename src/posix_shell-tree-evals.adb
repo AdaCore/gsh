@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -24,9 +24,9 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
-with Posix_Shell.Functions; use Posix_Shell.Functions;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Utils; use  Posix_Shell.Utils;
 with Posix_Shell.GNULib; use Posix_Shell.GNULib;
@@ -575,7 +575,8 @@ package body Posix_Shell.Tree.Evals is
      (S : in out Shell_State; N : Node)
    is
    begin
-      Register_Function (Get_Token_String (N.Function_Name),
+      Register_Function (S,
+                         Get_Token_String (N.Function_Name),
                          N.Function_Code.all);
       Save_Last_Exit_Status (S, 0);
    end Eval_Function;

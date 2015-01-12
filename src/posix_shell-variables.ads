@@ -7,7 +7,7 @@
 --                                 S p e c                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -28,6 +28,7 @@ with GNAT.OS_Lib; use GNAT.OS_Lib;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Strings.Hash;
+with Posix_Shell.Tree; use Posix_Shell.Tree;
 
 package Posix_Shell.Variables is
 
@@ -163,6 +164,12 @@ package Posix_Shell.Variables is
      (S : Shell_State; Signal_Number : Integer)
       return String_Access;
 
+   function Is_Function (S : Shell_State; Name : String) return Boolean;
+   function Get_Function (S : Shell_State; Name : String) return Shell_Tree;
+   procedure Register_Function (S    : in out Shell_State;
+                                Name : String;
+                                Tree : Shell_Tree);
+
    type Shell_Descriptors is private;
 
 private
@@ -184,10 +191,24 @@ private
      new Ada.Containers.Indefinite_Hashed_Maps
        (String,
         Var_Value,
-        Hash => Ada.Strings.Hash,
+        Hash            => Ada.Strings.Hash,
         Equivalent_Keys => "=");
    use String_Maps;
 
+   type Function_Map_Element is record
+      Code  : Shell_Tree;
+      Owner : Boolean;
+   end record;
+
+   package Function_Maps is
+     new Ada.Containers.Indefinite_Hashed_Maps
+       (Key_Type        => String,
+        Element_Type    => Function_Map_Element,
+        Hash            => Ada.Strings.Hash,
+        Equivalent_Keys => "=");
+   use Function_Maps;
+
+   --  A table that maps function names to their associated Node.
    type Shell_Descriptor is record
       Fd              : File_Descriptor;
       Filename        : String_Access;
@@ -210,7 +231,8 @@ private
    type Trap_Action_List is array (0 .. 15) of String_Access;
 
    type Shell_State is record
-      Var_Table              : Map;
+      Var_Table              : String_Maps.Map;
+      Fun_Table              : Function_Maps.Map;
       Last_Exit_Status       : Integer := 0;
       Pos_Params             : Pos_Params_State;
       Scope_Level            : Natural := 1;

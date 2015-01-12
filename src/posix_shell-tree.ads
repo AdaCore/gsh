@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -20,7 +20,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Buffers; use Posix_Shell.Buffers;
 with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 with Posix_Shell.Lexer; use Posix_Shell.Lexer;

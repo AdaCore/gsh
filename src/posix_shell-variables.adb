@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -73,24 +73,39 @@ package body Posix_Shell.Variables is
 
       Result : Shell_State;
 
-      procedure Enter_Scope_Aux (Position : Cursor);
+      procedure Enter_Scope_Aux (Position : String_Maps.Cursor);
 
       ---------------------
       -- Enter_Scope_Aux --
       ---------------------
 
-      procedure Enter_Scope_Aux (Position : Cursor) is
+      procedure Enter_Scope_Aux (Position : String_Maps.Cursor) is
          V : constant Var_Value := Element (Position);
          K : constant String := Key (Position);
       begin
          Insert (Result.Var_Table, K, V);
       end Enter_Scope_Aux;
+
+      procedure Enter_Scope_Aux2 (Position : Function_Maps.Cursor);
+
+      ---------------------
+      -- Enter_Scope_Aux --
+      ---------------------
+
+      procedure Enter_Scope_Aux2 (Position : Function_Maps.Cursor) is
+         V : constant Function_Map_Element := Element (Position);
+         K : constant String := Key (Position);
+      begin
+         Insert (Result.Fun_Table, K, (V.Code, False));
+      end Enter_Scope_Aux2;
    begin
       Result.Scope_Level := Previous.Scope_Level + 1;
       --  Create a new var table based on the previous context
       Reserve_Capacity (Result.Var_Table, 256);
       Iterate (Previous.Var_Table,
                Enter_Scope_Aux'Unrestricted_Access);
+      Iterate (Previous.Fun_Table,
+               Enter_Scope_Aux2'Unrestricted_Access);
 
       --  Copy also the positional parameters status
       Result.Pos_Params := Previous.Pos_Params;
@@ -119,9 +134,9 @@ package body Posix_Shell.Variables is
       Result      : String_List (1 .. Integer (Length (State.Var_Table)));
       Result_Last : Natural := 0;
 
-      procedure Export_Aux (Position : Cursor);
+      procedure Export_Aux (Position : String_Maps.Cursor);
 
-      procedure Export_Aux (Position : Cursor) is
+      procedure Export_Aux (Position : String_Maps.Cursor) is
          V : constant Var_Value := Element (Position);
          K : constant String := Key (Position);
          --  Upper_Name : constant String := Translate (K, Upper_Case_Map);
@@ -185,6 +200,15 @@ package body Posix_Shell.Variables is
          return Cur;
       end if;
    end Get_Current_Dir;
+
+   ------------------
+   -- Get_Function --
+   ------------------
+
+   function Get_Function (S : Shell_State; Name : String) return Shell_Tree is
+   begin
+      return Element (S.Fun_Table, Name).Code;
+   end Get_Function;
 
    --------------------------
    -- Get_Last_Exit_Status --
@@ -483,6 +507,15 @@ package body Posix_Shell.Variables is
       return S.File_Expansion_Enabled;
    end Is_File_Expansion_Enabled;
 
+   -----------------
+   -- Is_Function --
+   -----------------
+
+   function Is_Function (S : Shell_State; Name : String) return Boolean is
+   begin
+      return Contains (S.Fun_Table, Name);
+   end Is_Function;
+
    -----------------------------
    -- Is_Positional_Parameter --
    -----------------------------
@@ -565,19 +598,18 @@ package body Posix_Shell.Variables is
      (Current  : in out Shell_State;
       Previous : in out Shell_State)
    is
-      procedure Leave_Scope_Aux (Position : Cursor);
+      procedure Leave_Scope_Aux (Position : String_Maps.Cursor);
 
       ---------------------
       -- Leave_Scope_Aux --
       ---------------------
 
-      procedure Leave_Scope_Aux (Position : Cursor) is
+      procedure Leave_Scope_Aux (Position : String_Maps.Cursor) is
          V : Var_Value := Element (Position);
       begin
          if V.Scope_Owner = Current.Scope_Level and then V.Val /= null then
             Free (V.Val);
          end if;
-
       end Leave_Scope_Aux;
    begin
 
@@ -606,6 +638,18 @@ package body Posix_Shell.Variables is
       --  Free Current dir
       Free (Current.Current_Dir);
    end Leave_Scope;
+
+   -----------------------
+   -- Register_Function --
+   -----------------------
+
+   procedure Register_Function (S    : in out Shell_State;
+                                Name : String;
+                                Tree : Shell_Tree)
+   is
+   begin
+      Include (S.Fun_Table, Name, (Tree, True));
+   end Register_Function;
 
    ------------------
    -- Resolve_Path --

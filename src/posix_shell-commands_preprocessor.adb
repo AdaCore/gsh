@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -154,7 +154,7 @@ package body Posix_Shell.Commands_Preprocessor is
       end if;
 
       --  Next, is this a function ?
-      if Is_Function (Cmd) then
+      if Is_Function (S, Cmd) then
          Execute_Function (S, Cmd, Args);
          return Get_Last_Exit_Status (S);
       end if;

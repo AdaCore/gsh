@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -24,7 +24,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Variables.Output;
 with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 with Posix_Shell.Traces; use Posix_Shell.Traces;
 
@@ -929,7 +928,6 @@ package body Posix_Shell.Parser is
       IO_Number : Integer)
    is
       pragma Unreferenced (C);
-      use Posix_Shell.Variables.Output;
       Target_FD : Integer := IO_Number;
       IO_Mode   : constant Token_Type := Read_Token (B);
       Filename  : Token;
@@ -1017,7 +1015,7 @@ package body Posix_Shell.Parser is
                Set_Node_Redirection
                  (T,
                   Pending_IO_Heres (Index).N,
-                  (Posix_Shell.Variables.Output.IOHERE,
+                  (IOHERE,
                    Pending_IO_Heres (Index).Target_Fd,
                    IOHere_Token,
                    Eval));

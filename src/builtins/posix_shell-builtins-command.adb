@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -25,7 +25,6 @@
 ------------------------------------------------------------------------------
 
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
-with Posix_Shell.Functions;             use Posix_Shell.Functions;
 with Posix_Shell.Utils;                 use Posix_Shell.Utils;
 with Posix_Shell.Variables.Output;      use Posix_Shell.Variables.Output;
 
@@ -65,7 +64,7 @@ package body Posix_Shell.Builtins.Command is
             Put (S, 1, Command_Name & " is a shell builtin");
          end if;
          New_Line (S, 1);
-      elsif Is_Function (Command_Name) then
+      elsif Is_Function (S, Command_Name) then
          Put (S, 1, Command_Name & " is a function");
          New_Line (S, 1);
       else

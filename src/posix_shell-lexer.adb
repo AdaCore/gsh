@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -69,6 +69,19 @@ package body Posix_Shell.Lexer is
       Deallocate (B.B);
    end Deallocate;
 
+   -------------
+   -- Element --
+   -------------
+
+   function Element
+     (RS    : Redirection_Stack;
+      Index : Positive)
+      return Redirection
+   is
+   begin
+      return RS.Ops (Index);
+   end Element;
+
    ------------------
    -- Expect_Token --
    ------------------
@@ -126,6 +139,15 @@ package body Posix_Shell.Lexer is
    begin
       return T.First;
    end Get_Token_Pos;
+
+   ------------
+   -- Length --
+   ------------
+
+   function Length (RS : Redirection_Stack) return Natural is
+   begin
+      return RS.Top;
+   end Length;
 
    ------------------
    -- Lexer_Error --
@@ -188,6 +210,20 @@ package body Posix_Shell.Lexer is
       Result.Valid_Cache := False;
       return Result;
    end New_Buffer_From_File;
+
+   ----------
+   -- Push --
+   ----------
+
+   procedure Push
+     (RS : in out Redirection_Stack;
+      R  : Redirection)
+   is
+   begin
+      --  ??? missing overflow check ?
+      RS.Top := RS.Top + 1;
+      RS.Ops (RS.Top) := R;
+   end Push;
 
    --------------
    -- Pushback --

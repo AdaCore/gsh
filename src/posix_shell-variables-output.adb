@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -272,10 +272,10 @@ package body Posix_Shell.Variables.Output is
          end loop;
       end if;
 
-      for J in 1 .. R.Top loop
+      for J in 1 .. Length (R) loop
 
          declare
-            C : constant Redirection := R.Ops (J);
+            C : constant Redirection := Element (R, J);
 
          begin
             case C.Kind is
@@ -376,20 +376,6 @@ package body Posix_Shell.Variables.Output is
       GNAT.Task_Lock.Unlock;
       return True;
    end Set_Redirections;
-
-   ----------
-   -- Push --
-   ----------
-
-   procedure Push
-     (RS : in out Redirection_Stack;
-      R  : Redirection)
-   is
-   begin
-      --  ??? missing overflow check ?
-      RS.Top := RS.Top + 1;
-      RS.Ops (RS.Top) := R;
-   end Push;
 
    ---------
    -- Put --

@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -22,16 +22,9 @@
 
 with GNAT.Strings; use GNAT.Strings;
 
-with Posix_Shell.Tree; use Posix_Shell.Tree;
 with Posix_Shell.Variables; use Posix_Shell.Variables;
 
 package Posix_Shell.Functions is
-
-   procedure Register_Function (Name : String; Tree : Shell_Tree);
-   --  Register the given Node as a new function.
-
-   function Is_Function (Name : String) return Boolean;
-   --  Return True if a function of the given name has been defined.
 
    procedure Execute_Function
      (State : in out Shell_State;

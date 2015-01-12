@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -117,6 +117,47 @@ package Posix_Shell.Lexer is
 
    Shell_Lexer_Error    : exception;
 
+   type Operator is (NULL_REDIR,
+                     OPEN_READ,
+                     OPEN_WRITE,
+                     OPEN_APPEND,
+                     DUPLICATE,
+                     IOHERE);
+
+   type Redirection (Kind : Operator := NULL_REDIR) is record
+      case Kind is
+         when OPEN_READ | OPEN_WRITE | OPEN_APPEND  =>
+            Open_Target : Natural;
+            Filename    : Token;
+         when DUPLICATE =>
+            Dup_Target  : Natural;
+            Source      : Token;
+         when IOHERE =>
+            Doc_Target  : Natural;
+            Content     : Token;
+            Expand      : Boolean;
+         when NULL_REDIR =>
+            null;
+      end case;
+   end record;
+   --  Redirection directive. F is the name of the file. If Append is True
+   --  then F will be opened in append mode (relevant only for Stdin and
+   --  Stdout).
+
+   type Redirection_Stack is private;
+
+   Empty_Redirections : constant Redirection_Stack;
+
+   procedure Push
+     (RS : in out Redirection_Stack;
+      R  : Redirection);
+
+   function Length (RS : Redirection_Stack) return Natural;
+   function Element
+     (RS    : Redirection_Stack;
+      Index : Positive)
+      return Redirection;
+
    pragma Inline (Read_Token);
    pragma Inline (Get_Token_Type);
    pragma Inline (Read_Command_Token);
@@ -138,5 +179,14 @@ private
                                    Null_Text_Position,
                                    Null_Buffer);
 
+   type Redirection_Array is array (1 .. 16) of Redirection;
+   type Redirection_Stack is record
+      Top : Natural := 0;
+      Ops : Redirection_Array;
+   end record;
+   --  Redirection directives for Stdin, Stdout and Stderr.
+
+   Empty_Redirections : constant Redirection_Stack :=
+     (0, (others => (Kind => NULL_REDIR)));
 
 end Posix_Shell.Lexer;

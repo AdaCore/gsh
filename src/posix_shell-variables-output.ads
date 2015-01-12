@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -24,37 +24,6 @@ with Posix_Shell.Variables; use Posix_Shell.Variables;
 with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 
 package Posix_Shell.Variables.Output is
-
-   type Operator is (NULL_REDIR,
-                     OPEN_READ,
-                     OPEN_WRITE,
-                     OPEN_APPEND,
-                     DUPLICATE,
-                     IOHERE);
-
-   type Redirection (Kind : Operator := NULL_REDIR) is record
-      case Kind is
-         when OPEN_READ | OPEN_WRITE | OPEN_APPEND  =>
-            Open_Target : Natural;
-            Filename    : Token;
-         when DUPLICATE =>
-            Dup_Target  : Natural;
-            Source      : Token;
-         when IOHERE =>
-            Doc_Target  : Natural;
-            Content     : Token;
-            Expand      : Boolean;
-         when NULL_REDIR =>
-            null;
-      end case;
-   end record;
-   --  Redirection directive. F is the name of the file. If Append is True
-   --  then F will be opened in append mode (relevant only for Stdin and
-   --  Stdout).
-
-   type Redirection_Stack is private;
-
-   Empty_Redirections : constant Redirection_Stack;
 
    function Set_Redirections
      (S             : in out Shell_State;
@@ -113,18 +82,6 @@ package Posix_Shell.Variables.Output is
       Close_On_Exec : Boolean;
       Status        : out Boolean);
 
-   procedure Push
-     (RS : in out Redirection_Stack;
-      R  : Redirection);
-
 private
-   type Redirection_Array is array (1 .. 16) of Redirection;
-   type Redirection_Stack is record
-      Top : Natural := 0;
-      Ops : Redirection_Array;
-   end record;
-   --  Redirection directives for Stdin, Stdout and Stderr.
 
-   Empty_Redirections : constant Redirection_Stack :=
-     (0, (others => (Kind => NULL_REDIR)));
 end Posix_Shell.Variables.Output;
