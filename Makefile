@@ -30,7 +30,7 @@ install:
 	mkdir -p $(PREFIX)/etc
 	mkdir -p $(PREFIX)/bin
 	mkdir -p $(PREFIX)/bin_dev
-	if [ "$(SYS)" = "windows" ]; then cp -p -r gnutools/* $(PREFIX)/; fi
+	if [ "$(OS)" = "Windows_NT" ]; then cp -p -r gnutools/* $(PREFIX)/; fi
 	cp -r etc/* $(PREFIX)/etc
 	cp -p obj/prod/gsh$(EXEEXT) $(PREFIX)/bin/gsh$(EXEEXT)
 	cp -p obj/dev/gsh$(EXEEXT) $(PREFIX)/bin_dev/gsh$(EXEEXT)
