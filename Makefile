@@ -49,3 +49,5 @@ install:
 
 clean:
 	-rm -rf obj/*
+	-rm -rf lua/src/*.o
+	-rm -rf lua/src/lib*.a
