@@ -366,7 +366,7 @@ package body Posix_Shell.Tree.Evals is
       Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
    begin
       if Command = "exec" then
-         if not Set_Redirections (S, Redirections) then
+         if not Set_Redirections (S, Redirections, Free_Previous => True) then
             Save_Last_Exit_Status (S, 1);
             return;
          end if;
