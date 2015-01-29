@@ -35,7 +35,7 @@ package body Posix_Shell.Builtins.Head is
    ------------------
 
    function Head_Builtin
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Args : String_List)
       return Integer
    is
@@ -61,7 +61,7 @@ package body Posix_Shell.Builtins.Head is
 
                --  Check that we have an argument
                if Current_Arg > Args_Last then
-                  Put (S.all, 2,
+                  Put (S, 2,
                        "head: option -n requires an argument" & ASCII.LF);
                   return 1;
                end if;
@@ -70,7 +70,7 @@ package body Posix_Shell.Builtins.Head is
                To_Integer (Args (Current_Arg).all, Line_Number, Is_Valid);
 
                if not Is_Valid then
-                  Put (S.all, 2, "head: invalid context" & ASCII.LF);
+                  Put (S, 2, "head: invalid context" & ASCII.LF);
                   return 1;
                end if;
             elsif CA = "--" then
@@ -81,7 +81,7 @@ package body Posix_Shell.Builtins.Head is
                To_Integer (CA (CA'First + 1 .. CA'Last),
                            Line_Number, Is_Valid);
                if not Is_Valid or else not Enable_Minus_N_Opt then
-                  Put (S.all, 2, "head: invalid option" & ASCII.LF);
+                  Put (S, 2, "head: invalid option" & ASCII.LF);
                   return 1;
                end if;
 
@@ -97,27 +97,27 @@ package body Posix_Shell.Builtins.Head is
       end loop;
 
       if Current_Arg > Args'Last then
-         Buffer := new String'(Read (S.all, 0));
+         Buffer := new String'(Read (S, 0));
       else
          declare
             Fd : File_Descriptor;
             Byte_Reads : Integer;
             Length : Long_Integer;
          begin
-            Fd := Open_Read (Resolve_Path (S.all, Args (Current_Arg).all),
+            Fd := Open_Read (Resolve_Path (S, Args (Current_Arg).all),
                              Binary);
             Length := File_Length (Fd);
             Buffer := new String (1 .. Integer (Length));
             Byte_Reads := Read (Fd, Buffer.all'Address, Buffer.all'Last);
             Close (Fd);
             if Byte_Reads /= Integer (Length) then
-               Put (S.all, 2, "head: cannot read file");
+               Put (S, 2, "head: cannot read file");
                return 1;
             end if;
          end;
       end if;
 
-      Put (S.all, 1, To_Line (Buffer.all, Line_Number));
+      Put (S, 1, To_Line (Buffer.all, Line_Number));
 
       Free (Buffer);
       return 0;

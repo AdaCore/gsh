@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -24,8 +24,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Utils; use Posix_Shell.Utils;
-with Posix_Shell.Variables.Output;
 with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 with Posix_Shell.Traces; use Posix_Shell.Traces;
 
@@ -930,7 +928,6 @@ package body Posix_Shell.Parser is
       IO_Number : Integer)
    is
       pragma Unreferenced (C);
-      use Posix_Shell.Variables.Output;
       Target_FD : Integer := IO_Number;
       IO_Mode   : constant Token_Type := Read_Token (B);
       Filename  : Token;
@@ -951,29 +948,17 @@ package body Posix_Shell.Parser is
       case IO_Mode is
          when T_LESS =>
             Set_Node_Redirection
-              (T, N, Target_FD, Filename, 0, OPEN_READ, True);
+              (T, N, (OPEN_READ, Target_FD, Filename));
          when T_GREAT =>
             Set_Node_Redirection
-              (T, N, Target_FD, Filename, 0, OPEN_WRITE, True);
+              (T, N, (OPEN_WRITE, Target_FD, Filename));
          when T_DGREAT =>
             Set_Node_Redirection
-              (T, N, Target_FD, Filename, 0, OPEN_APPEND, True);
+              (T, N, (OPEN_APPEND, Target_FD, Filename));
          when T_GREATAND =>
-            declare
-               Source_FD : Integer := 0;
-               Is_Valid  : Boolean := False;
-            begin
-               To_Integer (Get_Token_String (Filename), Source_FD, Is_Valid);
-               if Is_Valid then
-                  Set_Node_Redirection
-                    (T, N, Target_FD, Filename, Source_FD,
-                     DUPLICATE, True);
-               else
-                  Set_Node_Redirection
-                    (T, N, Target_FD, Filename, 0, OPEN_WRITE, True);
-               end if;
-            end;
-         when T_DLESS =>
+            Set_Node_Redirection
+              (T, N, (DUPLICATE, Target_FD, Filename));
+         when T_DLESS | T_DLESSDASH =>
             --  This implem is not right need to fix at some point XXXX
 
             --  Parse_Redirect_List (B, C, N);
@@ -1030,11 +1015,10 @@ package body Posix_Shell.Parser is
                Set_Node_Redirection
                  (T,
                   Pending_IO_Heres (Index).N,
-                  Pending_IO_Heres (Index).Target_Fd,
-                  IOHere_Token,
-                  0,
-                  Posix_Shell.Variables.Output.IOHERE,
-                  Eval);
+                  (IOHERE,
+                   Pending_IO_Heres (Index).Target_Fd,
+                   IOHere_Token,
+                   Eval));
                B.Valid_Cache := False;
             end;
          end loop;
@@ -1349,12 +1333,17 @@ package body Posix_Shell.Parser is
             Expect_Token (B, T_RPAR);
             Parse_Linebreak (B, T, C);
             declare
-               Function_Tree : Shell_Tree := New_Tree (B.B);
+               Function_Tree : Shell_Tree := New_Tree
+                 (B.B, Protect => True);
                N : constant Node_Id := Parse_Compound_Command
                  (B, Function_Tree, C);
             begin
                Set_Tree_Toplevel (Function_Tree, N);
                Set_Function_Node (T, Cmd_Id, Cmd, Function_Tree);
+
+               --  tree associated with a function cannot be deallocated along
+               --  with the buffer that is also the buffer of the parent tree
+               Protect_Tree_Buffer (T);
             end;
          else
 

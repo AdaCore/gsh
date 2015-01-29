@@ -45,7 +45,7 @@ package body Posix_Shell.Opts is
    --------------------------
 
    procedure Process_Command_Line
-     (State : Shell_State_Access;
+     (State : in out Shell_State;
       B : out Buffer_Access;
       Status : out Integer;
       Is_Interactive : out Boolean)
@@ -91,7 +91,7 @@ package body Posix_Shell.Opts is
             elsif Arg = "--enable-traces" then
                Enable_Traces := True;
             elsif Arg = "-x" then
-               Set_Xtrace (State.all, True);
+               Set_Xtrace (State, True);
             elsif Arg = "-e" then
                null;
             elsif Arg = "-c" then
@@ -140,7 +140,7 @@ package body Posix_Shell.Opts is
          B.all := New_Buffer (Argument (Arg_Number));
          Arg_Number := Arg_Number + 1;
          if Arg_Number <= Argument_Count then
-            Set_Script_Name (State.all, Argument (Arg_Number));
+            Set_Script_Name (State, Argument (Arg_Number));
             Arg_Number := Arg_Number + 1;
          end if;
       elsif Read_From_Stdin then
@@ -161,7 +161,7 @@ package body Posix_Shell.Opts is
                B.all := New_Buffer (To_String (Result));
             end;
          end if;
-         Set_Script_Name (State.all, Command_Name);
+         Set_Script_Name (State, Command_Name);
       else
          begin
             B.all := New_Buffer_From_File (Argument (Arg_Number));
@@ -174,7 +174,7 @@ package body Posix_Shell.Opts is
                return;
          end;
 
-         Set_Script_Name (State.all, Argument (Arg_Number));
+         Set_Script_Name (State, Argument (Arg_Number));
          Arg_Number := Arg_Number + 1;
       end if;
 
@@ -186,7 +186,7 @@ package body Posix_Shell.Opts is
          declare
             Empty_List : String_List (1 .. 0);
          begin
-            Set_Positional_Parameters (State.all, Empty_List);
+            Set_Positional_Parameters (State, Empty_List);
          end;
       else
          declare
@@ -195,7 +195,7 @@ package body Posix_Shell.Opts is
             for J in Arg_Number .. Argument_Count loop
                Args (J - Arg_Number + 1) := new String'(Argument (J));
             end loop;
-            Set_Positional_Parameters (State.all, Args);
+            Set_Positional_Parameters (State, Args);
          end;
       end if;
 

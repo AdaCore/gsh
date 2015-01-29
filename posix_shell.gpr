@@ -2,49 +2,37 @@ project Posix_Shell is
 
    type Build_Type is ("dev", "prod");
    type Boolean_Type is ("true", "false");
-   type System_Type is ("windows", "unix");
 
    Build     : Build_Type   := external ("BUILD", "dev");
    Build_Dir : Build_Type   := Build;
-   Coverage  : Boolean_Type := external ("COVERAGE", "false");
-   Gnatmem   : Boolean_Type := external ("GNATMEM", "false");
-   Sys       : System_Type := external ("SYS", "windows");
+   OS        := external("OS", "");
 
    Default_Switches := ("-gnat12", "-gnatwcfijklmopruvz", "-gnaty");
-
    Default_Libs := ();
 
-   case Sys is
-      when "windows" => Default_Libs := ("-lntdll",
-                                         "-Lgnulib/lib",
-                                         "-Lgnulib",
-                                         "-lgshgnu",
-                                         "-lgnu",
-                                         "-Lreadline",
-                                         "-lreadline",
-                                         "-Wl,--stack=0x2000000");
-      when "unix" => Default_Libs := ("-lreadline");
+   case OS is
+      when "Windows_NT" =>
+         Default_Libs := ("-lntdll", "lua\src\liblua.a",
+                          "-Wl,--stack=0x2000000");
+      when others =>
+         Default_Libs := ("-lreadline", "lua/src/liblua.a", "-lm", "-ldl");
    end case;
-
-   Default_C_Switches := ("-I" & external("DDK_DIR"));
 
    Dev_Switches := ("-g", "-O0");
 
-   case Coverage is
-      when "true" =>  Default_Switches := Default_Switches & ("-fprofile-arcs", "-ftest-coverage");
-                      Default_Libs     := Default_Libs & ("-lgcov");
-                      Build_Dir        := Build_Dir & "/cov";
-      when "false" => Build_Dir        := Build_Dir & "/no-cov";
+   case Build is
+      when "dev" =>  Default_Switches := Default_Switches & ("-fprofile-arcs", "-ftest-coverage");
+                     Default_Libs     := Default_Libs & ("-lgcov");
    end case;
 
-   case Gnatmem is
-      when "true" =>  Default_Libs     := Default_Libs & ("-lgmem");
-                      Build_Dir        := Build_Dir & "/gmem";
-      when "false" => Build_Dir        := Build_Dir & "/no-gmem";
-   end case;
+   for Main use ("gsh_lexer.adb", "gsh.adb", "builtin.adb", "gsh_unit.adb");
 
-   for Main use ("gsh_lexer.adb", "gsh.adb");
-   for Source_Dirs use (".", "src", "src/builtins", "src/" & Sys);
+   case OS is
+      when "Windows_NT" =>
+         for Source_Dirs use (".", "src", "src\builtins", "src\gnulib", "src\ddk", "src\readline", "src\lua");
+      when others =>
+         for Source_Dirs use (".", "src", "src/builtins", "src/lua");
+   end case;
 
    for Languages use ("Ada", "C");
 
@@ -79,10 +67,10 @@ project Posix_Shell is
       case Build is
          when "prod" =>
             for Default_Switches ("ada") use ("-O2", "-gnatpn") & Default_Switches;
-	    for Default_Switches ("c") use ("-O2") & Default_C_Switches;
+	         for Default_Switches ("c") use ("-O2", "-DHAVE_CONFIG_H");
          when "dev" =>
             for Default_Switches ("ada") use ("-gnata") & Dev_Switches & Default_Switches;
-            for Default_Switches ("c") use Dev_Switches & Default_C_Switches;
+            for Default_Switches ("c") use ("-DHAVE_CONFIG_H") & Dev_Switches;
       end case;
    end Compiler;
 

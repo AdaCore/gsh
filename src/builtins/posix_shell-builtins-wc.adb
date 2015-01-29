@@ -33,7 +33,7 @@ package body Posix_Shell.Builtins.Wc is
    ----------------
 
    function Wc_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
 
       Global_Line_Count : Integer := 0;
@@ -78,21 +78,21 @@ package body Posix_Shell.Builtins.Wc is
          end if;
 
          if Show_Line_Count then
-            Put (S.all, 1, Integer'Image (Line_Count));
+            Put (S, 1, Integer'Image (Line_Count));
          end if;
          if Show_Word_Count then
-            Put (S.all, 1, Integer'Image (Word_Count));
+            Put (S, 1, Integer'Image (Word_Count));
          end if;
 
          if Show_Byte_Count then
-            Put (S.all, 1, Integer'Image (Byte_Count));
+            Put (S, 1, Integer'Image (Byte_Count));
          end if;
 
          if Content_Name'Length > 0 then
-            Put (S.all, 1, " " & Content_Name);
+            Put (S, 1, " " & Content_Name);
          end if;
 
-         Put (S.all, 1, ASCII.LF & "");
+         Put (S, 1, ASCII.LF & "");
 
          Global_Byte_Count := Global_Byte_Count + Byte_Count;
          Global_Word_Count := Global_Word_Count + Word_Count;
@@ -110,7 +110,7 @@ package body Posix_Shell.Builtins.Wc is
                   when 'c' => Show_Byte_Count := True;
                   when 'l' => Show_Line_Count := True;
                   when others =>
-                     Put (S.all, 2,
+                     Put (S, 2,
                           "unexpected option " &
                             Args (Index) (Char_Index) & ASCII.LF);
                      return 1;
@@ -140,10 +140,10 @@ package body Posix_Shell.Builtins.Wc is
                R : Integer;
                pragma Unreferenced (R);
             begin
-               Fd := Open_Read (Resolve_Path (S.all, Args (File_Index).all),
+               Fd := Open_Read (Resolve_Path (S, Args (File_Index).all),
                                 Binary);
                if Fd < 0 then
-                  Put (S.all, 2, "wc: " & Args (File_Index).all &
+                  Put (S, 2, "wc: " & Args (File_Index).all &
                        ": No such file or directory" & ASCII.LF);
                else
                   Fl := File_Length (Fd);
@@ -160,23 +160,23 @@ package body Posix_Shell.Builtins.Wc is
          --  more than 2 files so print totals
          if Args'Last - File_List_Index > 0 then
             if Show_Line_Count then
-               Put (S.all, 1, Integer'Image (Global_Line_Count));
+               Put (S, 1, Integer'Image (Global_Line_Count));
             end if;
 
             if Show_Word_Count then
-               Put (S.all, 1, Integer'Image (Global_Word_Count));
+               Put (S, 1, Integer'Image (Global_Word_Count));
             end if;
 
             if Show_Byte_Count then
-               Put (S.all, 1, Integer'Image (Global_Byte_Count));
+               Put (S, 1, Integer'Image (Global_Byte_Count));
             end if;
 
-            Put (S.all, 1, " total" & ASCII.LF);
+            Put (S, 1, " total" & ASCII.LF);
 
          end if;
 
       else
-         Count (Read (S.all, 0), "");
+         Count (Read (S, 0), "");
       end if;
 
       return 0;

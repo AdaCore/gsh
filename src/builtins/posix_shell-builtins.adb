@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -24,8 +24,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;
 
 with Posix_Shell.Annotated_Strings;     use Posix_Shell.Annotated_Strings;
@@ -52,7 +50,6 @@ with Posix_Shell.Builtins.Wc;           use Posix_Shell.Builtins.Wc;
 
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
 with Posix_Shell.Exec;                  use Posix_Shell.Exec;
-with Posix_Shell.Functions;             use Posix_Shell.Functions;
 with Posix_Shell.Parser;                use Posix_Shell.Parser;
 with Posix_Shell.String_Utils;          use Posix_Shell.String_Utils;
 with Posix_Shell.Subst;                 use Posix_Shell.Subst;
@@ -65,30 +62,23 @@ package body Posix_Shell.Builtins is
 
    type Builtin_Function
      is access function
-       (S : Shell_State_Access; Args : String_List) return Integer;
+       (S : in out Shell_State; Args : String_List) return Integer;
    --  The signature of a function implementing a given builtin.
 
-   package Builtin_Maps is
-     new Ada.Containers.Indefinite_Hashed_Maps
-       (String,
-        Builtin_Function,
-        Hash => Ada.Strings.Hash,
-        Equivalent_Keys => "=");
-   use Builtin_Maps;
-
-   Builtin_Map : Map;
-   --  A map of all builtins.
+   function Get_Builtin (Name : String) return Builtin_Function;
+   --  Return function associated with a builtin. If there is no builtin
+   --  called Name then null is returned.
 
    function Return_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
    --  Implement the "return" builtin.
 
    function Shift_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
    --  Implement the "shift" builtin.
 
    function Exec_Builtin
-     (S : Shell_State_Access; Args : String_List)
+     (S : in out Shell_State; Args : String_List)
       return Integer;
    --  The exec utility shall open, close, and/or copy file descriptors as
    --  specified by any redirections as part of the command.
@@ -103,51 +93,51 @@ package body Posix_Shell.Builtins is
    --  fork/exec on Windows systems.
 
    function Eval_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    function Trap_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    function Export_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    function Set_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    function Unsetenv_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    function Exit_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    function Continue_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    function Break_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    function Read_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    function Unset_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    -------------------
    -- Break_Builtin --
    -------------------
 
    function Break_Builtin
-     (S : Shell_State_Access; Args : String_List)
+     (S : in out Shell_State; Args : String_List)
       return Integer
    is
       Break_Number : Integer;
       Is_Valid : Boolean;
-      Current_Loop_Level : constant Natural := Get_Loop_Scope_Level (S.all);
+      Current_Loop_Level : constant Natural := Get_Loop_Scope_Level (S);
    begin
 
       if Current_Loop_Level = 0 then
          --  we are not in a loop construct. So ignore the builtin and return 0
-         Put (S.all, 2, "break: only meaningful in a " &
+         Put (S, 2, "break: only meaningful in a " &
               "`for', `while', or `until' loop" & ASCII.LF);
          return 0;
       end if;
@@ -157,10 +147,10 @@ package body Posix_Shell.Builtins is
       else
          To_Integer (Args (Args'First).all, Break_Number, Is_Valid);
          if not Is_Valid then
-            Put (S.all, 2, "break: " &
+            Put (S, 2, "break: " &
                  Args (Args'First).all &
                  ":numeric argument required" & ASCII.LF);
-            Shell_Exit (S.all, 128);
+            Shell_Exit (S, 128);
          end if;
 
          if Break_Number < 1 then
@@ -183,18 +173,18 @@ package body Posix_Shell.Builtins is
    ----------------------
 
    function Continue_Builtin
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Args : String_List)
       return Integer
    is
       Break_Number : Integer;
       Is_Valid : Boolean;
-      Current_Loop_Level : constant Natural := Get_Loop_Scope_Level (S.all);
+      Current_Loop_Level : constant Natural := Get_Loop_Scope_Level (S);
    begin
 
       if Current_Loop_Level = 0 then
          --  we are not in a loop construct. So ignore the builtin and return 0
-         Put (S.all, 2, "continue: only meaningful in a " &
+         Put (S, 2, "continue: only meaningful in a " &
               "`for', `while', or `until' loop" & ASCII.LF);
          return 0;
       end if;
@@ -204,10 +194,10 @@ package body Posix_Shell.Builtins is
       else
          To_Integer (Args (Args'First).all, Break_Number, Is_Valid);
          if not Is_Valid then
-            Put (S.all, 2, "continue: " &
+            Put (S, 2, "continue: " &
                  Args (Args'First).all &
                  ":numeric argument required" & ASCII.LF);
-            Shell_Exit (S.all, 128);
+            Shell_Exit (S, 128);
          end if;
 
          if Break_Number < 1 then
@@ -230,7 +220,7 @@ package body Posix_Shell.Builtins is
    ------------------
 
    function Eval_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       Str : Ada.Strings.Unbounded.Unbounded_String;
       T : Shell_Tree;
@@ -244,7 +234,7 @@ package body Posix_Shell.Builtins is
       T := Parse_String (To_String (Str));
       Eval (S, T);
       Free_Node (T);
-      return Get_Last_Exit_Status (S.all);
+      return Get_Last_Exit_Status (S);
    exception
       when Shell_Syntax_Error =>
          return 1;
@@ -255,7 +245,7 @@ package body Posix_Shell.Builtins is
    ------------------
 
    function Exec_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       Result : Integer;
    begin
@@ -267,8 +257,8 @@ package body Posix_Shell.Builtins is
             Arguments : constant String_List :=
               Args (Args'First + 1 .. Args'Last);
          begin
-            Result := Run (S, Command, Arguments, Get_Environment (S.all));
-            Shell_Exit (S.all, Result);
+            Result := Run (S, Command, Arguments, Get_Environment (S));
+            Shell_Exit (S, Result);
          end;
       end if;
       return 0;
@@ -279,12 +269,12 @@ package body Posix_Shell.Builtins is
    ---------------------
 
    function Execute_Builtin
-     (S    : Shell_State_Access;
+     (S    : in out Shell_State;
       Cmd  : String;
       Args : String_List)
       return Integer
    is
-      Builtin : constant Builtin_Function := Element (Builtin_Map, Cmd);
+      Builtin : constant Builtin_Function := Get_Builtin (Cmd);
    begin
       return Builtin (S, Args);
    end Execute_Builtin;
@@ -294,7 +284,7 @@ package body Posix_Shell.Builtins is
    ------------------
 
    function Exit_Builtin
-     (S    : Shell_State_Access;
+     (S    : in out Shell_State;
       Args : String_List)
       return Integer
    is
@@ -304,13 +294,13 @@ package body Posix_Shell.Builtins is
       --  Calling "exit" without argument is equivalent to calling
       --  it with "$?" as its argument.
       if Args'Length = 0 then
-         Shell_Exit (S.all, Get_Last_Exit_Status (S.all));
+         Shell_Exit (S, Get_Last_Exit_Status (S));
       end if;
 
       --  If more than one argument was provided, print an error
       --  message and return 1.
       if Args'Length > 1 then
-         Error (S.all, "exit: too many arguments");
+         Error (S, "exit: too many arguments");
          return 1;
       end if;
 
@@ -318,13 +308,13 @@ package body Posix_Shell.Builtins is
       if not Success then
          --  The exit code value is not entirely numeric.
          --  Report the error and exit with value 255.
-         Error (S.all, "exit: " & Args (Args'First).all
+         Error (S, "exit: " & Args (Args'First).all
                 & ": numeric argument required");
          Exit_Code := 255;
       end if;
 
       --  Exit with the code specified.
-      Shell_Exit (S.all, Exit_Code);
+      Shell_Exit (S, Exit_Code);
    end Exit_Builtin;
 
    ------------
@@ -332,7 +322,7 @@ package body Posix_Shell.Builtins is
    ------------
 
    function Export_Builtin
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Args : String_List)
       return Integer
    is
@@ -350,17 +340,188 @@ package body Posix_Shell.Builtins is
             end loop;
 
             if Equal_Pos > Arg'First then
-               Set_Var_Value (S.all,
+               Set_Var_Value (S,
                               Arg (Arg'First .. Equal_Pos - 1),
                               Arg (Equal_Pos + 1 .. Arg'Last),
                               Export => True);
             else
-               Export_Var (S.all, Arg);
+               Export_Var (S, Arg);
             end if;
          end;
       end loop;
       return 0;
    end Export_Builtin;
+
+   -----------------
+   -- Get_Builtin --
+   -----------------
+
+   function Get_Builtin (Name : String) return Builtin_Function
+   is
+      L : constant Natural := Name'Length;
+   begin
+      if L = 0 then
+         return null;
+      end if;
+
+      --  The case statement is divided in two part. First part handle
+      --  builtins that are working for all platforms and the second part the
+      --  builtins that are present only on the windows platform
+
+      case Name (Name'First) is
+         when '.' =>
+            if L = 1 then
+               return Source_Builtin'Access;
+            end if;
+
+         when ':' =>
+            if L = 1 then
+               return True_Builtin'Access;
+            end if;
+
+         when '[' =>
+            if L = 1 then
+               return Test_Builtin'Access;
+            end if;
+
+         when 'b' =>
+            if L = 8 and then Name = "basename" then
+               return Basename_Builtin'Access;
+            elsif L = 5 and then Name = "break" then
+               return Break_Builtin'Access;
+            end if;
+
+         when 'c' =>
+            if  L = 3 and then Name = "cat" then
+               return Cat_Builtin'Access;
+            elsif L = 2 and then Name = "cd" then
+               return Change_Dir_Builtin'Access;
+            elsif L = 7 and then Name = "command" then
+               return Command_Builtin'Access;
+            elsif L = 8 and then Name = "continue" then
+               return Continue_Builtin'Access;
+            elsif L = 2 and then Name = "cp" then
+               return Cp_Builtin'Access;
+            end if;
+
+         when 'd' =>
+            if L = 7 and then Name = "dirname" then
+               return Dirname_Builtin'Access;
+            end if;
+
+         when 'e' =>
+            if L = 4 then
+               if Name = "echo" then
+                  return Echo_Builtin'Access;
+               elsif Name = "eval" then
+                  return Eval_Builtin'Access;
+               elsif Name = "exec" then
+                  return Exec_Builtin'Access;
+               elsif Name = "exit" then
+                  return Exit_Builtin'Access;
+               elsif Name = "expr" then
+                  return Expr_Builtin'Access;
+               end if;
+            elsif L = 6 and then Name = "export" then
+               return Export_Builtin'Access;
+            end if;
+
+         when 'f' =>
+            if L = 5 and then Name = "false" then
+               return False_Builtin'Access;
+            end if;
+
+         when 'h' =>
+            if L = 4 and then Name = "head" then
+               return Head_Builtin'Access;
+            end if;
+
+         when 'l' =>
+            if L = 5 and then Name = "limit" then
+               return Limit_Builtin'Access;
+            end if;
+
+         when 'm' =>
+            if L = 5 and then Name = "mkdir" then
+               return Mkdir_Builtin'Access;
+            end if;
+
+         when 'p' =>
+            if L = 6 and then Name = "printf" then
+               return Printf_Builtin'Access;
+            elsif L = 3 and then Name = "pwd" then
+               return Pwd_Builtin'Access;
+            end if;
+
+         when 'r' =>
+            if L = 4 and then Name = "read" then
+               return Read_Builtin'Access;
+            elsif L = 5 and then Name = "recho" then
+               return REcho_Builtin'Access;
+            elsif L = 6 and then Name = "return" then
+               return Return_Builtin'Access;
+            end if;
+         when 's' =>
+            if L = 3 and then Name = "set" then
+               return Set_Builtin'Access;
+            elsif L = 6  and then Name = "setenv" then
+               return Export_Builtin'Access;
+            elsif L = 5 and then Name = "shift" then
+               return Shift_Builtin'Access;
+            end if;
+
+         when 't' =>
+            if L = 4 then
+               if Name = "tail" then
+                  return Tail_Builtin'Access;
+               elsif Name = "test" then
+                  return Test_Builtin'Access;
+               elsif Name = "trap" then
+                  return Trap_Builtin'Access;
+               elsif Name = "true" then
+                  return True_Builtin'Access;
+               elsif Name = "type" then
+                  return Type_Builtin'Access;
+               end if;
+            end if;
+
+         when 'u' =>
+            if L = 5 and then Name = "umask" then
+               return Limit_Builtin'Access;
+            elsif L = 5 and then Name = "unset" then
+               return Unset_Builtin'Access;
+            elsif L = 8 and then Name = "unsetenv" then
+               return Unsetenv_Builtin'Access;
+            end if;
+         when 'w' =>
+            if L = 2 and then Name = "wc" then
+               return Wc_Builtin'Access;
+            elsif L = 5 and then Name = "which" then
+               return Which_Builtin'Access;
+            end if;
+         when others =>
+            null;
+      end case;
+
+      if Is_Windows then
+         case Name (Name'First) is
+            when 'r' =>
+               if L = 2 and then Name = "rm" then
+                  return Rm_Builtin'Access;
+               end if;
+
+            when 'u' =>
+               if L = 5 and then Name = "uname" then
+                  return Uname_Builtin'Access;
+               end if;
+
+            when others =>
+               null;
+         end case;
+      end if;
+
+      return null;
+   end Get_Builtin;
 
    ----------------
    -- Is_Builtin --
@@ -368,7 +529,7 @@ package body Posix_Shell.Builtins is
 
    function Is_Builtin (Cmd : String) return Boolean is
    begin
-      return Contains (Builtin_Map, Cmd);
+      return Get_Builtin (Cmd) /= null;
    end Is_Builtin;
 
    ------------------
@@ -376,17 +537,17 @@ package body Posix_Shell.Builtins is
    ------------------
 
    function Read_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
-      CC : Character := Read (S.all, 0);
-      Line : Annotated_String := Null_Annotated_String;
+      CC : Character := Read (S, 0);
+      Line : Annotated_String;
    begin
       --  First read the complete line
       while CC /= ASCII.LF and CC /= ASCII.EOT loop
          if CC /= ASCII.CR then
             Append (Line, CC);
          end if;
-         CC := Read (S.all, 0);
+         CC := Read (S, 0);
       end loop;
 
       if Args'Length > 0 then
@@ -398,10 +559,10 @@ package body Posix_Shell.Builtins is
 
             for J in Args'Range loop
                if Index <= List'Last then
-                  Set_Var_Value (S.all, Args (J).all, List (Index).all);
+                  Set_Var_Value (S, Args (J).all, List (Index).all);
                   Index := Index + 1;
                else
-                  Set_Var_Value (S.all, Args (J).all, "");
+                  Set_Var_Value (S, Args (J).all, "");
                end if;
             end loop;
          end;
@@ -415,67 +576,12 @@ package body Posix_Shell.Builtins is
 
    end Read_Builtin;
 
-   -------------------------------
-   -- Register_Default_Builtins --
-   -------------------------------
-
-   procedure Register_Default_Builtins is
-   begin
-      --  Register all the builtins.
-
-      Include (Builtin_Map, ".",             Source_Builtin'Access);
-      Include (Builtin_Map, ":",             True_Builtin'Access);
-      Include (Builtin_Map, "[",             Test_Builtin'Access);
-      Include (Builtin_Map, "break",         Break_Builtin'Access);
-      Include (Builtin_Map, "cat",           Cat_Builtin'Access);
-      Include (Builtin_Map, "cd",            Change_Dir_Builtin'Access);
-      Include (Builtin_Map, "command",       Command_Builtin'Access);
-      Include (Builtin_Map, "continue",      Continue_Builtin'Access);
-      Include (Builtin_Map, "cp",            Cp_Builtin'Access);
-      Include (Builtin_Map, "echo",          Echo_Builtin'Access);
-      Include (Builtin_Map, "eval",          Eval_Builtin'Access);
-      Include (Builtin_Map, "exec",          Exec_Builtin'Access);
-      Include (Builtin_Map, "exit",          Exit_Builtin'Access);
-      Include (Builtin_Map, "export",        Export_Builtin'Access);
-      Include (Builtin_Map, "expr",          Expr_Builtin'Access);
-      Include (Builtin_Map, "false",         False_Builtin'Access);
-      Include (Builtin_Map, "limit",         Limit_Builtin'Access);
-      Include (Builtin_Map, "printf",        Printf_Builtin'Access);
-      Include (Builtin_Map, "pwd",           Pwd_Builtin'Access);
-      Include (Builtin_Map, "read",          Read_Builtin'Access);
-      Include (Builtin_Map, "recho",         REcho_Builtin'Access);
-      Include (Builtin_Map, "return",        Return_Builtin'Access);
-      Include (Builtin_Map, "set",           Set_Builtin'Access);
-      Include (Builtin_Map, "setenv",        Export_Builtin'Access);
-      Include (Builtin_Map, "shift",         Shift_Builtin'Access);
-      Include (Builtin_Map, "test",          Test_Builtin'Access);
-      Include (Builtin_Map, "trap",          Trap_Builtin'Access);
-      Include (Builtin_Map, "true",          True_Builtin'Access);
-      Include (Builtin_Map, "umask",         Limit_Builtin'Access);
-      Include (Builtin_Map, "unset",         Unset_Builtin'Access);
-      Include (Builtin_Map, "unsetenv",      Unsetenv_Builtin'Access);
-      Include (Builtin_Map, "which",         Which_Builtin'Access);
-      Include (Builtin_Map, "wc",            Wc_Builtin'Access);
-
-      --  if GNAT.Directory_Operations.Dir_Separator = '\' then
-         --  No need to include these builtins on non-windows machines
-         Include (Builtin_Map, "basename",      Basename_Builtin'Access);
-         Include (Builtin_Map, "dirname",       Dirname_Builtin'Access);
-         Include (Builtin_Map, "head",          Head_Builtin'Access);
-         Include (Builtin_Map, "mkdir",         Mkdir_Builtin'Access);
-         Include (Builtin_Map, "rm",            Rm_Builtin'Access);
-         Include (Builtin_Map, "tail",          Tail_Builtin'Access);
-         Include (Builtin_Map, "type",          Type_Builtin'Access);
-         Include (Builtin_Map, "uname",         Uname_Builtin'Access);
-      --  end if;
-   end Register_Default_Builtins;
-
    --------------------
    -- Return_Builtin --
    --------------------
 
    function Return_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       Return_Value : Integer;
       Success : Boolean;
@@ -483,8 +589,8 @@ package body Posix_Shell.Builtins is
       --  If more than one argument was provided: Report an error and
       --  execute the return with a fixed return value of 1.
       if Args'Length > 1 then
-         Error (S.all, "return: too many arguments");
-         Save_Last_Exit_Status (S.all, 1);
+         Error (S, "return: too many arguments");
+         Save_Last_Exit_Status (S, 1);
 
       --  If one argument was provided: Return with this value.
       elsif Args'Length = 1 then
@@ -492,11 +598,11 @@ package body Posix_Shell.Builtins is
          if not Success then
             --  The provided value is not a valid number, so report
             --  this problem, and force the return value to 255.
-            Error (S.all, "return: " & Args (Args'First).all
+            Error (S, "return: " & Args (Args'First).all
                    & ": numeric argument required");
             Return_Value := 255;
          end if;
-         Save_Last_Exit_Status (S.all, Return_Value);
+         Save_Last_Exit_Status (S, Return_Value);
       end if;
 
       --  Note: If no argument is provided, then return using the exit
@@ -518,7 +624,7 @@ package body Posix_Shell.Builtins is
    -----------------
 
    function Set_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       Saved_Index : Integer := -1;
    begin
@@ -535,17 +641,17 @@ package body Posix_Shell.Builtins is
                      Saved_Index := Index + 1;
                      exit;
                   elsif Args (Index).all = "-x" then
-                     Set_Xtrace (S.all, True);
+                     Set_Xtrace (S, True);
                   elsif Args (Index).all = "-f" then
-                     Set_File_Expansion (S.all, False);
+                     Set_File_Expansion (S, False);
                   else
                      null;
                   end if;
                when '+' =>
                   if Args (Index).all = "+x" then
-                     Set_Xtrace (S.all, False);
+                     Set_Xtrace (S, False);
                   elsif Args (Index).all = "+f" then
-                     Set_File_Expansion (S.all, True);
+                     Set_File_Expansion (S, True);
                   end if;
 
                when others => Saved_Index := Index; exit;
@@ -554,7 +660,7 @@ package body Posix_Shell.Builtins is
       end loop;
 
       if Saved_Index >= Args'First and then Saved_Index <= Args'Last then
-         Set_Positional_Parameters (S.all, Args (Saved_Index .. Args'Last));
+         Set_Positional_Parameters (S, Args (Saved_Index .. Args'Last));
       end if;
       return 0;
    end Set_Builtin;
@@ -564,7 +670,7 @@ package body Posix_Shell.Builtins is
    -------------------
 
    function Shift_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       Shift : Integer := 1;
       Success : Boolean;
@@ -573,8 +679,8 @@ package body Posix_Shell.Builtins is
       --  and abort with error code 1.
 
       if Args'Length > 1 then
-         Error (S.all, "shift: too many arguments");
-         Shell_Exit (S.all, 1);
+         Error (S, "shift: too many arguments");
+         Shell_Exit (S, 1);
       end if;
 
       --  If one argument was provided, convert it to an integer
@@ -584,19 +690,19 @@ package body Posix_Shell.Builtins is
          To_Integer (Args (Args'First).all, Shift, Success);
 
          if not Success then
-            Error (S.all, "shift: " & Args (Args'First).all
+            Error (S, "shift: " & Args (Args'First).all
                    & ": numeric argument required");
-            Shell_Exit (S.all, 1);
+            Shell_Exit (S, 1);
          end if;
 
          if Shift < 0 then
-            Error (S.all, "shift: " & Args (Args'First).all
+            Error (S, "shift: " & Args (Args'First).all
                    & ": shift count out of range");
             return 1;
          end if;
       end if;
 
-      Shift_Positional_Parameters (S.all, Shift, Success);
+      Shift_Positional_Parameters (S, Shift, Success);
       if Success then
          return 0;
       else
@@ -609,7 +715,7 @@ package body Posix_Shell.Builtins is
    ------------------
 
    function Trap_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
 
    begin
@@ -618,7 +724,7 @@ package body Posix_Shell.Builtins is
          null;
          return 0;
       elsif Args'Length = 1 then
-         Error (S.all, "trap: invalid number of arguments");
+         Error (S, "trap: invalid number of arguments");
          return 1;
       end if;
 
@@ -636,9 +742,9 @@ package body Posix_Shell.Builtins is
 
             if Signal_Number >= 0 then
                if Args (Args'First).all = "-" then
-                  Set_Trap_Action (S.all, null, Signal_Number);
+                  Set_Trap_Action (S, null, Signal_Number);
                else
-                  Set_Trap_Action (S.all,
+                  Set_Trap_Action (S,
                                    new String'(Args (Args'First).all),
                                    Signal_Number);
                end if;
@@ -653,11 +759,11 @@ package body Posix_Shell.Builtins is
    -------------------
 
    function Unset_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
    begin
       for Index in Args'Range loop
-         Unset_Var (S.all, Args (Index).all);
+         Unset_Var (S, Args (Index).all);
       end loop;
       return 0;
    end Unset_Builtin;
@@ -667,10 +773,10 @@ package body Posix_Shell.Builtins is
    ----------------------
 
    function Unsetenv_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
    begin
-      Export_Var (S.all, Args (Args'First).all, "");
+      Export_Var (S, Args (Args'First).all, "");
       return 0;
    end Unsetenv_Builtin;
 

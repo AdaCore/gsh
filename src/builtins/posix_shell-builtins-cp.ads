@@ -27,7 +27,7 @@
 package Posix_Shell.Builtins.Cp is
 
    function Cp_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
    --  Implement the "cp" builtin.
    --  Deviation from Standard:
    --    * only -R (-r), -p and -f are currently currently supported.

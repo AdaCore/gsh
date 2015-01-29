@@ -1,62 +1,11 @@
 #!/usr/bin/env python
-"""Usage: run-test [options] test_dir
+"""usage: testsuite [OPTIONS]
 
-Run a gprbuild test located in test_dir
+Posix Shell Testsuite
 """
 
-from gnatpython.env import Env
-from gnatpython.fileutils import find, mv, split_file, cp
-from gnatpython.main import Main
-from gnatpython.stringutils import Filter
-from gnatpython.testdriver import TestRunner, add_run_test_options
-
-import glob
+from support import GSHTestsuite
 import os
-import sys
-
-class TestGNATPython(TestRunner):
-    def __init__(self,
-                 test,
-                 discs,
-                 result_dir,
-                 temp_dir=Env().tmp_dir,
-                 enable_cleanup=True,
-                 restricted_discs=None,
-                 test_args=None,
-                 failed_only=False,
-                 default_timeout=780,
-                 use_basename=True):
-        TestRunner.__init__(self, test, discs, result_dir, temp_dir,
-                            enable_cleanup, restricted_discs, test_args,
-                            failed_only, default_timeout, use_basename=True)
-
-    def write_results(self):
-        self.result['msg'] = "%-16s: %s" % (self.result['msg'], split_file (self.test + '/description')[0])
-        TestRunner.write_results(self)
-
-
-
-def main():
-    """Run a gprbuild test"""
-    m = Main()
-    add_run_test_options(m)
-    m.parse_args()
-    if not m.args:
-        sys.exit("Error: 1 argument expected. See -h")
-
-    if m.options.restricted_discs is not None:
-        m.options.restricted_discs = m.options.restricted_discs.split(',')
-
-    t = TestGNATPython(m.args[0],
-                m.options.discs,
-                m.options.output_dir,
-                m.options.tmp,
-                m.options.enable_cleanup,
-                m.options.restricted_discs,
-                (len(m.args) > 1 and m.args[1:] or ["-v"]),
-                m.options.failed_only)
-    t.execute()
-
 
 if __name__ == '__main__':
-    main()
+    GSHTestsuite(os.path.dirname(__file__)).test_main()

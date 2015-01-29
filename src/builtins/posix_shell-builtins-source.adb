@@ -37,19 +37,19 @@ package body Posix_Shell.Builtins.Source is
    --------------------
 
    function Source_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       T : Shell_Tree;
       Return_Code : Integer;
       Saved_Pos_Params : Pos_Params_State;
    begin
       if Args'Length = 0 then
-         Error (S.all, ".: filename argument required");
+         Error (S, ".: filename argument required");
          return 2;
       end if;
 
       begin
-         T := Parse_File (Resolve_Path (S.all, Args (Args'First).all));
+         T := Parse_File (Resolve_Path (S, Args (Args'First).all));
       exception
          when Buffer_Read_Error =>
             return 1;
@@ -64,26 +64,23 @@ package body Posix_Shell.Builtins.Source is
       --  up, because the script should be in this case able to access
       --  the positional arguments of the parent script.
       if Args'Length > 1 then
-         Saved_Pos_Params := Get_Positional_Parameters (S.all);
+         Saved_Pos_Params := Get_Positional_Parameters (S);
          Set_Positional_Parameters
-           (S.all, Args (Args'First + 1 .. Args'Last), False);
+           (S, Args (Args'First + 1 .. Args'Last), False);
       end if;
 
       begin
          Eval (S, T);
-         Return_Code := Get_Last_Exit_Status (S.all);
-         --  Tree should be freed only when getting out of context not just
-         --  after sourcing the script. Otherwise we don't have access anymore
-         --  to functions defined in a sourced script. ??? SHOULD BE FIXED ???
-         --  Free_Node (T);
+         Return_Code := Get_Last_Exit_Status (S);
+         Free_Node (T);
       exception
          when Shell_Return_Exception =>
-            Return_Code := Get_Last_Exit_Status (S.all);
+            Return_Code := Get_Last_Exit_Status (S);
       end;
 
       --  Restore the positional parameters if necessary.
       if Args'Length > 1 then
-         Restore_Positional_Parameters (S.all, Saved_Pos_Params);
+         Restore_Positional_Parameters (S, Saved_Pos_Params);
       end if;
 
       return Return_Code;

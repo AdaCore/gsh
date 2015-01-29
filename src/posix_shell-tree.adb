@@ -21,7 +21,6 @@
 ------------------------------------------------------------------------------
 
 with Ada.Unchecked_Deallocation;
---  with Ada.Text_IO;
 
 package body Posix_Shell.Tree is
 
@@ -30,12 +29,22 @@ package body Posix_Shell.Tree is
       N    : Node)
       return Node_Id;
 
-   procedure Free_Node (Tree : in out Shell_Tree; N : in out Node_Access);
+   procedure Free_Node (Tree : in out Shell_Tree; N : in out Node);
 
    procedure Deallocate is
-        new Ada.Unchecked_Deallocation
-          (Node,
-           Node_Access);
+     new Ada.Unchecked_Deallocation
+       (Node_Id_Array,
+        Node_Id_Array_Access);
+
+   procedure Deallocate is
+     new Ada.Unchecked_Deallocation
+       (And_Or_Node_Id_Array,
+        And_Or_Node_Id_Array_Access);
+
+   procedure Deallocate is
+     new Ada.Unchecked_Deallocation
+       (Shell_Tree,
+        Shell_Tree_Access);
 
    function Token_List_Pool (T : Shell_Tree) return List_Pool
    is
@@ -52,9 +61,9 @@ package body Posix_Shell.Tree is
       Append (Tree.Pool, List, T);
    end Append;
 
-   -----------------------
+   --------------------------
    -- Add_And_Or_List_Node --
-   -----------------------
+   --------------------------
 
    function Add_And_Or_List_Node
      (Tree   : in out Shell_Tree;
@@ -67,7 +76,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => AND_OR_LIST_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           And_Or_List_Childs => Child_List));
    end Add_And_Or_List_Node;
@@ -85,7 +94,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => BRACE_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           Brace_Code   => Brace_Code));
    end Add_Brace_Node;
@@ -105,7 +114,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => CASE_LIST_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           Pattern_List => Pattern,
           Match_Code   => Case_Code,
@@ -126,7 +135,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => CASE_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           Case_Word    => Case_Value,
           First_Case   => Case_List_Code));
@@ -148,7 +157,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind                => FOR_NODE,
-          Redirections        => Empty_Redirection_Op_Stack,
+          Redirections        => Empty_Redirections,
           Pos                 => Null_Text_Position,
           Loop_Var            => Variable_Name,
           Loop_Var_Values     => Value_List,
@@ -171,7 +180,7 @@ package body Posix_Shell.Tree is
           Cond => Cond,
           True_Code => True_Code,
           False_Code => False_Code,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position));
 
    end Add_If_Node;
@@ -190,7 +199,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => LIST_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           List_Childs  => Child_List));
    end Add_List_Node;
@@ -219,7 +228,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => NULL_CMD_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position));
    end Add_Null_Node;
 
@@ -238,7 +247,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => PIPE_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           Pipe_Childs  => Child_List,
           Pipe_Negation => Pipe_Negation));
@@ -257,7 +266,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind          => SUBSHELL_NODE,
-          Redirections  => Empty_Redirection_Op_Stack,
+          Redirections  => Empty_Redirections,
           Pos           => Null_Text_Position,
           Subshell_Code => Subshell_Code));
    end Add_Subshell_Node;
@@ -273,7 +282,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind         => UNTIL_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           Until_Cond   => Cond,
           Until_Code   => Loop_Code));
@@ -290,7 +299,7 @@ package body Posix_Shell.Tree is
       return Add_Node
         (Tree,
          (Kind => WHILE_NODE,
-          Redirections => Empty_Redirection_Op_Stack,
+          Redirections => Empty_Redirections,
           Pos          => Null_Text_Position,
           While_Cond   => Cond,
           While_Code   => Loop_Code));
@@ -333,21 +342,55 @@ package body Posix_Shell.Tree is
       Tree.Node_Table.Table (N) := Current;
    end Append_Assignement;
 
-   function New_Tree (B : Buffer) return Shell_Tree is
+   --------------
+   -- New_Tree --
+   --------------
+
+   function New_Tree
+     (B       : Buffer;
+      Protect : Boolean := False)
+      return Shell_Tree
+   is
       T : Shell_Tree;
    begin
       Init (T.Node_Table);
       T.Pool := New_Pool;
       T.Buffer := B;
+      if Protect then
+         Protect_Tree (T);
+      end if;
       return T;
    end New_Tree;
+
+   ------------------
+   -- Protect_Tree --
+   ------------------
+
+   procedure Protect_Tree (T : in out Shell_Tree) is
+   begin
+      T.Protect_Tree := True;
+      T.Protect_Buffer := True;
+   end Protect_Tree;
+
+   -------------------------
+   -- Protect_Tree_Buffer --
+   -------------------------
+
+   procedure Protect_Tree_Buffer (T : in out Shell_Tree) is
+   begin
+      T.Protect_Buffer := True;
+   end Protect_Tree_Buffer;
+
+   --------------
+   -- Get_Node --
+   --------------
 
    function Get_Node
      (Tree : Shell_Tree;
       N    : Node_Id) return Node is
    begin
       if N = Null_Node then
-         return (NOP_NODE, Empty_Redirection_Op_Stack,
+         return (NOP_NODE, Empty_Redirections,
                  Null_Text_Position);
       else
          return Tree.Node_Table.Table (N);
@@ -384,12 +427,8 @@ package body Posix_Shell.Tree is
    -- Free_Node --
    ---------------
 
-   procedure Free_Node (Tree : in out Shell_Tree; N : in out Node_Access) is
+   procedure Free_Node (Tree : in out Shell_Tree; N : in out Node) is
    begin
-      if N = null then
-         return;
-      end if;
-
       case N.Kind is
          when IF_NODE =>
             Free_Node (Tree, N.Cond);
@@ -399,10 +438,12 @@ package body Posix_Shell.Tree is
             for Index in N.List_Childs'Range loop
                Free_Node (Tree, N.List_Childs (Index));
             end loop;
+            Deallocate (N.List_Childs);
          when AND_OR_LIST_NODE =>
             for Index in N.And_Or_List_Childs'Range loop
                Free_Node (Tree, N.And_Or_List_Childs (Index).N);
             end loop;
+            Deallocate (N.And_Or_List_Childs);
          when BRACE_NODE =>
             Free_Node (Tree, N.Brace_Code);
          when CASE_LIST_NODE =>
@@ -412,12 +453,12 @@ package body Posix_Shell.Tree is
          when CASE_NODE =>
             Free_Node (Tree, N.First_Case);
          when FOR_NODE =>
-            Deallocate (Tree.Pool, N.Loop_Var_Values);
             Free_Node (Tree, N.Loop_Code);
          when PIPE_NODE =>
             for Index in N.Pipe_Childs'Range loop
                Free_Node (Tree, N.Pipe_Childs (Index));
             end loop;
+            Deallocate (N.Pipe_Childs);
          when SUBSHELL_NODE =>
             Free_Node (Tree, N.Subshell_Code);
          when UNTIL_NODE =>
@@ -426,16 +467,11 @@ package body Posix_Shell.Tree is
          when WHILE_NODE =>
             Free_Node (Tree, N.While_Cond);
             Free_Node (Tree, N.While_Code);
-         when CMD_NODE =>
-            Deallocate (Tree.Pool, N.Arguments);
-            Deallocate (Tree.Pool, N.Cmd_Assign_List);
-         when ASSIGN_NODE =>
-            Deallocate (Tree.Pool, N.Assign_List);
+         when FUNCTION_NODE =>
+            Deallocate (N.Function_Code);
          when others =>
             null;
       end case;
-
-      Deallocate (N);
    end Free_Node;
 
    ---------------
@@ -445,10 +481,14 @@ package body Posix_Shell.Tree is
    procedure Free_Node
      (Tree   : in out Shell_Tree) is
    begin
-      Free_Node (Tree, Tree.Toplevel_Node);
-      Free (Tree.Node_Table);
-      Deallocate (Tree.Pool);
-      Deallocate (Tree.Buffer);
+      if not Tree.Protect_Tree then
+         Free_Node (Tree, Tree.Toplevel_Node);
+         Free (Tree.Node_Table);
+         Deallocate (Tree.Pool);
+         if not Tree.Protect_Buffer then
+            Deallocate (Tree.Buffer);
+         end if;
+      end if;
    end Free_Node;
 
    procedure Free_Node (Tree : in out Shell_Tree; N : Node_Id) is
@@ -456,7 +496,7 @@ package body Posix_Shell.Tree is
       if N = Null_Node then
          return;
       end if;
-      --  ???? Free_Node (Tree, Tree.Node_Table.Table (N));
+      Free_Node (Tree, Tree.Node_Table.Table (N));
    end Free_Node;
 
    -----------------------
@@ -501,18 +541,11 @@ package body Posix_Shell.Tree is
    procedure Set_Node_Redirection
      (Tree      : Shell_Tree;
       N         : Node_Id;
-      Target_FD : Natural;
-      Filename  : Token;
-      Source_FD : Natural;
-      Cmd       : Redir_Cmd;
-      Eval      : Boolean)
+      Operator  : Redirection)
    is
-      New_Top : constant Natural :=
-        Tree.Node_Table.Table (N).Redirections.Top + 1;
+
    begin
-      Tree.Node_Table.Table (N).Redirections.Top := New_Top;
-      Tree.Node_Table.Table (N).Redirections.Ops (New_Top) :=
-        (Target_FD, Cmd, Source_FD, Filename, Eval);
+      Push (Tree.Node_Table.Table (N).Redirections, Operator);
    end Set_Node_Redirection;
 
    -----------------------

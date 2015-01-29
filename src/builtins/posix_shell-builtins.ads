@@ -7,7 +7,7 @@
 --                                 S p e c                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -33,10 +33,7 @@ package Posix_Shell.Builtins is
    --  Return True if Cmd is a known builtin.
 
    function Execute_Builtin
-     (S : Shell_State_Access; Cmd : String; Args : String_List) return Integer;
+     (S : in out Shell_State; Cmd : String; Args : String_List) return Integer;
    --  Execute the given builtin.
-
-   procedure Register_Default_Builtins;
-   --  Register all default builtins
 
 end Posix_Shell.Builtins;

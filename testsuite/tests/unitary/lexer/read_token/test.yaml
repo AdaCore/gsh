@@ -1,0 +1,21 @@
+title: 'Test Posix_Shell.Lexer.Read_Token function (unit)'
+driver: tabletest
+coverage_objectives:
+    posix_shell-lexer.adb: "Read_Token_Aux"
+
+table:
+       - input: 'a'
+         output: [['word', 'a']]
+       - input: 'fefe'
+         output: [['word', 'fefe']]
+       - input: '>'
+         output: [['>', '>']]
+       - input: '<'
+         output: [['<', '<']]
+       - input: '='
+         output: [['word', '=']]
+       - input: '=='
+         output: [['word', '==']]
+       - input: 'expr'
+         output: [['word', 'expr']]
+

@@ -1,0 +1,46 @@
+built-in 'test': -nt and -ot operators
+
+Files
+=====
+
+a.txt is older than b.txt status (true): 0
+b.txt is newer than a.txt status (true): 0
+
+a.txt is newer than b.txt status (false): 1
+b.txt is older than a.txt status (false): 1
+
+b.txt is older than notexisting status (false): 1
+b.txt is newer than notexisting status (false): 1
+
+notexisting is older than b.txt status (false): 1
+notexisting is newer than b.txt status (false): 1
+
+same time_stamp with older status (false): 1
+same time_stamp with newer status (false): 1
+
+Directories
+===========
+
+dir_a is older than dir_b status (true): 0
+dir_b is newer than dir_a status (true): 0
+
+dir_a is newer than dir_b status (false): 1
+dir_b is older than dir_a status (false): 1
+
+dir_b is older than notexisting status (false): 1
+dir_b is newer than notexisting status (false): 1
+
+notexisting is older than dir_b status (false): 1
+notexisting is newer than dir_b status (false): 1
+
+same time_stamp with older status (false): 1
+same time_stamp with newer status (false): 1
+
+Mixing Files and Directories
+============================
+
+a.txt is older than dir_a status (true): 0
+dir_a is newer than a.txt status (true): 0
+
+a.txt is newer than dir_a status (false): 1
+dir_a is older than a.txt status (false): 1

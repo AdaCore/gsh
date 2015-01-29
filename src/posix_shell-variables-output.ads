@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -25,47 +25,20 @@ with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 
 package Posix_Shell.Variables.Output is
 
-   type Redir_Cmd is (NULL_REDIR,
-                      OPEN_READ,
-                      OPEN_WRITE,
-                      OPEN_APPEND,
-                      DUPLICATE,
-                      IOHERE);
-
-   type Redirection_Op is record
-      Target_FD : Natural;
-      Cmd       : Redir_Cmd;
-      Source_FD : Natural;
-      Filename  : Token;
-      Eval      : Boolean;
-   end record;
-   --  Redirection directive. F is the name of the file. If Append is True
-   --  then F will be opened in append mode (relevant only for Stdin and
-   --  Stdout).
-
-   type Redirection_Op_Array is array (1 .. 16) of Redirection_Op;
-   type Redirection_Op_Stack is record
-      Top : Natural := 0;
-      Ops : Redirection_Op_Array;
-   end record;
-   --  Redirection directives for Stdin, Stdout and Stderr.
-
-   Empty_Redirection_Op_Stack : Redirection_Op_Stack :=
-     (0, (others => (0, NULL_REDIR, 0, Null_Token, True)));
-
-   procedure Set_Redirections
-     (S : Shell_State_Access;
-      R : Redirection_Op_Stack;
-      Free_Previous : Boolean := False);
+   function Set_Redirections
+     (S             : in out Shell_State;
+      R             : Redirection_Stack;
+      Free_Previous : Boolean := False)
+     return Boolean;
 
    function Get_Redirections
      (S : Shell_State)
-      return Redirection_States;
+      return Shell_Descriptors;
    --  Return the current redirection set.
 
    procedure Restore_Redirections
      (S : in out Shell_State;
-      R : Redirection_States);
+      R : Shell_Descriptors);
    --  Restore the previous redirections context.
 
    procedure Set_Pipe_Out (S : in out Shell_State);
@@ -78,7 +51,7 @@ package Posix_Shell.Variables.Output is
    --  Close the pipe in the current context
 
    function Read_Pipe_And_Close
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Input_Fd : File_Descriptor) return String;
    --  Read the pipe content, then close it, and return the content read.
 
@@ -108,5 +81,7 @@ package Posix_Shell.Variables.Output is
      (FD            : File_Descriptor;
       Close_On_Exec : Boolean;
       Status        : out Boolean);
+
+private
 
 end Posix_Shell.Variables.Output;

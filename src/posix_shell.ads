@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -21,6 +21,7 @@
 ------------------------------------------------------------------------------
 
 with GNAT.OS_Lib;
+with GNAT.Directory_Operations;
 
 package Posix_Shell is
 
@@ -57,7 +58,6 @@ package Posix_Shell is
       T_AND,          -- '&'
       T_OR_IF,        -- '||'
       T_PIPE,         -- '|'
-      T_DLESSDASH,    -- '>>-'
 
       --  Output redirection operators
 
@@ -70,6 +70,7 @@ package Posix_Shell is
 
       T_LESS,         -- '<'
       T_DLESS,        -- '<<'
+      T_DLESSDASH,    -- '<<-'
       T_LESSAND,      -- '<&'
       T_LESSGREAT,    -- '<>'
 
@@ -104,6 +105,9 @@ package Posix_Shell is
    subtype Output_Redirection_Ops is Token_Type range T_DGREAT .. T_GREAT;
    subtype Redirection_Ops is Token_Type range T_DGREAT .. T_LESSGREAT;
    subtype Redirection_Tokens is Token_Type range T_DGREAT .. T_IO_NUMBER;
+
+   Is_Windows : constant Boolean :=
+     GNAT.Directory_Operations.Dir_Separator = '\';
 
    Shell_Syntax_Error    : exception;
    Shell_Non_Implemented : exception;

@@ -33,7 +33,7 @@ package body Posix_Shell.Builtins.Uname is
    -------------------
 
    function Uname_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       Kernel_Name       : Boolean := False;
       Node_Name         : Boolean := False;
@@ -57,15 +57,12 @@ package body Posix_Shell.Builtins.Uname is
                case Arg (Arg'First) is
                   when '-' =>
                      if Arg = "--help" then
-                        Put (S.all, 1, "usage: uname [OPTIONS]" & ASCII.LF);
+                        Put (S, 1, "usage: uname [OPTIONS]" & ASCII.LF);
                         return 0;
 
                      elsif Arg = "--" then
-                        if Index /= Args'Last then
-                           Put (S.all, 2, "uname: extra operand" & ASCII.LF);
+                           Put (S, 2, "uname: unexpected operand" & ASCII.LF);
                            return 1;
-                        end if;
-
                      else
                         for Index2 in Arg'First + 1 .. Arg'Last loop
                            case Arg (Index2) is
@@ -85,7 +82,7 @@ package body Posix_Shell.Builtins.Uname is
                               when 'i' => Hardware_Platform := True;
                               when 'o' => Operating_System := True;
                               when others =>
-                                 Put (S.all, 2,
+                                 Put (S, 2,
                                       "uname: unknown option" & ASCII.LF);
                                  return 1;
                            end case;
@@ -93,7 +90,7 @@ package body Posix_Shell.Builtins.Uname is
                      end if;
 
                   when others =>
-                     Put (S.all, 2, "uname: extra operand" & ASCII.LF);
+                     Put (S, 2, "uname: extra operand" & ASCII.LF);
                      return 1;
                end case;
             end;
@@ -101,64 +98,66 @@ package body Posix_Shell.Builtins.Uname is
       end if;
 
       if Kernel_Name then
-         Put (S.all, 1, "CYGWIN_NT-6.0-WOW64");
+         Put (S, 1, "CYGWIN_NT-6.0-WOW64");
          Add_Space := True;
       end if;
 
       if Node_Name then
          if Add_Space then
-            Put (S.all, 1, " ");
+            Put (S, 1, " ");
          end if;
-         Put (S.all, 1, "machine");
+         Put (S, 1, "machine");
          Add_Space := True;
       end if;
 
       if Kernel_Release then
          if Add_Space then
-            Put (S.all, 1, " ");
+            Put (S, 1, " ");
          end if;
-         Put (S.all, 1, "1.7.0(0.212/5/3)");
+         Put (S, 1, "1.7.0(0.212/5/3)");
          Add_Space := True;
       end if;
 
       if Kernel_Version then
          if Add_Space then
-            Put (S.all, 1, " ");
+            Put (S, 1, " ");
          end if;
-         Put (S.all, 1, "2009-09-11 01:25");
+         Put (S, 1, "2009-09-11 01:25");
          Add_Space := True;
       end if;
 
       if Machine then
          if Add_Space then
-            Put (S.all, 1, " ");
+            Put (S, 1, " ");
          end if;
-         Put (S.all, 1, "i686");
+         Put (S, 1, "i686");
          Add_Space := True;
       end if;
 
       if Processor then
          if Add_Space then
-            Put (S.all, 1, " ");
+            Put (S, 1, " ");
          end if;
-         Put (S.all, 1, "unknown");
+         Put (S, 1, "unknown");
          Add_Space := True;
       end if;
 
       if Hardware_Platform then
          if Add_Space then
-            Put (S.all, 1, " ");
+            Put (S, 1, " ");
          end if;
-         Put (S.all, 1, "unknown");
+         Put (S, 1, "unknown");
          Add_Space := True;
       end if;
 
       if Operating_System then
          if Add_Space then
-            Put (S.all, 1, " ");
+            Put (S, 1, " ");
          end if;
-         Put (S.all, 1, "Cygwin");
+         Put (S, 1, "Cygwin");
       end if;
+
+      Put (S, 1, "" & ASCII.LF);
 
       return 0;
    end Uname_Builtin;

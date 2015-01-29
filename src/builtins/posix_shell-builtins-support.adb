@@ -63,7 +63,7 @@ package body Posix_Shell.Builtins.Support is
    ----------------
 
    function Change_Dir
-     (S        : Shell_State_Access;
+     (S        : in out Shell_State;
       Dir_Name : String;
       Verbose  : Boolean := False)
       return Integer
@@ -75,7 +75,7 @@ package body Posix_Shell.Builtins.Support is
          if Is_Absolute_Path (D) then
             return D;
          else
-            return Get_Current_Dir (S.all) & "/" & D;
+            return Get_Current_Dir (S) & "/" & D;
          end if;
       end Get_Absolute_Path;
 
@@ -87,8 +87,8 @@ package body Posix_Shell.Builtins.Support is
       end if;
 
       if not Is_Directory (Abs_Dir) then
-         Put (S.all, 2, "cd: " & Dir_Name & ": No such file or directory");
-         New_Line (S.all, 2);
+         Put (S, 2, "cd: " & Dir_Name & ": No such file or directory");
+         New_Line (S, 2);
          return 1;
       end if;
 
@@ -98,25 +98,25 @@ package body Posix_Shell.Builtins.Support is
            (GNAT.OS_Lib.Normalize_Pathname (Abs_Dir),
             GNAT.Directory_Operations.UNIX);
       begin
-         Set_Current_Dir (S.all, Full_Path);
-         Set_Var_Value (S.all, "OLDPWD", Get_Var_Value (S.all, "PWD"));
+         Set_Current_Dir (S, Full_Path);
+         Set_Var_Value (S, "OLDPWD", Get_Var_Value (S, "PWD"));
 
          --  Update PWd variable. Use a Unix format (without drive letter)
-         Set_Var_Value (S.all, "PWD", Get_Current_Dir (S.all, True));
+         Set_Var_Value (S, "PWD", Get_Current_Dir (S, True));
       end;
 
       if Verbose then
-         Put (S.all, 1, Dir_Name);
-         New_Line (S.all, 1);
+         Put (S, 1, Dir_Name);
+         New_Line (S, 1);
       end if;
 
       return 0;
 
    exception
       when GNAT.Directory_Operations.Directory_Error =>
-         Put (S.all, 2,
+         Put (S, 2,
               "cd: " & Dir_Name & ": Cannot change to this directory");
-         New_Line (S.all, 2);
+         New_Line (S, 2);
          return 1;
    end Change_Dir;
 

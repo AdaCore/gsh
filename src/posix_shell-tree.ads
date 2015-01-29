@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -20,7 +20,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Buffers; use Posix_Shell.Buffers;
 with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 with Posix_Shell.Lexer; use Posix_Shell.Lexer;
@@ -147,11 +146,7 @@ package Posix_Shell.Tree is
    procedure Set_Node_Redirection
      (Tree      : Shell_Tree;
       N         : Node_Id;
-      Target_FD : Natural;
-      Filename  : Token;
-      Source_FD : Natural;
-      Cmd       : Redir_Cmd;
-      Eval      : Boolean);
+      Operator  : Redirection);
 
    procedure Append_Arg
      (Tree   : in out Shell_Tree;
@@ -174,7 +169,18 @@ package Posix_Shell.Tree is
    procedure Free_Node
      (Tree   : in out Shell_Tree);
 
-   function New_Tree (B : Buffer) return Shell_Tree;
+   function New_Tree
+     (B       : Buffer;
+      Protect : Boolean := False)
+      return Shell_Tree;
+   --  Create a new tree associated with buffer B. If Protect is set to True
+   --  then Tree cannot be deallocatd (a call to Protect_Tree is done)
+
+   procedure Protect_Tree (T : in out Shell_Tree);
+   --  Ensure tree cannot be deallocated and neither its associated buffer
+
+   procedure Protect_Tree_Buffer (T : in out Shell_Tree);
+   --  Ensure that the tree buffer cannot be deallocated
 
    function Token_List_Pool (T : Shell_Tree) return List_Pool;
    procedure Append
@@ -214,12 +220,10 @@ private
    type Node_Id_Array_Access is access Node_Id_Array;
    type And_Or_Node_Id_Array_Access is access And_Or_Node_Id_Array;
 
-
-
    function Get_Node (Tree : Shell_Tree; N : Node_Id) return Node;
 
    type Node (Kind : Node_Kind := IF_NODE) is record
-      Redirections      : Redirection_Op_Stack := Empty_Redirection_Op_Stack;
+      Redirections      : Redirection_Stack := Empty_Redirections;
       Pos               : Text_Position := Null_Text_Position;
       case Kind is
          when IF_NODE =>
@@ -281,10 +285,13 @@ private
    use Node_Tables;
 
    type Shell_Tree is record
-      Node_Table    : Instance;
-      Next_Node     : Node_Id := 1;
-      Toplevel_Node : Node_Id := 0;
-      Pool          : List_Pool;
-      Buffer        : Posix_Shell.Buffers.Buffer;
+      Node_Table     : Instance;
+      Next_Node      : Node_Id := 1;
+      Toplevel_Node  : Node_Id := 0;
+      Pool           : List_Pool;
+      Buffer         : Posix_Shell.Buffers.Buffer;
+      Protect_Tree   : Boolean := False;
+      Protect_Buffer : Boolean := False;
    end record;
+
 end Posix_Shell.Tree;

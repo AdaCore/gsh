@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -22,8 +22,11 @@
 
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
+with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Ada.Strings.Unbounded;
+pragma Warnings (Off);
 with System.CRTL;
+pragma Warnings (On);
 with GNAT.Task_Lock;
 
 package body Posix_Shell.Variables.Output is
@@ -119,9 +122,9 @@ package body Posix_Shell.Variables.Output is
    ----------------------
 
    procedure Restore_Redirections
-     (S : in out Shell_State; R : Redirection_States)
+     (S : in out Shell_State; R : Shell_Descriptors)
    is
-      Previous : constant Redirection_States := S.Redirections;
+      Previous : constant Shell_Descriptors := S.Redirections;
       Success : Boolean;
    begin
       GNAT.Task_Lock.Lock;
@@ -145,15 +148,19 @@ package body Posix_Shell.Variables.Output is
    -- Push_Redirections --
    -----------------------
 
-   procedure Set_Redirections
-     (S : Shell_State_Access;
-      R : Redirection_Op_Stack;
+   function Set_Redirections
+     (S             : in out Shell_State;
+      R             : Redirection_Stack;
       Free_Previous : Boolean := False)
+     return Boolean
    is
+
       Success    : Boolean := False;
-      Old_States : constant Redirection_States := S.Redirections;
-      New_States : Redirection_States;
+      Old_States : constant Shell_Descriptors := S.Redirections;
+      New_States : Shell_Descriptors;
       On_Windows : constant Boolean := Directory_Separator = '\';
+      Has_Errors : Boolean := False;
+      --  Will be set to true if some redirection were not put in place
 
       function Is_Null_File (Str : String) return Boolean;
       pragma Inline (Is_Null_File);
@@ -161,6 +168,64 @@ package body Posix_Shell.Variables.Output is
       --  (for example "dev/null" on Unix systems).
 
       function Resolve_Filename (A : Token) return String;
+
+      procedure Open_FD
+         (FD              : Natural;
+          Path            : String;
+          Write           : Boolean := True;
+          Append          : Boolean := False;
+          Delete_On_Close : Boolean := False);
+      --  @ Open a file descriptor
+      --  @
+      --  @ :param Natural FD: File descriptor that needs to be created
+      --  @ :param String Path: Path to the file that should be opened
+      --  @ :param Boolean Write: If True (default) the file is open for
+      --  @     writing otherwise it is opened for reading.
+      --  @ :param Boolean Append: If True then when a file is open in write
+      --  @     mode content will be appended to the previous content.
+      --  @     Otherwise previous content is discarded. In read mode the
+      --  @     flag has no effect.
+      --  @ :param Boolean Delete_On_Close: If True the file will be deleted
+      --  @     when the file descriptor is closed
+
+      -------------
+      -- Open_FD --
+      -------------
+
+      procedure Open_FD
+         (FD              : Natural;
+          Path            : String;
+          Write           : Boolean := True;
+          Append          : Boolean := False;
+          Delete_On_Close : Boolean := False)
+      is
+      begin
+         if Is_Xtrace_Enabled (S) then
+            Put (S, 2, "fd:" & FD'Img & ", path: " & Path & ASCII.LF);
+         end if;
+         New_States (FD).Filename := new String'(Path);
+
+         if Write and then not Append and then
+            not Is_Null_File (Path)
+         then
+            Delete_File (Path, Success);
+         end if;
+
+         GNAT.Task_Lock.Lock;
+         if Write then
+            New_States (FD).Fd := Open_Append (Path, Binary);
+         else
+            New_States (FD).Fd := Open_Read (Path, Binary);
+         end if;
+
+         Set_Close_On_Exec (New_States (FD).Fd, True, Success);
+         New_States (FD).Delete_On_Close := Delete_On_Close;
+         New_States (FD).Can_Be_Closed := True;
+         if Append and then Write then
+            Lseek (New_States (FD).Fd, 0, Seek_End);
+         end if;
+         GNAT.Task_Lock.Unlock;
+      end Open_FD;
 
       ------------------
       -- Is_Null_File --
@@ -184,7 +249,7 @@ package body Posix_Shell.Variables.Output is
       function Resolve_Filename (A : Token) return String
       is
          Eval_Result : constant String := Resolve_Path
-           (S.all, Eval_String_Unsplit (S, Get_Token_String (A)));
+           (S, Eval_String_Unsplit (S, Get_Token_String (A)));
       begin
          if On_Windows and then Eval_Result = "/dev/null" then
             return "NUL";
@@ -195,9 +260,9 @@ package body Posix_Shell.Variables.Output is
 
    begin
 
-      null;
       --  The new redirection states inherits the unmodifed file
       --  descriptors from the old state.
+
       New_States := Old_States;
 
       --  We are not allowed to close file descriptor we are inheriting
@@ -207,88 +272,73 @@ package body Posix_Shell.Variables.Output is
          end loop;
       end if;
 
-      for J in 1 .. R.Top loop
+      for J in 1 .. Length (R) loop
+
          declare
-            C : constant Redirection_Op := R.Ops (J);
+            C : constant Redirection := Element (R, J);
+
          begin
-            case C.Cmd is
+            case C.Kind is
                when OPEN_READ =>
-                  New_States (C.Target_FD).Filename :=
-                    new String'(Resolve_Filename (C.Filename));
-                  GNAT.Task_Lock.Lock;
-                  New_States (C.Target_FD).Fd := Open_Read
-                    (New_States (C.Target_FD).Filename.all,
-                     Binary);
-                  Set_Close_On_Exec
-                    (New_States (C.Target_FD).Fd, True, Success);
-                  New_States (C.Target_FD).Delete_On_Close := False;
-                  New_States (C.Target_FD).Can_Be_Closed := True;
-                  GNAT.Task_Lock.Unlock;
+                  Open_FD (C.Open_Target,
+                           Resolve_Filename (C.Filename),
+                           Write => False);
+
                when OPEN_WRITE =>
-                  New_States (C.Target_FD).Filename :=
-                    new String'(Resolve_Filename (C.Filename));
-                  if not Is_Null_File
-                    (New_States (C.Target_FD).Filename.all)
-                  then
-                     Delete_File
-                       (New_States (C.Target_FD).Filename.all, Success);
-                  end if;
-                  GNAT.Task_Lock.Lock;
-                  New_States (C.Target_FD).Fd := Open_Append
-                    (New_States (C.Target_FD).Filename.all, Binary);
-                  Set_Close_On_Exec
-                    (New_States (C.Target_FD).Fd, True, Success);
-                  New_States (C.Target_FD).Delete_On_Close := False;
-                  Lseek (New_States (C.Target_FD).Fd, 0, 2);
-                  New_States (C.Target_FD).Can_Be_Closed := True;
-                  GNAT.Task_Lock.Unlock;
+                  Open_FD (C.Open_Target,
+                           Resolve_Filename (C.Filename));
+
                when OPEN_APPEND =>
-                  New_States (C.Target_FD).Filename :=
-                    new String'(Resolve_Filename (C.Filename));
-                  GNAT.Task_Lock.Lock;
-                  New_States (C.Target_FD).Fd := Open_Append
-                    (New_States (C.Target_FD).Filename.all, Binary);
-                  Set_Close_On_Exec
-                    (New_States (C.Target_FD).Fd, True, Success);
-                  New_States (C.Target_FD).Delete_On_Close := False;
-                  Lseek (New_States (C.Target_FD).Fd, 0, 2);
-                  New_States (C.Target_FD).Can_Be_Closed := True;
-                  GNAT.Task_Lock.Unlock;
+                  Open_FD (C.Open_Target,
+                           Resolve_Filename (C.Filename),
+                           Append => True);
+
                when DUPLICATE =>
-                  GNAT.Task_Lock.Lock;
-                  New_States (C.Target_FD).Fd :=
-                    Dup (New_States (C.Source_FD).Fd);
-                  Set_Close_On_Exec
-                    (New_States (C.Target_FD).Fd, True, Success);
-                  New_States (C.Target_FD).Can_Be_Closed := True;
-                  GNAT.Task_Lock.Unlock;
+
+                  declare
+                     FD_Str : constant String :=
+                       Eval_String_Unsplit (S, Get_Token_String (C.Source));
+                     Source_FD : Integer := 0;
+                     Is_Valid  : Boolean := False;
+
+                  begin
+                     To_Integer (FD_Str, Source_FD, Is_Valid);
+                     if Is_Valid and then
+                       New_States (Source_FD).Fd /= Invalid_FD
+                     then
+                        GNAT.Task_Lock.Lock;
+                        New_States (C.Dup_Target).Fd :=
+                          Dup (New_States (Source_FD).Fd);
+                        Set_Close_On_Exec
+                          (New_States (C.Dup_Target).Fd, True, Success);
+                        New_States (C.Dup_Target).Can_Be_Closed := True;
+                        GNAT.Task_Lock.Unlock;
+                     else
+                        Has_Errors := True;
+                        exit;
+                     end if;
+                  end;
                when IOHERE =>
                   declare
-                     Fd : File_Descriptor;
-                     Name : Temp_File_Name;
+                     Fd     : File_Descriptor;
+                     Name   : Temp_File_Name;
                      Result : Integer;
                      pragma Warnings (Off, Result);
                      Result_String : aliased String :=
-                       (if C.Eval
+                       (if C.Expand
                         then Eval_String_Unsplit
-                          (S, Get_Token_String (C.Filename), IOHere => True)
-                        else Get_Token_String (C.Filename));
+                          (S, Get_Token_String (C.Content), IOHere => True)
+                        else Get_Token_String (C.Content));
                   begin
-                     GNAT.Task_Lock.Lock;
                      Create_Temp_File (Fd, Name);
                      Result := Write
                        (Fd, Result_String'Address, Result_String'Length);
                      Close (Fd);
 
-                     New_States (C.Target_FD).Filename := new String'(Name);
-                     New_States (C.Target_FD).Fd := Open_Read
-                       (New_States (C.Target_FD).Filename.all,
-                        Binary);
-                     Set_Close_On_Exec
-                       (New_States (C.Target_FD).Fd, True, Success);
-                     New_States (C.Target_FD).Delete_On_Close := True;
-                     New_States (C.Target_FD).Can_Be_Closed := True;
-                     GNAT.Task_Lock.Unlock;
+                     Open_FD (C.Doc_Target,
+                              Name,
+                              Write           => False,
+                              Delete_On_Close => True);
                   end;
                when others =>
                   null;
@@ -298,6 +348,12 @@ package body Posix_Shell.Variables.Output is
 
       --  All went well, so we can now push the new states.
       --  Ada.Text_IO.Put_Line (New_States (2).Fd'Img);
+
+      if Has_Errors then
+         Put (S, 2, "bad redirections" & ASCII.LF);
+         return False;
+      end if;
+
       GNAT.Task_Lock.Lock;
 
       if Free_Previous then
@@ -316,7 +372,9 @@ package body Posix_Shell.Variables.Output is
          end loop;
       end if;
       S.Redirections := New_States;
+
       GNAT.Task_Lock.Unlock;
+      return True;
    end Set_Redirections;
 
    ---------
@@ -370,7 +428,7 @@ package body Posix_Shell.Variables.Output is
    -------------------------
 
    function Read_Pipe_And_Close
-     (S        : Shell_State_Access;
+     (S        : in out Shell_State;
       Input_Fd : File_Descriptor)
       return String
    is
@@ -454,7 +512,6 @@ package body Posix_Shell.Variables.Output is
          Shell_Exit (S, 127);
       end if;
 
-
       --  Save stdout
       S.Redirections (-1) := S.Redirections (1);
       S.Redirections (1)  := (Pipe.Output, null, False, True);
@@ -471,12 +528,12 @@ package body Posix_Shell.Variables.Output is
    -- Get_Current_Redirections --
    ------------------------------
 
-   function Get_Redirections (S : Shell_State) return Redirection_States is
+   function Get_Redirections (S : Shell_State) return Shell_Descriptors is
    begin
       return S.Redirections;
    end Get_Redirections;
 
-   --  function Get_Current_Redirections return Redirection_States is
+   --  function Get_Current_Redirections return Shell_Descriptors is
    --  begin
    --     return Redirection_Stack (Redirection_Pos);
    --  end Get_Current_Redirections;

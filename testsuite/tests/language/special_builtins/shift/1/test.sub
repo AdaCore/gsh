@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# check initial status of positional parameters
+for d in 0 "" 2 25 -1; do
+   echo "++ Test shift $d"
+   shift $d 2>/dev/null
+   echo "shift status: $?"
+   echo "\$1='$1'"
+   echo "\$2='$2'"
+   echo "\$6='$6'"
+   echo "\$#='$#'"
+done
+
+echo "++ shift with non numerical argument should cause shell exit"
+(shift 1 2 2>/dev/null
+ echo "This message should not be print"
+); echo $?
+
+echo "++ shift with 2 arguments should cause shell exit"
+(shift a 2>/dev/null
+ echo "this message should not be print"
+); echo $?
+

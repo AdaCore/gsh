@@ -31,7 +31,7 @@ package body Posix_Shell.Builtins.Booleans is
    ------------------
 
    function True_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       pragma Unreferenced (Args);
       pragma Unreferenced (S);
@@ -44,7 +44,7 @@ package body Posix_Shell.Builtins.Booleans is
    -------------------
 
    function False_Builtin
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Args : String_List)
       return Integer
    is

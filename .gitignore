@@ -1,8 +1,14 @@
 doc/build/*
 install/*
+src/posix_shell-lua_bindings.adb
 testsuite/out/*
+testsuite/tmp/*
+testsuite/tmp.xml
 obj/*
 gnutools/bin/sh.exe
 gnutools/bin/gsh.exe
 *.pyc
 *.o
+lua/src/liblua.a
+lua/src/lua
+lua/src/luac

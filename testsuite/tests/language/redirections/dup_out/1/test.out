@@ -1,0 +1,33 @@
+=======================================
++ check basic descriptor duplication
+.. create fd 2 that point to error.out
+..   > status=0 (expect 0)
+.. echo PASSED by duplicating fd 2 into 1
+.. check that error.out contains PASSED
+..   > PASSED
+=======================================
++ check fd duplication 5>&word were word is a dynamic value
+.. create fd 5 that point to file5.txt
+..   > status=0 (expect 0)
+.. echo PASSED to fd "`echo 5`" (that should evaluate to 5)
+..   > status=0 (expect 0)
+.. check content of file5
+..   > PASSED
+=======================================
++ check error handling on duplication of invalid fd
+.. do an exec with invalid duplication
+..   > status=1 (expect 1)
+.. check that first redirection was executed (3>file3.txt)
+..   > PASSED
+.. check that third redirection was not executed (4>file4.txt)
+..   > PASSED
+..  check that none of the redirection are still in effect
+..   > status=1 (expected 1 because of invalid fd)
+..   > status=1 (expected 1 because of invalid fd)
+=======================================
++ check that shell current command is not run in case of redirection error
+.. launch subshell with bad fd duplication redirection
+..   > status=1 (expected 1 because of invalid fd)
+.. check that file should_not_be_here.txt does not exist
+..   > PASSED (command was interrupted)
+=======================================

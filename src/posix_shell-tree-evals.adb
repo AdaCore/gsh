@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2013, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -24,9 +24,9 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Commands_Preprocessor; use Posix_Shell.Commands_Preprocessor;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
-with Posix_Shell.Functions; use Posix_Shell.Functions;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Utils; use  Posix_Shell.Utils;
 with Posix_Shell.GNULib; use Posix_Shell.GNULib;
@@ -41,39 +41,44 @@ with GNAT.Regpat; use GNAT.Regpat;
 package body Posix_Shell.Tree.Evals is
 
    Special_Builtin_Matcher : constant Pattern_Matcher := Compile
-     ("^(eval|exec|source|\.)$");
+     ("^(eval|exec|source|\.|:|break|continue|exit|export|readonly" &
+        "|return|set|shift|times|trap|unset|cd)$");
    --  Regexp used to check if a command is a special builtin (see open group
-   --  definition of special builtins).
+   --  definition of special builtins). Note that we consider cd also as a
+   --  special builtin. Indeed it comes handy to keep changes done on the shell
+   --  state by cd. Note that in a very tricky case we won't be Posix as cd
+   --  should not preserve variable changes ("a=b cd path" will preserver
+   --  change on variable a).
 
-   procedure Eval_List (S : Shell_State_Access; T : Shell_Tree; N : Node);
-   procedure Eval_Case (S : Shell_State_Access; T : Shell_Tree; N : Node);
-   procedure Eval_If (S : Shell_State_Access; T : Shell_Tree; N : Node);
+   procedure Eval_List (S : in out Shell_State; T : Shell_Tree; N : Node);
+   procedure Eval_Case (S : in out Shell_State; T : Shell_Tree; N : Node);
+   procedure Eval_If (S : in out Shell_State; T : Shell_Tree; N : Node);
    procedure Eval_And_Or_List
-     (S : Shell_State_Access; T : Shell_Tree; N : Node);
+     (S : in out Shell_State; T : Shell_Tree; N : Node);
 
    procedure Eval_Until_While
-     (S : Shell_State_Access; T : Shell_Tree; N : Node; Is_Until : Boolean);
-   procedure Eval_Pipe (S : Shell_State_Access; T : Shell_Tree; N : Node);
-   procedure Eval_For (S : Shell_State_Access; T : Shell_Tree; N : Node);
-   procedure Eval_Subshell (S : Shell_State_Access; T : Shell_Tree; N : Node);
-   procedure Eval_Function (S : Shell_State_Access; N : Node);
-   procedure Eval_Brace (S : Shell_State_Access; T : Shell_Tree; N : Node);
-   procedure Eval_Null_Cmd (S : Shell_State_Access; N : Node);
+     (S : in out Shell_State; T : Shell_Tree; N : Node; Is_Until : Boolean);
+   procedure Eval_Pipe (S : in out Shell_State; T : Shell_Tree; N : Node);
+   procedure Eval_For (S : in out Shell_State; T : Shell_Tree; N : Node);
+   procedure Eval_Subshell (S : in out Shell_State; T : Shell_Tree; N : Node);
+   procedure Eval_Function (S : in out Shell_State; N : Node);
+   procedure Eval_Brace (S : in out Shell_State; T : Shell_Tree; N : Node);
+   procedure Eval_Null_Cmd (S : in out Shell_State; N : Node);
 
-   procedure Eval_Cmd (S            : Shell_State_Access;
+   procedure Eval_Cmd (S            : in out Shell_State;
                        Command      : String;
                        Arguments    : String_List;
-                       Redirections : Redirection_Op_Stack);
+                       Redirections : Redirection_Stack);
    --  Evaluate the call to the given Command with the given Arguments.
    --  This function takes care of setting and the restoring the redirections
    --  as well.
 
-   procedure Eval_Cmd (S : Shell_State_Access; T : Shell_Tree; N : Node);
+   procedure Eval_Cmd (S : in out Shell_State; T : Shell_Tree; N : Node);
    --  Evaluate the given node as a command, after having expanded
    --  the command name and its arguments.
 
    procedure Eval_Assign
-     (S         : Shell_State_Access;
+     (S         : in out Shell_State;
       T         : Shell_Tree;
       N         : Node;
       Do_Export : Boolean := False);
@@ -82,7 +87,7 @@ package body Posix_Shell.Tree.Evals is
    -- Eval --
    ----------
 
-   procedure Eval (S : Shell_State_Access; T : Shell_Tree) is
+   procedure Eval (S : in out Shell_State; T : Shell_Tree) is
    begin
       Eval (S, T, T.Toplevel_Node);
    end Eval;
@@ -92,7 +97,7 @@ package body Posix_Shell.Tree.Evals is
    ----------
 
    procedure Eval
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       T : Shell_Tree;
       N : Node_Id)
    is
@@ -109,7 +114,7 @@ package body Posix_Shell.Tree.Evals is
    ----------
 
    function Eval
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       T : Shell_Tree) return String
    is
 
@@ -124,30 +129,30 @@ package body Posix_Shell.Tree.Evals is
       end Eval_Task;
 
       task body Eval_Task is
-         S_Copy : constant Shell_State_Access := new Shell_State;
+         S_Copy : Shell_State;
       begin
          accept Start (Pipe_Input : out File_Descriptor) do
             --  Create a new scope and create the pipe. The task is in charge
             --  of closing the writable side of the pipe and the main task the
             --  reading part
             GNAT.Task_Lock.Lock;
-            S_Copy.all := Enter_Scope (S.all);
-            Set_Pipe_Out (S_Copy.all);
+            S_Copy := Enter_Scope (S);
+            Set_Pipe_Out (S_Copy);
 
             --  Pass to the main task the fd to the readble side of the pipe.
-            Pipe_Input := Get_Fd (S_Copy.all, -2);
+            Pipe_Input := Get_Fd (S_Copy, -2);
             GNAT.Task_Lock.Unlock;
          end Start;
 
          Eval (S_Copy, T);
          --  Close the write side (will unblock main task which is doing a read
          --  of the other side of the pipe).
-         Close (Get_Fd (S_Copy.all, 1));
+         Close (Get_Fd (S_Copy, 1));
 
          accept Get_Exit_Status do
             --  Destroy scope and ensure exit_status is correctly set.
             GNAT.Task_Lock.Lock;
-            Leave_Scope (S_Copy.all, S.all);
+            Leave_Scope (S_Copy, S);
             GNAT.Task_Lock.Unlock;
          end Get_Exit_Status;
       end Eval_Task;
@@ -166,7 +171,7 @@ package body Posix_Shell.Tree.Evals is
    -- Eval --
    ----------
 
-   procedure Eval (S : Shell_State_Access; T : Shell_Tree; N : Node) is
+   procedure Eval (S : in out Shell_State; T : Shell_Tree; N : Node) is
    begin
       case N.Kind is
          when LIST_NODE        => Eval_List (S, T, N);
@@ -193,7 +198,7 @@ package body Posix_Shell.Tree.Evals is
    -------------------
 
    procedure Eval_And_Or_List
-     (S : Shell_State_Access; T : Shell_Tree; N : Node)
+     (S : in out Shell_State; T : Shell_Tree; N : Node)
    is
       Go_To  : List_Kind := AND_LIST;
    begin
@@ -202,7 +207,7 @@ package body Posix_Shell.Tree.Evals is
            Go_To = N.And_Or_List_Childs (Index).Kind
          then
             Eval (S, T, N.And_Or_List_Childs (Index).N);
-            if Get_Last_Exit_Status (S.all) = 0 then
+            if Get_Last_Exit_Status (S) = 0 then
                Go_To := AND_LIST;
             else
                Go_To := OR_LIST;
@@ -217,7 +222,7 @@ package body Posix_Shell.Tree.Evals is
    -----------------
 
    procedure Eval_Assign
-     (S         : Shell_State_Access;
+     (S         : in out Shell_State;
       T         : Shell_Tree;
       N         : Node;
       Do_Export : Boolean := False)
@@ -225,7 +230,7 @@ package body Posix_Shell.Tree.Evals is
       Tmp    : Token_List;
       Pool   : constant List_Pool := Token_List_Pool (T);
    begin
-      Set_Var_Value (S.all, "LINENO", Line (N.Pos));
+      Set_Var_Value (S, "LINENO", Line (N.Pos));
       if N.Kind = CMD_NODE then
          Tmp := N.Cmd_Assign_List;
       else
@@ -241,12 +246,12 @@ package body Posix_Shell.Tree.Evals is
             for I in Assign'First .. Assign'Last loop
                if Assign (I) = '=' then
                   if I = Assign'Last then
-                     Set_Var_Value (S.all, Assign (Assign'First .. I - 1),
+                     Set_Var_Value (S, Assign (Assign'First .. I - 1),
                                     "",
                                     Do_Export);
                   else
                      Set_Var_Value
-                       (S.all, Assign (Assign'First .. I - 1),
+                       (S, Assign (Assign'First .. I - 1),
                         Eval_String_Unsplit
                           (S, Assign (I + 1 .. Assign'Last)),
                            Do_Export);
@@ -263,18 +268,23 @@ package body Posix_Shell.Tree.Evals is
    -- Eval_Brace --
    ----------------
 
-   procedure Eval_Brace (S : Shell_State_Access; T : Shell_Tree; N : Node) is
-      Current : constant Redirection_States := Get_Redirections (S.all);
+   procedure Eval_Brace (S : in out Shell_State; T : Shell_Tree; N : Node) is
+      Current : constant Shell_Descriptors := Get_Redirections (S);
+
    begin
-      Set_Redirections (S, N.Redirections);
+      if not Set_Redirections (S, N.Redirections) then
+         Save_Last_Exit_Status (S, 1);
+         return;
+      end if;
+
       Eval (S, T, N.Brace_Code);
-      Restore_Redirections (S.all, Current);
+      Restore_Redirections (S, Current);
    exception
       when E : Continue_Exception | Break_Exception =>
-         Restore_Redirections (S.all, Current);
+         Restore_Redirections (S, Current);
          Reraise_Occurrence (E);
       when Shell_Return_Exception =>
-         Restore_Redirections (S.all, Current);
+         Restore_Redirections (S, Current);
    end Eval_Brace;
 
    ---------------
@@ -282,7 +292,7 @@ package body Posix_Shell.Tree.Evals is
    ---------------
 
    procedure Eval_Case
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       T : Shell_Tree;
       N : Node)
    is
@@ -290,13 +300,17 @@ package body Posix_Shell.Tree.Evals is
         Eval_String_Unsplit (S, Get_Token_String (N.Case_Word));
       Current_Case   : Node := Get_Node (T, N.First_Case);
       Pattern_Found  : Boolean := False;
-      Current_Redirs : constant Redirection_States :=
-        Get_Redirections (S.all);
+      Current_Redirs : constant Shell_Descriptors :=
+        Get_Redirections (S);
 
       Cursor : Token_List;
       Pool   : constant List_Pool := Token_List_Pool (T);
    begin
-      Set_Redirections (S, N.Redirections);
+      if not Set_Redirections (S, N.Redirections) then
+         Save_Last_Exit_Status (S, 1);
+         return;
+      end if;
+
       while Current_Case.Kind /= NOP_NODE loop
          Cursor := Current_Case.Pattern_List;
 
@@ -311,7 +325,7 @@ package body Posix_Shell.Tree.Evals is
                   if Current_Case.Match_Code /= Null_Node then
                      Eval (S, T, Current_Case.Match_Code);
                   else
-                     Save_Last_Exit_Status (S.all, 0);
+                     Save_Last_Exit_Status (S, 0);
                   end if;
                   Pattern_Found := True;
                   exit;
@@ -328,13 +342,13 @@ package body Posix_Shell.Tree.Evals is
       --  In case no pattern has been matched and so no command executed we
       --  need to ensure that the exit status of the case construct is 0.
       if not Pattern_Found then
-         Save_Last_Exit_Status (S.all, 0);
+         Save_Last_Exit_Status (S, 0);
       end if;
 
-      Restore_Redirections (S.all, Current_Redirs);
+      Restore_Redirections (S, Current_Redirs);
    exception
       when E :  Break_Exception | Continue_Exception =>
-         Restore_Redirections (S.all, Current_Redirs);
+         Restore_Redirections (S, Current_Redirs);
          Reraise_Occurrence (E);
    end Eval_Case;
 
@@ -342,22 +356,28 @@ package body Posix_Shell.Tree.Evals is
    -- Eval_Cmd --
    --------------
 
-   procedure Eval_Cmd (S            : Shell_State_Access;
+   procedure Eval_Cmd (S            : in out Shell_State;
                        Command      : String;
                        Arguments    : String_List;
-                       Redirections : Redirection_Op_Stack)
+                       Redirections : Redirection_Stack)
    is
       Exit_Status : Integer := 0;
-      Env : String_List := Get_Environment (S.all);
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+      Env : String_List := Get_Environment (S);
+      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
    begin
       if Command = "exec" then
-         Set_Redirections (S, Redirections, Free_Previous => True);
+         if not Set_Redirections (S, Redirections, Free_Previous => True) then
+            Save_Last_Exit_Status (S, 1);
+            return;
+         end if;
          Exit_Status := Run
            (S, Command, Arguments, Env);
       else
-         Set_Redirections (S, Redirections);
-         --  Ada.Text_IO.Put_Line (Get_Fd (S.all, 1)'Img);
+         if not Set_Redirections (S, Redirections) then
+            Save_Last_Exit_Status (S, 1);
+            return;
+         end if;
+
          begin
             --  Export_Environment;
             Exit_Status := Run
@@ -365,10 +385,10 @@ package body Posix_Shell.Tree.Evals is
 
          exception
             when others =>
-               Restore_Redirections (S.all, Current_Redirs);
+               Restore_Redirections (S, Current_Redirs);
                raise;
          end;
-         Restore_Redirections (S.all, Current_Redirs);
+         Restore_Redirections (S, Current_Redirs);
 
       end if;
 
@@ -376,7 +396,7 @@ package body Posix_Shell.Tree.Evals is
          Free (Env (J));
       end loop;
 
-      Save_Last_Exit_Status (S.all, Exit_Status);
+      Save_Last_Exit_Status (S, Exit_Status);
    end Eval_Cmd;
 
    --------------
@@ -384,7 +404,7 @@ package body Posix_Shell.Tree.Evals is
    --------------
 
    procedure Eval_Cmd
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       T : Shell_Tree;
       N : Node)
    is
@@ -408,54 +428,76 @@ package body Posix_Shell.Tree.Evals is
 
             Is_Special_Builtin : Boolean := False;
 
-            New_State : Shell_State_Access := S;
+            New_State : Shell_State;
          begin
-            Set_Var_Value (S.all, "LINENO", Line (N.Pos));
+            Set_Var_Value (S, "LINENO", Line (N.Pos));
 
             --  Is the command a special builtin ?
             if Match (Special_Builtin_Matcher, Cmd) then
                Is_Special_Builtin := True;
             end if;
 
-            if not Is_Empty (Pool, N.Cmd_Assign_List) then
+            if not Is_Empty (Pool, N.Cmd_Assign_List) and then
+              not Is_Special_Builtin
+            then
+
+               New_State := Enter_Scope (S);
+               Eval_Assign (New_State, T, N, True);
+
+               if Is_Xtrace_Enabled (S) then
+                  Ada.Text_IO.Put_Line
+                    (Ada.Text_IO.Standard_Error,
+                  "(pos " & Image (N.Pos) & ")");
+               end if;
+
+               if Result_String'Length > 0 then
+                  Eval_Cmd (S => New_State,
+                            Command => Cmd,
+                            Arguments => Args,
+                            Redirections => N.Redirections);
+                  for J in Result_String'Range loop
+                     Free (Result_String (J));
+                  end loop;
+               end if;
+
+               if Is_Xtrace_Enabled (S) then
+                  Ada.Text_IO.Put_Line
+                    (Ada.Text_IO.Standard_Error,
+                  "(return " & Get_Last_Exit_Status (New_State)'Img & ")");
+               end if;
+               Leave_Scope (New_State, S);
+            else
                --  As stated by posix shell standard (2.14 Special Built-In
                --  Utilities). Variable assignments specified with special
                --  built-in utilities remain in effect after the built-in
                --  completes. Note that most of the shell such as bash do not
                --  respect this requirement.
-               if not Is_Special_Builtin then
-                  New_State := new Shell_State;
-                  New_State.all := Enter_Scope (S.all);
+
+               if not Is_Empty (Pool, N.Cmd_Assign_List) then
+                  Eval_Assign (S, T, N, True);
                end if;
-               Eval_Assign (New_State, T, N, True);
-            end if;
 
-            if Is_Xtrace_Enabled (S.all) then
-               Ada.Text_IO.Put_Line
-                 (Ada.Text_IO.Standard_Error,
-                  "(pos " & Image (N.Pos) & ")");
-            end if;
+               if Is_Xtrace_Enabled (S) then
+                  Ada.Text_IO.Put_Line
+                    (Ada.Text_IO.Standard_Error,
+                     "(pos " & Image (N.Pos) & ")");
+               end if;
 
-            if Result_String'Length > 0 then
-               Eval_Cmd (S => New_State,
-                         Command => Cmd,
-                         Arguments => Args,
-                         Redirections => N.Redirections);
-               for J in Result_String'Range loop
-                  Free (Result_String (J));
-               end loop;
-            end if;
+               if Result_String'Length > 0 then
+                  Eval_Cmd (S            => S,
+                            Command      => Cmd,
+                            Arguments    => Args,
+                            Redirections => N.Redirections);
+                  for J in Result_String'Range loop
+                     Free (Result_String (J));
+                  end loop;
+               end if;
 
-            if Is_Xtrace_Enabled (S.all) then
-               Ada.Text_IO.Put_Line
-                 (Ada.Text_IO.Standard_Error,
-                  "(return " & Get_Last_Exit_Status (New_State.all)'Img & ")");
-            end if;
-
-            if not Is_Empty (Pool, N.Cmd_Assign_List) and then
-              not Is_Special_Builtin
-            then
-               Leave_Scope (New_State.all, S.all, True);
+               if Is_Xtrace_Enabled (S) then
+                  Ada.Text_IO.Put_Line
+                    (Ada.Text_IO.Standard_Error,
+                     "(return " & Get_Last_Exit_Status (New_State)'Img & ")");
+               end if;
             end if;
          end;
       end;
@@ -467,14 +509,14 @@ package body Posix_Shell.Tree.Evals is
             --  return 1 as the exit code.  The error message has already
             --  been printed earlier (during the variable substitution),
             --  so no need to report anything further at this point.
-            Save_Last_Exit_Status (S.all, 1);
+            Save_Last_Exit_Status (S, 1);
    end Eval_Cmd;
 
    --------------
    -- Eval_For --
    --------------
 
-   procedure Eval_For (S : Shell_State_Access; T : Shell_Tree; N : Node) is
+   procedure Eval_For (S : in out Shell_State; T : Shell_Tree; N : Node) is
       Loop_Var        : constant String := Get_Token_String (N.Loop_Var);
       Loop_Var_Values : String_List :=
         (if not N.Loop_Default_Values then
@@ -482,16 +524,19 @@ package body Posix_Shell.Tree.Evals is
          Eval_String (S, """$@"""));
       Is_Valid        : Boolean;
       Break_Number    : Integer;
-      Current_Redirs  : constant Redirection_States :=
-        Get_Redirections (S.all);
-      My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S.all) + 1;
+      Current_Redirs  : constant Shell_Descriptors :=
+        Get_Redirections (S);
+      My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S) + 1;
    begin
-      Set_Redirections (S, N.Redirections);
-      Set_Loop_Scope_Level (S.all, My_Nested_Level);
+      if not Set_Redirections (S, N.Redirections) then
+         Save_Last_Exit_Status (S, 1);
+         return;
+      end if;
+      Set_Loop_Scope_Level (S, My_Nested_Level);
       for I in Loop_Var_Values'Range loop
 
          begin
-            Set_Var_Value (S.all, Loop_Var, Loop_Var_Values (I).all);
+            Set_Var_Value (S, Loop_Var, Loop_Var_Values (I).all);
             Eval (S, T, N.Loop_Code);
          exception
             when E : Continue_Exception =>
@@ -499,8 +544,8 @@ package body Posix_Shell.Tree.Evals is
                if Break_Number = My_Nested_Level then
                   null;
                else
-                  Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
-                  Restore_Redirections (S.all, Current_Redirs);
+                  Set_Loop_Scope_Level (S, My_Nested_Level - 1);
+                  Restore_Redirections (S, Current_Redirs);
                   raise Continue_Exception with To_String (Break_Number);
                end if;
             when E : Break_Exception =>
@@ -508,8 +553,8 @@ package body Posix_Shell.Tree.Evals is
                if Break_Number = My_Nested_Level then
                   exit;
                else
-                  Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
-                  Restore_Redirections (S.all, Current_Redirs);
+                  Set_Loop_Scope_Level (S, My_Nested_Level - 1);
+                  Restore_Redirections (S, Current_Redirs);
                   raise Break_Exception with To_String (Break_Number);
                end if;
          end;
@@ -518,8 +563,8 @@ package body Posix_Shell.Tree.Evals is
       for Index in Loop_Var_Values'Range loop
          Free (Loop_Var_Values (Index));
       end loop;
-      Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
-      Restore_Redirections (S.all, Current_Redirs);
+      Set_Loop_Scope_Level (S, My_Nested_Level - 1);
+      Restore_Redirections (S, Current_Redirs);
    end Eval_For;
 
    -------------------
@@ -527,37 +572,41 @@ package body Posix_Shell.Tree.Evals is
    -------------------
 
    procedure Eval_Function
-     (S : Shell_State_Access; N : Node)
+     (S : in out Shell_State; N : Node)
    is
    begin
-      Register_Function (Get_Token_String (N.Function_Name),
+      Register_Function (S,
+                         Get_Token_String (N.Function_Name),
                          N.Function_Code.all);
-      Save_Last_Exit_Status (S.all, 0);
+      Save_Last_Exit_Status (S, 0);
    end Eval_Function;
 
    -------------
    -- Eval_If --
    -------------
 
-   procedure Eval_If (S : Shell_State_Access; T : Shell_Tree; N : Node) is
+   procedure Eval_If (S : in out Shell_State; T : Shell_Tree; N : Node) is
       Status      : Integer := 0;
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
    begin
-      Set_Redirections (S, N.Redirections);
+      if not Set_Redirections (S, N.Redirections) then
+         Save_Last_Exit_Status (S, 1);
+         return;
+      end if;
       Eval (S, T, N.Cond);
-      if Get_Last_Exit_Status (S.all) = 0 then
+      if Get_Last_Exit_Status (S) = 0 then
          Eval (S, T, N.True_Code);
-         Status := Get_Last_Exit_Status (S.all);
+         Status := Get_Last_Exit_Status (S);
       elsif N.False_Code /= Null_Node then
          Eval (S, T, N.False_Code);
-         Status := Get_Last_Exit_Status (S.all);
+         Status := Get_Last_Exit_Status (S);
       end if;
 
-      Save_Last_Exit_Status (S.all, Status);
-      Restore_Redirections (S.all, Current_Redirs);
+      Save_Last_Exit_Status (S, Status);
+      Restore_Redirections (S, Current_Redirs);
    exception
       when E :  Break_Exception | Continue_Exception =>
-         Restore_Redirections (S.all, Current_Redirs);
+         Restore_Redirections (S, Current_Redirs);
          Reraise_Occurrence (E);
    end Eval_If;
 
@@ -565,7 +614,7 @@ package body Posix_Shell.Tree.Evals is
    -- Eval_List --
    ---------------
 
-   procedure Eval_List (S : Shell_State_Access; T : Shell_Tree; N : Node) is
+   procedure Eval_List (S : in out Shell_State; T : Shell_Tree; N : Node) is
    begin
       for Index in N.List_Childs'Range loop
          Eval (S, T, N.List_Childs (Index));
@@ -576,20 +625,23 @@ package body Posix_Shell.Tree.Evals is
    -- Eval_Null_Cmd --
    -------------------
 
-   procedure Eval_Null_Cmd (S : Shell_State_Access; N : Node)
+   procedure Eval_Null_Cmd (S : in out Shell_State; N : Node)
    is
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
    begin
-      Set_Redirections (S, N.Redirections);
-      Restore_Redirections (S.all, Current_Redirs);
-      Save_Last_Exit_Status (S.all, 0);
+      if not Set_Redirections (S, N.Redirections) then
+         Save_Last_Exit_Status (S, 1);
+         return;
+      end if;
+      Restore_Redirections (S, Current_Redirs);
+      Save_Last_Exit_Status (S, 0);
    end Eval_Null_Cmd;
 
    ---------------
    -- Eval_Pipe --
    ---------------
 
-   procedure Eval_Pipe (S : Shell_State_Access; T : Shell_Tree; N : Node) is
+   procedure Eval_Pipe (S : in out Shell_State; T : Shell_Tree; N : Node) is
       Status : Integer;
       pragma Warnings (Off, Status);
 
@@ -598,9 +650,9 @@ package body Posix_Shell.Tree.Evals is
       end Eval_Task;
 
       task body Eval_Task is
-         S_Copy : constant Shell_State_Access := new Shell_State;
+         S_Copy   : Shell_State;
          Cmd_Node : Node_Id;
-         Result : File_Descriptor;
+         Result   : File_Descriptor;
          My_Input : File_Descriptor := -1;
 
       begin
@@ -609,12 +661,12 @@ package body Posix_Shell.Tree.Evals is
             --  of closing the writable side of the pipe and the main task the
             --  reading part
             GNAT.Task_Lock.Lock;
-            S_Copy.all := Enter_Scope (S.all);
-            Set_Pipe_Out (S_Copy.all);
-            Result := Get_Fd (S_Copy.all, -2);
+            S_Copy := Enter_Scope (S);
+            Set_Pipe_Out (S_Copy);
+            Result := Get_Fd (S_Copy, -2);
             if Pipe_Input /= -1 then
                My_Input := Pipe_Input;
-               Set_Pipe_In (S_Copy.all, Pipe_Input);
+               Set_Pipe_In (S_Copy, Pipe_Input);
             end if;
 
             --  Pass to the main task the fd to the readble side of the pipe.
@@ -623,12 +675,17 @@ package body Posix_Shell.Tree.Evals is
             GNAT.Task_Lock.Unlock;
          end Start;
 
-         Eval (S_Copy, T, Cmd_Node);
+         begin
+            Eval (S_Copy, T, Cmd_Node);
+         exception
+            when others =>
+               Ada.Text_IO.Put_Line ("got exception");
+         end;
          --  Ada.Text_IO.Put_Line ("task ends");
          --  Close the write side (will unblock main task which is doing a read
          --  of the other side of the pipe).
          GNAT.Task_Lock.Lock;
-         Close (S_Copy.all, 1);
+         Close (S_Copy, 1);
          if My_Input /= -1 then
             Close (My_Input);
          end if;
@@ -636,7 +693,7 @@ package body Posix_Shell.Tree.Evals is
 
          --  accept Get_Exit_Status do
          --  Destroy scope and ensure exit_status is correctly set.
-         --   Leave_Scope (S_Copy.all, S.all);
+         --   Leave_Scope (S_Copy, S);
          --  end Get_Exit_Status
       end Eval_Task;
 
@@ -650,24 +707,24 @@ package body Posix_Shell.Tree.Evals is
       end loop;
 
       declare
-         S_Copy : constant Shell_State_Access := new Shell_State;
+         S_Copy : Shell_State;
       begin
          GNAT.Task_Lock.Lock;
-         S_Copy.all := Enter_Scope (S.all);
-         Set_Pipe_In (S_Copy.all, Input_Fd);
+         S_Copy := Enter_Scope (S);
+         Set_Pipe_In (S_Copy, Input_Fd);
          GNAT.Task_Lock.Unlock;
          Eval (S_Copy, T, N.Pipe_Childs (N.Pipe_Childs'Last));
          GNAT.Task_Lock.Lock;
-         Close_Pipe (S_Copy.all);
-         Leave_Scope (S_Copy.all, S.all);
+         Close_Pipe (S_Copy);
+         Leave_Scope (S_Copy, S);
          GNAT.Task_Lock.Unlock;
       end;
 
       if N.Pipe_Negation then
-         if Get_Last_Exit_Status (S.all) /= 0 then
-            Save_Last_Exit_Status (S.all, 0);
+         if Get_Last_Exit_Status (S) /= 0 then
+            Save_Last_Exit_Status (S, 0);
          else
-            Save_Last_Exit_Status (S.all, 1);
+            Save_Last_Exit_Status (S, 1);
          end if;
 
       end if;
@@ -678,22 +735,24 @@ package body Posix_Shell.Tree.Evals is
    -------------------
 
    procedure Eval_Subshell
-     (S : Shell_State_Access; T : Shell_Tree; N : Node)
+     (S : in out Shell_State; T : Shell_Tree; N : Node)
    is
-      New_State : constant Shell_State_Access :=
-        new Shell_State'(Enter_Scope (S.all));
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+      New_State : Shell_State := Enter_Scope (S);
+      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
    begin
-      Set_Redirections (New_State, N.Redirections);
+      if not Set_Redirections (New_State, N.Redirections) then
+         Save_Last_Exit_Status (S, 1);
+         return;
+      end if;
       begin
          Eval (New_State, T, N.Subshell_Code);
       exception
          when Shell_Return_Exception =>
             --  A return outside of a function or a sourced script
             --  is not legitimate.
-            Error (New_State.all, "return: can only `return'"
+            Error (New_State, "return: can only `return'"
                    & " from a function or sourced script");
-            Save_Last_Exit_Status (New_State.all, 1);
+            Save_Last_Exit_Status (New_State, 1);
          when Shell_Exit_Exception =>
             null;
       end;
@@ -701,7 +760,7 @@ package body Posix_Shell.Tree.Evals is
       --  Do we have a trap registered ?
       declare
          Exit_Trap_Action : constant String_Access :=
-           Get_Trap_Action (New_State.all, 0);
+           Get_Trap_Action (New_State, 0);
          Trap_Status : Integer;
          Saved_Status : Integer;
          pragma Warnings (Off, Trap_Status);
@@ -709,25 +768,25 @@ package body Posix_Shell.Tree.Evals is
          if Exit_Trap_Action /= null and then
            Exit_Trap_Action.all'Length > 0
          then
-            Saved_Status := Get_Last_Exit_Status (New_State.all);
+            Saved_Status := Get_Last_Exit_Status (New_State);
             Trap_Status := Execute_Builtin (New_State,
                                            "eval",
                                             (1 => Exit_Trap_Action));
-            Save_Last_Exit_Status (New_State.all, Saved_Status);
+            Save_Last_Exit_Status (New_State, Saved_Status);
          end if;
       exception
          when Shell_Return_Exception =>
             --  A return outside of a function or a sourced script
             --  is not legitimate.
-            Error (New_State.all, "return: can only `return'"
+            Error (New_State, "return: can only `return'"
                    & " from a function or sourced script");
-            Save_Last_Exit_Status (New_State.all, 1);
+            Save_Last_Exit_Status (New_State, 1);
          when Shell_Exit_Exception =>
             null;
       end;
 
-      Restore_Redirections (New_State.all, Current_Redirs);
-      Leave_Scope (New_State.all, S.all);
+      Restore_Redirections (New_State, Current_Redirs);
+      Leave_Scope (New_State, S);
    end Eval_Subshell;
 
    ----------------------
@@ -735,28 +794,31 @@ package body Posix_Shell.Tree.Evals is
    ----------------------
 
    procedure Eval_Until_While
-     (S : Shell_State_Access; T : Shell_Tree; N : Node; Is_Until : Boolean)
+     (S : in out Shell_State; T : Shell_Tree; N : Node; Is_Until : Boolean)
    is
       Is_Valid : Boolean;
       Break_Number : Integer;
-      Current_Redirs : constant Redirection_States := Get_Redirections (S.all);
+      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
       Result : Integer := 0;
-      My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S.all) + 1;
+      My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S) + 1;
    begin
-      Set_Redirections (S, N.Redirections);
-      Set_Loop_Scope_Level (S.all, My_Nested_Level);
+      if not Set_Redirections (S, N.Redirections) then
+         Save_Last_Exit_Status (S, 1);
+         return;
+      end if;
+      Set_Loop_Scope_Level (S, My_Nested_Level);
       loop
          begin
             if not Is_Until then
                Eval (S, T, N.While_Cond);
-               exit when Get_Last_Exit_Status (S.all) /= 0;
+               exit when Get_Last_Exit_Status (S) /= 0;
                Eval (S, T, N.While_Code);
-               Result := Get_Last_Exit_Status (S.all);
+               Result := Get_Last_Exit_Status (S);
             else
                Eval (S, T, N.Until_Code);
-               Result := Get_Last_Exit_Status (S.all);
+               Result := Get_Last_Exit_Status (S);
                Eval (S, T, N.Until_Cond);
-               exit when Get_Last_Exit_Status (S.all) = 0;
+               exit when Get_Last_Exit_Status (S) = 0;
             end if;
          exception
             when E : Continue_Exception =>
@@ -764,25 +826,25 @@ package body Posix_Shell.Tree.Evals is
                if Break_Number = My_Nested_Level then
                   null;
                else
-                  Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
-                  Restore_Redirections (S.all, Current_Redirs);
+                  Set_Loop_Scope_Level (S, My_Nested_Level - 1);
+                  Restore_Redirections (S, Current_Redirs);
                   raise Continue_Exception with To_String (Break_Number);
                end if;
             when E : Break_Exception =>
                To_Integer (Exception_Message (E), Break_Number, Is_Valid);
                if Break_Number = My_Nested_Level then
-                  Result := Get_Last_Exit_Status (S.all);
+                  Result := Get_Last_Exit_Status (S);
                   exit;
                else
-                  Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
-                  Restore_Redirections (S.all, Current_Redirs);
+                  Set_Loop_Scope_Level (S, My_Nested_Level - 1);
+                  Restore_Redirections (S, Current_Redirs);
                   raise Break_Exception with To_String (Break_Number);
                end if;
          end;
       end loop;
-      Save_Last_Exit_Status (S.all, Result);
-      Set_Loop_Scope_Level (S.all, My_Nested_Level - 1);
-      Restore_Redirections (S.all, Current_Redirs);
+      Save_Last_Exit_Status (S, Result);
+      Set_Loop_Scope_Level (S, My_Nested_Level - 1);
+      Restore_Redirections (S, Current_Redirs);
    end Eval_Until_While;
 
 end Posix_Shell.Tree.Evals;

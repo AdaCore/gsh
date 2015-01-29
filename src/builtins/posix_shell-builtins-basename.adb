@@ -33,12 +33,12 @@ package body Posix_Shell.Builtins.Basename is
    ----------------------
 
    function Basename_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       First : Integer := 0;
    begin
       if Args'Length = 0 then
-         Error (S.all, "basename: need at least one operand");
+         Error (S, "basename: need at least one operand");
          return 1;
       end if;
 
@@ -49,17 +49,17 @@ package body Posix_Shell.Builtins.Basename is
       end if;
 
       if Args'Last - First + 1 > 2 then
-         Error (S.all, "basename: does not accept more than two operands");
+         Error (S, "basename: does not accept more than two operands");
          return 1;
       end if;
 
       if Args (First).all = "" then
-         Put (S.all, 1, "" & ASCII.LF);
+         Put (S, 1, "" & ASCII.LF);
          return 0;
       end if;
 
       if Args (First).all = "//" or else Args (First).all = "\\" then
-         Put (S.all, 1, Args (First).all & ASCII.LF);
+         Put (S, 1, Args (First).all & ASCII.LF);
          return 0;
       end if;
 
@@ -72,7 +72,7 @@ package body Posix_Shell.Builtins.Basename is
             Filename_End := Filename_End - 1;
             if Filename_End < Filename_Start then
                --  Only slashes and backslashes in the path so return a /
-               Put (S.all, 1, "/" & ASCII.LF);
+               Put (S, 1, "/" & ASCII.LF);
                return 0;
             end if;
          end loop;
@@ -91,7 +91,7 @@ package body Posix_Shell.Builtins.Basename is
                if Filename_End - Filename_Start + 1 >= Ext'Length and then
                  Path (Filename_End - Ext'Length + 1 .. Filename_End) = Ext
                then
-                  Put (S.all, 1,
+                  Put (S, 1,
                        Path (Filename_Start .. Filename_End - Ext'Length)
                        & ASCII.LF);
                   return 0;
@@ -99,7 +99,7 @@ package body Posix_Shell.Builtins.Basename is
             end;
          end if;
 
-         Put (S.all, 1, Path (Filename_Start .. Filename_End) & ASCII.LF);
+         Put (S, 1, Path (Filename_Start .. Filename_End) & ASCII.LF);
          return 0;
       end;
    end Basename_Builtin;

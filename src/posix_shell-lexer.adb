@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -69,6 +69,19 @@ package body Posix_Shell.Lexer is
       Deallocate (B.B);
    end Deallocate;
 
+   -------------
+   -- Element --
+   -------------
+
+   function Element
+     (RS    : Redirection_Stack;
+      Index : Positive)
+      return Redirection
+   is
+   begin
+      return RS.Ops (Index);
+   end Element;
+
    ------------------
    -- Expect_Token --
    ------------------
@@ -126,6 +139,15 @@ package body Posix_Shell.Lexer is
    begin
       return T.First;
    end Get_Token_Pos;
+
+   ------------
+   -- Length --
+   ------------
+
+   function Length (RS : Redirection_Stack) return Natural is
+   begin
+      return RS.Top;
+   end Length;
 
    ------------------
    -- Lexer_Error --
@@ -188,6 +210,20 @@ package body Posix_Shell.Lexer is
       Result.Valid_Cache := False;
       return Result;
    end New_Buffer_From_File;
+
+   ----------
+   -- Push --
+   ----------
+
+   procedure Push
+     (RS : in out Redirection_Stack;
+      R  : Redirection)
+   is
+   begin
+      --  ??? missing overflow check ?
+      RS.Top := RS.Top + 1;
+      RS.Ops (RS.Top) := R;
+   end Push;
 
    --------------
    -- Pushback --
@@ -535,6 +571,9 @@ package body Posix_Shell.Lexer is
                   CC := Get_Char (B);
                when '`' =>
                   exit;
+               when ASCII.EOT =>
+                  Lexer_Error
+                    (B, "unexpected EOF while looking for matching '`'");
                when others =>
                   null;
             end case;
@@ -553,10 +592,7 @@ package body Posix_Shell.Lexer is
 
          CC := Get_Char (B);
 
-         if CC /= '(' then
-            Unget_Char (B);
-            return;
-         end if;
+         pragma Assert (CC = '(');
 
          loop
             CC := Get_Char (B);
@@ -586,20 +622,16 @@ package body Posix_Shell.Lexer is
       -------------------------------
 
       procedure Read_Arithmetic_Expansion is
-         Local_CC           : Character;
          Opened_Paranthesis : Natural := 2;
          Previous_Was_Par   : Boolean := False;
       begin
          pragma Assert (CC = '$');
 
-         Local_CC := Get_Char (B);
          CC := Get_Char (B);
+         pragma Assert (CC = '(');
 
-         if Local_CC /= '(' or else CC /= '(' then
-            Unget_Char (B);
-            Unget_Char (B);
-            return;
-         end if;
+         CC := Get_Char (B);
+         pragma Assert (CC = '(');
 
          loop
             CC := Get_Char (B);
@@ -1126,7 +1158,7 @@ package body Posix_Shell.Lexer is
          when T_DGREAT      => return ">>";
          when T_CLOBBER     => return ">|";
          when T_GREATAND    => return ">&";
-         when T_DLESSDASH   => return ">>-";
+         when T_DLESSDASH   => return "<<-";
          when T_LESS        => return "<";
          when T_GREAT       => return ">";
          when T_DLESS       => return "<<";

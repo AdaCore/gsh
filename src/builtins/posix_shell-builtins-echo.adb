@@ -34,7 +34,7 @@ package body Posix_Shell.Builtins.Echo is
    ------------------
 
    function Echo_Builtin
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Args : String_List)
       return Integer
    is
@@ -111,30 +111,30 @@ package body Posix_Shell.Builtins.Echo is
                   else
                      In_Options := False;
                      if Enable_Backslash then
-                        Put (S.all, 1, Transform_Backslashes (Args (I).all));
+                        Put (S, 1, Transform_Backslashes (Args (I).all));
                      else
-                        Put (S.all, 1, Args (I).all);
+                        Put (S, 1, Args (I).all);
                      end if;
                      if I < Args'Last then
-                        Put (S.all, 1, " ");
+                        Put (S, 1, " ");
                      end if;
                   end if;
                when others =>
                   In_Options := False;
                   if Enable_Backslash then
-                     Put (S.all, 1, Transform_Backslashes (Args (I).all));
+                     Put (S, 1, Transform_Backslashes (Args (I).all));
                   else
-                     Put (S.all, 1, Args (I).all);
+                     Put (S, 1, Args (I).all);
                   end if;
                   if I < Args'Last then
-                     Put (S.all, 1, " ");
+                     Put (S, 1, " ");
                   end if;
             end case;
          end if;
       end loop;
 
       if Enable_Newline then
-         New_Line (S.all, 1);
+         New_Line (S, 1);
       end if;
       return 0;
    end Echo_Builtin;
@@ -144,7 +144,7 @@ package body Posix_Shell.Builtins.Echo is
    -------------------
 
    function REcho_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       function Replace_LF (S : String) return String;
 
@@ -166,13 +166,13 @@ package body Posix_Shell.Builtins.Echo is
       end Replace_LF;
    begin
       for I in Args'Range loop
-         Put (S.all, 1, "argv[" & To_String (I - Args'First + 1) & "] = <" &
+         Put (S, 1, "argv[" & To_String (I - Args'First + 1) & "] = <" &
               Replace_LF (Args (I).all) & ">");
          if I < Args'Last then
-            New_Line (S.all, 1);
+            New_Line (S, 1);
          end if;
       end loop;
-      New_Line (S.all, 1);
+      New_Line (S, 1);
       return 0;
    end REcho_Builtin;
 

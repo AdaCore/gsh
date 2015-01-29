@@ -1,0 +1,38 @@
+--help
+usage: uname [OPTIONS]
+
+no option
+CYGWIN_NT-6.0-WOW64
+
+option -a
+CYGWIN_NT-6.0-WOW64 machine 1.7.0(0.212/5/3) 2009-09-11 01:25 i686 Cygwin
+
+option -m
+i686
+
+option -n
+machine
+
+option -r
+1.7.0(0.212/5/3)
+
+option -s
+'CYGWIN_NT-6.0-WOW64' is equiv to 'uname': 'CYGWIN_NT-6.0-WOW64' (true):  0
+
+option -v
+2009-09-11 01:25
+
+options -mnrsvo
+'CYGWIN_NT-6.0-WOW64 machine 1.7.0(0.212/5/3) 2009-09-11 01:25 i686 Cygwin' is equiv to 'uname -a': 'CYGWIN_NT-6.0-WOW64 machine 1.7.0(0.212/5/3) 2009-09-11 01:25 i686 Cygwin' (true):  0
+
+option -p
+unknown
+
+option -i
+unknown
+
+option -o
+Cygwin
+
+option -moi -p
+i686 unknown unknown Cygwin

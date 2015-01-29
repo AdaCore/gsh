@@ -83,7 +83,7 @@ package body Posix_Shell.Subst.Arith is
    --  Eval_Expr  --
    -----------------
 
-   function Eval_Expr (S            : Shell_State_Access;
+   function Eval_Expr (S            : in out Shell_State;
                        Args         : String_List;
                        Is_Arith_Exp : Boolean := False) return String
    is
@@ -276,7 +276,7 @@ package body Posix_Shell.Subst.Arith is
 
                   declare
                      Var_Value           : constant String :=
-                                             Get_Var_Value (S.all, Str);
+                                             Get_Var_Value (S, Str);
                      use Dyn_String_Lists;
                      Tokenized_List      : Dyn_String_List;
                      Previous_Was_Number : Boolean := False;
@@ -449,13 +449,13 @@ package body Posix_Shell.Subst.Arith is
 
                if Is_Arith_Exp then
                   if CT.Var_Name /= null then
-                     Error (S.all,
+                     Error (S,
                             "A valid arithmetic expression is expected as"
                             &  " value for the variable "
                             & CT.Var_Name.all
                             & ": " & CT.S.all & " is not valid");
                   else
-                     Error (S.all,
+                     Error (S,
                             "A valid arithmetic expression is expected : "
                             & CT.S.all & " is not valid");
                   end if;
@@ -472,7 +472,7 @@ package body Posix_Shell.Subst.Arith is
 
             when DOUBLE_PLUS | DOUBLE_MINUS =>
                if Is_Arith_Exp then
-                  Error (S.all,
+                  Error (S,
                          "++ and -- operations are currently not"
                          &  " supported in arith expr ");
                   raise Expr_Error;
@@ -558,13 +558,13 @@ package body Posix_Shell.Subst.Arith is
                               end if;
 
                               if Left.Var_Name = null then
-                                 Error (S.all,
+                                 Error (S,
                                         "affectation expects variable symbole:"
                                         & " '" & Left.S.all & "'");
                                  raise Expr_Error;
                               end if;
 
-                              Set_Var_Value (S.all,
+                              Set_Var_Value (S,
                                              Left.Var_Name.all,
                                              Right.S.all);
 
@@ -758,7 +758,7 @@ package body Posix_Shell.Subst.Arith is
                                     else
                                        if M (1) /= No_Match then
                                           Push_Result
-                                            (Left.S.all
+                                            (Left.S
                                                (M (1).First .. M (1).Last));
                                        else
                                           Push_Result ("");
@@ -808,7 +808,7 @@ package body Posix_Shell.Subst.Arith is
       end loop;
 
       if Opened_Par /= 0 then
-         Error (S.all,
+         Error (S,
                 "')' expected");
          raise Expr_Error;
       else

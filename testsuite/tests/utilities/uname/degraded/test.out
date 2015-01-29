@@ -1,0 +1,8 @@
+unknown option -q:
+uname: unknown option
+
+unexpected argument:
+uname: extra operand
+
+unexpected operand introduce by '--':
+uname: unexpected operand

@@ -27,9 +27,9 @@
 package Posix_Shell.Builtins.Booleans is
 
    function True_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
    function False_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
 
 end Posix_Shell.Builtins.Booleans;

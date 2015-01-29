@@ -26,7 +26,7 @@ with Posix_Shell.Variables; use Posix_Shell.Variables;
 package Posix_Shell.Commands_Preprocessor is
 
    function Run
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Cmd : String; Args : String_List; Env : String_List)
       return Integer;
    --  Run the given command with the arguments provided, and

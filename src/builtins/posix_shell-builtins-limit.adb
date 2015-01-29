@@ -31,7 +31,7 @@ package body Posix_Shell.Builtins.Limit is
    -------------------
 
    function Limit_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Integer
    is
       pragma Unreferenced (Args);
       pragma Unreferenced (S);

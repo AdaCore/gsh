@@ -27,6 +27,13 @@
 package Posix_Shell.Builtins.Uname is
 
    function Uname_Builtin
-     (S : Shell_State_Access; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Integer;
+   --  Implement the "uname" builtin.
+   --  Deviation from Standard (to match Cygwin behaviour):
+   --    * added options:
+   --          -o (op system),
+   --          -p (processor),
+   --          -i (hardware platform)
+   --    * -a option is equivalent to -mnrsvo (instead of -mnrsv)
 
 end Posix_Shell.Builtins.Uname;

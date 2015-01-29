@@ -1,0 +1,13 @@
+create simple directories
+0
+create recursively a directory
+0
+check if error is raised
+cannot create <TEST_DIR>/a
+cannot create <TEST_DIR>/b
+1
+check that no error is raised with -p
+0
+check creation of directories with spaces
+0
+ b a/b/toto.txt

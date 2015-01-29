@@ -34,7 +34,7 @@ package body Posix_Shell.Builtins.Cat is
    -----------------
 
    function Cat_Builtin
-     (S : Shell_State_Access;
+     (S : in out Shell_State;
       Args : String_List)
       return Integer
    is
@@ -46,7 +46,7 @@ package body Posix_Shell.Builtins.Cat is
       --  If no argument is given to cat then we assume that stdin should be
       --  dump.
       if Args'Length = 0 then
-         Put (S.all, 1, Read (S.all, 0));
+         Put (S, 1, Read (S, 0));
          return 0;
       end if;
 
@@ -54,21 +54,21 @@ package body Posix_Shell.Builtins.Cat is
          --  '-' means that we need to dump stdin otherwise the argument is
          --  interpreted as a filename.
          if Args (J).all = "-" then
-            Put (S.all, 1, Read (S.all, 0));
+            Put (S, 1, Read (S, 0));
          else
             if GNAT.OS_Lib.Is_Directory (Args (J).all) then
-               Put (S.all, 2, "cat: " & Args (J).all &
+               Put (S, 2, "cat: " & Args (J).all &
                       ": Is a directory" & ASCII.LF);
             else
-               Fd := Open_Read (Resolve_Path (S.all, Args (J).all), Binary);
+               Fd := Open_Read (Resolve_Path (S, Args (J).all), Binary);
                if Fd < 0 then
-                  Put (S.all, 2, "cat: " & Args (J).all &
+                  Put (S, 2, "cat: " & Args (J).all &
                          ": No such file or directory" & ASCII.LF);
                else
                   loop
                      R := Read (Fd, Buffer'Address, Buffer'Last);
                      if R > 0 then
-                        Put (S.all, 1, Strip_CR (Buffer (1 .. R)));
+                        Put (S, 1, Strip_CR (Buffer (1 .. R)));
                      end if;
                      exit when R /= Buffer'Last;
                   end loop;

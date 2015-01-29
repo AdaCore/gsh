@@ -1,0 +1,27 @@
+no args: cp
+[error] cp: missing operand
+
+unknow option: cp -q a copy_a
+[error] cp: unknown option: -q
+
+missing target: cp -f -p a
+[error] cp: missing operand
+
+unknown source file: cp unknown new_file
+[error] cp: no such file or directory '<TEST_DIR>/unknown'
+
+unknown source file in position 2: cp a unknown dir_a
+[error] cp: no such file or directory '<TEST_DIR>/unknown'
+
+unknow target dir: cp a b unknown_dir
+[error] cp: no such directory '<TEST_DIR>/unknown_dir'
+
+copy dir with no Recursive option: cp dir_a new_dir_a
+[error] cp: '<TEST_DIR>/dir_a' is a directory (not copied)
+
+duplicate dir in non-existing dir : cp -r dir_a new_dir/nested_new_dir
+[error] cp: unable to create such directory '<TEST_DIR>/new_dir/nested_new_dir'
+
+copy and rename a dir with -r into a not yet existing dir: cp -r dir_a new_dir/copy_dir_a
+[error] cp: unable to create such directory '<TEST_DIR>/new_dir/copy_dir_a'
+
