@@ -121,7 +121,7 @@ package body Posix_Shell.Variables is
       Result.File_Expansion_Enabled := Previous.File_Expansion_Enabled;
 
       Result.Script_Name := Previous.Script_Name;
-
+      Result.Last_Exit_Status := Previous.Last_Exit_Status;
       return Result;
    end Enter_Scope;
 

@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -45,8 +45,14 @@ package Posix_Shell.Subst is
      (SS                 : in out Shell_State;
       S                  : String;
       Case_Pattern       : Boolean := False;
-      IOHere             : Boolean := False)
+      IOHere             : Boolean := False;
+      Has_Command_Subst  : out Boolean)
       return String;
+   --  Do substitution but do not split final result. Case_Pattern or IOHere
+   --  must be set to True if in a case pattern or in a IOHere respectively.
+   --  Has_Command_Subst is set to true if during the substitution a
+   --  command substitution was done (needed to compute assignment exit
+   --  status. See Eval_Assign).
 
    function Eval_String_List
      (SS : in out Shell_State;
