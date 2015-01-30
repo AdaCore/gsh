@@ -155,6 +155,8 @@ package body Posix_Shell.Variables.Output is
      return Boolean
    is
 
+      Has_Command_Subst : Boolean;
+
       Success    : Boolean := False;
       Old_States : constant Shell_Descriptors := S.Redirections;
       New_States : Shell_Descriptors;
@@ -249,7 +251,9 @@ package body Posix_Shell.Variables.Output is
       function Resolve_Filename (A : Token) return String
       is
          Eval_Result : constant String := Resolve_Path
-           (S, Eval_String_Unsplit (S, Get_Token_String (A)));
+           (S,
+            Eval_String_Unsplit (S, Get_Token_String (A),
+              Has_Command_Subst => Has_Command_Subst));
       begin
          if On_Windows and then Eval_Result = "/dev/null" then
             return "NUL";
@@ -297,7 +301,9 @@ package body Posix_Shell.Variables.Output is
 
                   declare
                      FD_Str : constant String :=
-                       Eval_String_Unsplit (S, Get_Token_String (C.Source));
+                       Eval_String_Unsplit
+                         (S, Get_Token_String (C.Source),
+                          Has_Command_Subst => Has_Command_Subst);
                      Source_FD : Integer := 0;
                      Is_Valid  : Boolean := False;
 
@@ -327,7 +333,8 @@ package body Posix_Shell.Variables.Output is
                      Result_String : aliased String :=
                        (if C.Expand
                         then Eval_String_Unsplit
-                          (S, Get_Token_String (C.Content), IOHere => True)
+                          (S, Get_Token_String (C.Content), IOHere => True,
+                           Has_Command_Subst => Has_Command_Subst)
                         else Get_Token_String (C.Content));
                   begin
                      Create_Temp_File (Fd, Name);

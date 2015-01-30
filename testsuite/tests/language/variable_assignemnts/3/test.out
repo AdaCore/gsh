@@ -1,0 +1,7 @@
+check value of 0 after assignment
+a: 10; b: 0; c: 0
+a: 11; b: 0; c: 0
+a: notset; b: 0; c: 0
+a: 00; b: 0; c: 0
+a: 1; b: 11; c: 0; d: 0
+a: 1; b: ; c: 1; d: 1

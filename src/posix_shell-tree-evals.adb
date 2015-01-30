@@ -229,6 +229,7 @@ package body Posix_Shell.Tree.Evals is
    is
       Tmp    : Token_List;
       Pool   : constant List_Pool := Token_List_Pool (T);
+      Force_Status : Boolean := True;
    begin
       Set_Var_Value (S, "LINENO", Line (N.Pos));
       if N.Kind = CMD_NODE then
@@ -242,6 +243,7 @@ package body Posix_Shell.Tree.Evals is
          declare
             Assign : constant String :=
               Get_Token_String (Get_Element (Pool, Tmp));
+            Has_Command_Subst : Boolean;
          begin
             for I in Assign'First .. Assign'Last loop
                if Assign (I) = '=' then
@@ -253,8 +255,12 @@ package body Posix_Shell.Tree.Evals is
                      Set_Var_Value
                        (S, Assign (Assign'First .. I - 1),
                         Eval_String_Unsplit
-                          (S, Assign (I + 1 .. Assign'Last)),
-                           Do_Export);
+                          (S, Assign (I + 1 .. Assign'Last),
+                           Has_Command_Subst => Has_Command_Subst),
+                        Do_Export);
+                     if Has_Command_Subst then
+                        Force_Status := False;
+                     end if;
                   end if;
                   exit;
                end if;
@@ -262,6 +268,13 @@ package body Posix_Shell.Tree.Evals is
          end;
          Tmp := Next (Pool, Tmp);
       end loop;
+
+      --  If during a substitution a command substitution is done then the exit
+      --  status is the status of the last command run. Otherwise the
+      --  status is set to 0.
+      if Force_Status then
+         Save_Last_Exit_Status (S, 0);
+      end if;
    end Eval_Assign;
 
    ----------------
@@ -296,8 +309,10 @@ package body Posix_Shell.Tree.Evals is
       T : Shell_Tree;
       N : Node)
    is
+      Has_Command_Subst : Boolean;
       Case_Value     : constant String :=
-        Eval_String_Unsplit (S, Get_Token_String (N.Case_Word));
+        Eval_String_Unsplit (S, Get_Token_String (N.Case_Word),
+                             Has_Command_Subst => Has_Command_Subst);
       Current_Case   : Node := Get_Node (T, N.First_Case);
       Pattern_Found  : Boolean := False;
       Current_Redirs : constant Shell_Descriptors :=
@@ -319,7 +334,8 @@ package body Posix_Shell.Tree.Evals is
             declare
                Str : constant String := Eval_String_Unsplit
                  (S, Get_Token_String (Get_Element (Pool, Cursor)),
-                  True);
+                  True,
+                  Has_Command_Subst => Has_Command_Subst);
             begin
                if Fnmatch (Str, Case_Value) then
                   if Current_Case.Match_Code /= Null_Node then

@@ -55,7 +55,8 @@ package body Posix_Shell.Subst is
       Case_Pattern    : Boolean := False;
       IOHere          : Boolean := False;
       Is_Splitable    : Boolean := True;
-      Is_Param_Subst  : Boolean := False)
+      Is_Param_Subst  : Boolean := False;
+      Has_Command_Subst : out Boolean)
       return Annotated_String;
 
    function Eval_String
@@ -117,8 +118,9 @@ package body Posix_Shell.Subst is
       use Dyn_String_Lists;
 
       Characters_Read : Integer := 0;
+      Has_Command_Subst : Boolean;
       Result          : Annotated_String := Eval_String_Aux
-        (SS, S, Characters_Read);
+        (SS, S, Characters_Read, Has_Command_Subst => Has_Command_Subst);
    begin
       return Split_String (SS, Result, Max_Split);
    end Eval_String;
@@ -653,7 +655,8 @@ package body Posix_Shell.Subst is
       Case_Pattern    : Boolean := False;
       IOHere          : Boolean := False;
       Is_Splitable    : Boolean := True;
-      Is_Param_Subst  : Boolean := False)
+      Is_Param_Subst  : Boolean := False;
+      Has_Command_Subst : out Boolean)
       return Annotated_String
    is
 
@@ -704,6 +707,7 @@ package body Posix_Shell.Subst is
          Command_Last : Integer := 0;
 
       begin
+         Has_Command_Subst := True;
          Index := Index + 1; -- skip backquote
          Start_Index := Index;
 
@@ -762,6 +766,7 @@ package body Posix_Shell.Subst is
 
       procedure Eval_Command_Subst is
       begin
+         Has_Command_Subst := True;
          Index := Index + 1;
          --  skip the initial parenthesis. dollar has already been skipped
 
@@ -971,7 +976,6 @@ package body Posix_Shell.Subst is
          Is_Set        : Boolean := Is_Var_Set (SS, Parameter);
          Word          : Annotated_String;
          Read          : Integer := 0;
-
       begin
          if Operator (Operator'First) = ':' and then Is_Null then
             Is_Set := False;
@@ -983,7 +987,8 @@ package body Posix_Shell.Subst is
                    S (Index .. S'Last),
                    Read,
                    Is_Splitable => Is_Splitable,
-                   Is_Param_Subst => True));
+                   Is_Param_Subst    => True,
+                   Has_Command_Subst => Has_Command_Subst));
          Index := Index + Read - 1;
 
          --  Then decide what to do depending on the parameter value and the
@@ -1285,6 +1290,7 @@ package body Posix_Shell.Subst is
 
       CC : Character;
    begin
+      Has_Command_Subst := False;
       pragma Debug (Log ("eval_string_aux_begin", S));
       while Index <= S'Last loop
          CC := S (Index);
@@ -1365,12 +1371,14 @@ package body Posix_Shell.Subst is
      (SS                 : in out Shell_State;
       S                  : String;
       Case_Pattern       : Boolean := False;
-      IOHere             : Boolean := False)
+      IOHere             : Boolean := False;
+      Has_Command_Subst  : out Boolean)
       return String
    is
       Characters_Read   : Integer := 0;
       Result            : constant Annotated_String := Eval_String_Aux
-        (SS, S, Characters_Read, Case_Pattern, IOHere);
+        (SS, S, Characters_Read, Case_Pattern, IOHere,
+         Has_Command_Subst => Has_Command_Subst);
       --  we create a buffer or twice the size as some characters might be
       --  excaped in case construct context
       Result_String     : String (1 .. Length (Result) * 2);
