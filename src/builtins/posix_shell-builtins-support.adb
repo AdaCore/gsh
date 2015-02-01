@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -54,7 +54,19 @@ package body Posix_Shell.Builtins.Support is
                end if;
             end if;
          end;
-         GNAT.Directory_Operations.Make_Dir (Dir);
+
+         begin
+            GNAT.Directory_Operations.Make_Dir (Dir);
+         exception
+            when others =>
+               --  we got an error while trying to create a directory. Due to
+               --  the implementation it might means that the directory was
+               --  was created by another process in the meantime. In that
+               --  case don't raise an exception.
+               if not Is_Directory (Dir) then
+                  raise;
+               end if;
+         end;
       end if;
    end Recursive_Make_Dir;
 
