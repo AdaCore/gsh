@@ -59,10 +59,10 @@ package body Posix_Shell.Builtins.Support is
             GNAT.Directory_Operations.Make_Dir (Dir);
          exception
             when others =>
-               --  we got an error while trying to create a directory. Due to
-               --  the implementation it might means that the directory was
-               --  was created by another process in the meantime. In that
-               --  case don't raise an exception.
+               --  We got an error while trying to create a directory. Due to
+               --  the implementation, it might mean that the directory was
+               --  created by another process in the meantime. In that case,
+               --  don't raise an exception.
                if not Is_Directory (Dir) then
                   raise;
                end if;
