@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -108,6 +108,27 @@ package body Posix_Shell.Builtins.Cp is
                        Pathname => Target_Path,
                        Success  => Success,
                        Preserve => Preserve);
+            if not Success then
+               --  retry a second time as we sometimes sometimes some unknown
+               --  failures
+               delay 0.1;
+               Error (S, "cp: '" & Source_Path  & "' to '" &
+                        Target_Path & "' failed on first attempt");
+               Copy_File (Name     => Source_Path,
+                          Pathname => Target_Path,
+                          Success  => Success,
+                          Preserve => Preserve);
+               if not Success and Preserve = Full then
+                  --  in case of two failure in a row and peserver is set to
+                  --  True, try a last time without preserving attributes
+                  Error (S, "cp: '" & Source_Path & "' to '" &
+                           Target_Path & "' discard permission preserve");
+                  Copy_File (Name     => Source_Path,
+                             Pathname => Target_Path,
+                             Success  => Success,
+                             Preserve => Time_Stamps);
+               end if;
+            end if;
 
             if not Success then
                Error (S,
