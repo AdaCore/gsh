@@ -126,7 +126,7 @@ package body Posix_Shell.Builtins.Cp is
                   Copy_File (Name     => Source_Path,
                              Pathname => Target_Path,
                              Success  => Success,
-                             Preserve => Time_Stamps);
+                             Preserve => None);
                end if;
             end if;
 
