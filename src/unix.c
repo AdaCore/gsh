@@ -36,6 +36,10 @@
 #include <fnmatch.h>
 #include <sys/fcntl.h>
 
+#if defined(__APPLE__)
+#include <copyfile.h>
+#endif
+
 #include "gsh.h"
 
 
@@ -191,6 +195,37 @@ __gsh_next_entry (void *handle)
   result.fi.directory = dirent->d_type == DT_DIR;
   result.fi.stamp = 0;
   result.fi.length = 0;
+  return result;
+}
+
+unsigned long
+__gsh_copy_file(char *source,
+		            char *target,
+		            char fail_if_exists,
+		            char preserve_attributes)
+{
+  int result = 0;
+
+  /* Here we use kernel-space copying for performance reasons. Linux version
+   * should be implemented. ??? */
+
+#if defined(__APPLE__)
+    copyfile_flags_t flags;
+    if (fail_if_exists != 0)
+    {
+      flags = COPYFILE_EXCL;
+    } else {
+      flags = COPYFILE_UNLINK;
+    }
+    if (preserve_attributes != 0)
+    {
+      flags = flags | COPYFILE_ALL;
+    } else {
+      flags = flags | COPYFILE_DATA;
+    }
+
+    result = copyfile(source, target, NULL, flags);
+#endif
   return result;
 }
 

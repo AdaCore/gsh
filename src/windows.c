@@ -359,5 +359,59 @@ __gsh_unlink (char *path)
    return result.last_error_code;
 }
 
-#endif
+unsigned long
+__gsh_copy_file (char *source,
+		 char *target,
+		 char fail_if_exists,
+		 char preserve_attributes)
+{
 
+  unsigned int slen = strlen(source);
+  unsigned int tlen = strlen(target);
+
+  BOOL result;
+  WCHAR wsource[slen + 1];
+  WCHAR wsource2[slen + 1 + 4];
+  WCHAR wtarget[tlen + 1];
+  WCHAR wtarget2[tlen + 1 + 4];
+  SECURITY_ATTRIBUTES SA;
+  HANDLE h;
+  FILETIME ft;
+  SYSTEMTIME st;
+
+  /* create source and target filenames in UNICODE format).  */
+  S2WSC (wsource, source, slen + 1);
+  _tcscpy(wsource2, L"\\??\\");
+  _tcscat(wsource2, wsource);
+
+  S2WSC (wtarget, target, tlen + 1);
+  _tcscpy (wtarget2, L"\\??\\");
+  _tcscat (wtarget2, wtarget);
+
+  result = CopyFile (wsource2, wtarget2, fail_if_exists != 0);
+
+  if (result == 0)
+    {
+      return (unsigned long) GetLastError();
+    }
+
+  if (preserve_attributes == 0)
+    {
+      /* By default windows keep attributes. So if preserve_attribute is FALSE
+	 then reset the timestamps. */
+      SA.nLength = sizeof (SECURITY_ATTRIBUTES);
+      SA.bInheritHandle = FALSE;
+      GetSystemTime (&st);
+      SystemTimeToFileTime (&st, &ft);
+
+      SA.lpSecurityDescriptor = NULL;
+      h = CreateFile (wtarget2, GENERIC_WRITE, FILE_SHARE_READ,
+		      &SA, OPEN_EXISTING,  FILE_ATTRIBUTE_NORMAL,
+		      NULL);
+      SetFileTime (h, &ft, &ft, &ft);
+      CloseHandle (h);
+    }
+  return 0;
+}
+
+#endif

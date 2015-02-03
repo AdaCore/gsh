@@ -30,6 +30,7 @@ with GNAT.Directory_Operations;
 
 with Posix_Shell.Rm;               use Posix_Shell.Rm;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
+with Posix_Shell.Fileutils;        use Posix_Shell.Fileutils;
 
 package body Posix_Shell.Builtins.Cp is
 
@@ -92,7 +93,7 @@ package body Posix_Shell.Builtins.Cp is
                                 Target_Path : String)
          is
             Status  : long := 0;
-            Success : Boolean := False;
+            Success : unsigned_long;
          begin
             if GNAT.OS_Lib.Is_Regular_File (Target_Path) then
                Status := Posix_Shell.Rm.Delete_File (Target_Path);
@@ -101,39 +102,44 @@ package body Posix_Shell.Builtins.Cp is
             if Status /= 0 then
                Error (S, "cp: cannot remove '" &
                         Target_Path & "': windows error " & Status'Img);
-               Got_Errors := Force;
+               if Force then
+                  Got_Errors := True;
+               end if;
             end if;
 
-            Copy_File (Name     => Source_Path,
-                       Pathname => Target_Path,
-                       Success  => Success,
-                       Preserve => Preserve);
-            if not Success then
+            Success := Copy_File (Source   => Source_Path,
+                                  Target   => Target_Path,
+                                  Fail_If_Exists => False,
+                                  Preserve_Attributes => Preserve /= None);
+            if Success /= 0 then
                --  retry a second time as we sometimes sometimes some unknown
                --  failures
                delay 0.1;
                Error (S, "cp: '" & Source_Path  & "' to '" &
-                        Target_Path & "' failed on first attempt");
-               Copy_File (Name     => Source_Path,
-                          Pathname => Target_Path,
-                          Success  => Success,
-                          Preserve => Preserve);
-               if not Success and Preserve = Full then
+                        Target_Path & "' failed on first attempt" &
+                        Success'Img);
+               Success := Copy_File (Source     => Source_Path,
+                                     Target     => Target_Path,
+                                     Fail_If_Exists => False,
+                                     Preserve_Attributes => Preserve /= None);
+               if Success /= 0 and Preserve = Full then
                   --  in case of two failure in a row and peserver is set to
                   --  True, try a last time without preserving attributes
                   Error (S, "cp: '" & Source_Path & "' to '" &
-                           Target_Path & "' discard permission preserve");
-                  Copy_File (Name     => Source_Path,
-                             Pathname => Target_Path,
-                             Success  => Success,
-                             Preserve => None);
+                           Target_Path & "' discard permission preserve" &
+                           Success'Img);
+                  Success := Copy_File
+                    (Source              => Source_Path,
+                     Target              => Target_Path,
+                     Fail_If_Exists       => False,
+                     Preserve_Attributes => Preserve /= None);
                end if;
             end if;
 
-            if not Success then
+            if Success /= 0 then
                Error (S,
                       "cp: '"  & Source_Path & "' not copied to '" &
-                        Target_Path & "'");
+                        Target_Path & "'" & Success'Img);
                Got_Errors := True;
             end if;
          end Simple_Copy;
