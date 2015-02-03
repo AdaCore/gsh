@@ -36,6 +36,38 @@ package body Posix_Shell.Fileutils is
       Internal (D);
    end Close;
 
+   ---------------
+   -- Copy_File --
+   ---------------
+
+   function Copy_File (Source              : String;
+                       Target              : String;
+                       Fail_If_Exists      : Boolean;
+                       Preserve_Attributes : Boolean)
+                       return unsigned_long
+   is
+      function Internal
+        (Source              : chars_ptr;
+         Target              : chars_ptr;
+         Fail_If_Exists      : Boolean;
+         Preserve_Attributes : Boolean)
+         return unsigned_long;
+      pragma Import (C, Internal, "__gsh_copy_file");
+
+      Source_Ptr : chars_ptr := New_String (Source);
+      Target_Ptr : chars_ptr := New_String (Target);
+      Result     : unsigned_long;
+
+   begin
+      Result := Internal (Source_Ptr,
+                          Target_Ptr,
+                          Fail_If_Exists,
+                          Preserve_Attributes);
+      Free (Source_Ptr);
+      Free (Target_Ptr);
+      return Result;
+   end Copy_File;
+
    ----------------------
    -- File_Information --
    ----------------------
