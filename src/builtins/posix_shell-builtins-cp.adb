@@ -112,8 +112,8 @@ package body Posix_Shell.Builtins.Cp is
                                   Fail_If_Exists => False,
                                   Preserve_Attributes => Preserve /= None);
             if Success /= 0 then
-               --  retry a second time as we sometimes sometimes some unknown
-               --  failures
+               --  Retry a second time as we sometimes get some unknown
+               --  failures.
                delay 0.1;
                Error (S, "cp: '" & Source_Path  & "' to '" &
                         Target_Path & "' failed on first attempt" &
@@ -123,8 +123,8 @@ package body Posix_Shell.Builtins.Cp is
                                      Fail_If_Exists => False,
                                      Preserve_Attributes => Preserve /= None);
                if Success /= 0 and Preserve = Full then
-                  --  in case of two failure in a row and peserver is set to
-                  --  True, try a last time without preserving attributes
+                  --  In case of two failures in a row and Preserve is set to
+                  --  True, try one last time without preserving attributes.
                   Error (S, "cp: '" & Source_Path & "' to '" &
                            Target_Path & "' discard permission preserve" &
                            Success'Img);
