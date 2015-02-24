@@ -46,6 +46,11 @@ extern UINT CurrentCodePage;
 #define S2WSC(wstr,str,len) \
    MultiByteToWideChar (CurrentCodePage,0,str,-1,wstr,len)
 
+static DWORD windows_bid = 0;
+
+static const DWORD WINDOWS_XP_BID = 2600;
+
+
 long
 __gsh_getpid (void)
 {
@@ -369,6 +374,12 @@ __gsh_copy_file (char *source,
   unsigned int slen = strlen(source);
   unsigned int tlen = strlen(target);
 
+  /* Ensure we have the Windows build number */
+  if (windows_bid == 0)
+    {
+      windows_bid = (DWORD) (HIWORD (GetVersion()));
+    }
+
   BOOL result;
   WCHAR wsource[slen + 1];
   WCHAR wsource2[slen + 1 + 4];
@@ -381,12 +392,23 @@ __gsh_copy_file (char *source,
 
   /* create source and target filenames in UNICODE format).  */
   S2WSC (wsource, source, slen + 1);
-  _tcscpy(wsource2, L"\\??\\");
-  _tcscat(wsource2, wsource);
-
   S2WSC (wtarget, target, tlen + 1);
-  _tcscpy (wtarget2, L"\\??\\");
-  _tcscat (wtarget2, wtarget);
+
+  /* On Windows XP it seems that CopyFile does not support long paths starting
+     with \?\ so use the regular path names which limit the path size to
+     262.  */
+  if (windows_bid > WINDOWS_XP_BID)
+    {
+      _tcscpy (wsource2, L"\\??\\");
+      _tcscpy (wtarget2, L"\\??\\");
+      _tcscat (wsource2, wsource);
+      _tcscat (wtarget2, wtarget);
+    }
+  else
+    {
+      _tcscpy(wsource2, wsource);
+      _tcscpy(wtarget2, wtarget);
+    }
 
   result = CopyFile (wsource2, wtarget2, fail_if_exists != 0);
 
