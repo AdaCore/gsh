@@ -1,0 +1,18 @@
+simple change dir: cd dir_a
+currently in /private<TEST_DIR>/dir_a - path changed (true): 1
+
+cd .
+currently in /private<TEST_DIR> - path changed (false): 0
+
+cd ./dir_a
+currently in /private<TEST_DIR>/dir_a - path changed (true): 1
+
+cd -
+/private<TEST_DIR>/dir_a
+currently in /private<TEST_DIR>/dir_a - path changed (true): 1
+
+cd with no args
+currently in /Users/vreboul - path changed (true): 1
+
+cd with arg '..'
+currently in /private<TEST_DIR>/dir_b - path changed (true): 1

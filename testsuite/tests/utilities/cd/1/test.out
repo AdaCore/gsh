@@ -1,0 +1,11 @@
+unknow option: cd -q dir_a
+cd: -q: No such file or directory
+
+unknown dir: cd unknown_dir
+cd: unknown_dir: No such file or directory
+
+cd on file: cd a.txt
+cd: a.txt: No such file or directory
+
+'-' when no oldpwd: cd -
+cd: OLDPWD not set
