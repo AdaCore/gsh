@@ -4,7 +4,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *                      Copyright (C) 2011-2014, AdaCore                    *
+ *                      Copyright (C) 2011-2015, AdaCore                    *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -38,6 +38,11 @@
 /* not defined in the ddk include files... */
 #define MAX_PATH 260
 __declspec(dllimport) void WINAPI Sleep(unsigned long dwMilliseconds);
+
+__declspec(dllimport) BOOL WINAPI GetVolumePathNameW(
+    LPCWSTR lpszFileName,
+    LPWSTR lpszVolumePathName,
+    unsigned long cchBufferLength);
 
 #else /* _W64 */
 
@@ -76,35 +81,29 @@ move_away(HANDLE h, UNICODE_STRING filename)
 
    FILE_DISPOSITION_INFORMATION disp = { TRUE };
 
-   UNICODE_STRING root_dir, dest;
-   HANDLE root_dir_handle;
+   UNICODE_STRING dest;
+   WCHAR root_dir[MAX_PATH];
+   WCHAR from_buffer[MAX_PATH];
    WCHAR dest_buffer[MAX_PATH];
    NTSTATUS status;
    LONGLONG file_id;
    int i;
 
-   /* First retrieve the filename length. From this and the full path we have,
-      we can easily find which portion of our path correspond to the root
-      directory. */
-   status = NtQueryInformationFile(h, &io,
-                                   (PVOID) &query_size,
-                                   sizeof(query_size),
-                                   FileNameInformation);
-   if (!NT_SUCCESS(status) && status != STATUS_BUFFER_OVERFLOW) {
-      printf ("something weird happened\n");
-      return status;
-      }
-
-   /* root_dir is a slice of filename (we use the filename buffer) */
-   root_dir.Length = filename.Length - query_size.FileNameLength;
-   root_dir.MaximumLength = root_dir.Length;
-   root_dir.Buffer = filename.Buffer;
+   /* Retrieve volume associated with the current path */
+   memcpy(from_buffer, filename.Buffer, filename.Length);
+   from_buffer[filename.Length] = L'\0';
+   /* Note: we ignore the \??\ as only native api understand it */
+   GetVolumePathNameW(from_buffer + 4, root_dir, MAX_PATH);
 
    /* Now compute the destination path */
-   dest.Length = root_dir.Length;
+   dest.Length = 4 * sizeof(WCHAR);
    dest.MaximumLength = sizeof(WCHAR) * MAX_PATH;
    dest.Buffer = dest_buffer;
-   memcpy(dest.Buffer, root_dir.Buffer, dest.Length);
+   memcpy(dest.Buffer, L"\\??\\", 4 * sizeof(WCHAR));
+   memcpy(dest.Buffer + dest.Length / sizeof(WCHAR),
+          root_dir,
+          sizeof(WCHAR) * wcslen(root_dir));
+   dest.Length = dest.Length + wcslen(root_dir) * sizeof(WCHAR);
 
    /* Append to dest our trash directory */
    memcpy(dest.Buffer + dest.Length / sizeof(WCHAR),
