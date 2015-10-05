@@ -22,7 +22,8 @@ project Posix_Shell is
 
    case Build is
       when "dev" =>  Default_Switches := Default_Switches & ("-fprofile-arcs", "-ftest-coverage");
-                     Default_Libs     := Default_Libs & ("-lgcov");
+         Default_Libs     := Default_Libs & ("-lgcov");
+      when "prod" => null;
    end case;
 
    for Main use ("gsh_lexer.adb", "gsh.adb", "builtin.adb", "gsh_unit.adb");
@@ -75,4 +76,3 @@ project Posix_Shell is
    end Compiler;
 
 end Posix_Shell;
-
