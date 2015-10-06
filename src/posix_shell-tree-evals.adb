@@ -65,23 +65,35 @@ package body Posix_Shell.Tree.Evals is
    procedure Eval_Brace (S : in out Shell_State; T : Shell_Tree; N : Node);
    procedure Eval_Null_Cmd (S : in out Shell_State; N : Node);
 
-   procedure Eval_Cmd (S            : in out Shell_State;
-                       Command      : String;
-                       Arguments    : String_List;
-                       Redirections : Redirection_Stack);
-   --  Evaluate the call to the given Command with the given Arguments.
-   --  This function takes care of setting and the restoring the redirections
-   --  as well.
-
-   procedure Eval_Cmd (S : in out Shell_State; T : Shell_Tree; N : Node);
-   --  Evaluate the given node as a command, after having expanded
-   --  the command name and its arguments.
-
    procedure Eval_Assign
      (S         : in out Shell_State;
       T         : Shell_Tree;
       N         : Node;
       Do_Export : Boolean := False);
+   --  @ Evaluate an ASSIGN_NODE
+
+   procedure Eval_Cmd
+     (State        : in out Shell_State;
+      Command      : String;
+      Arguments    : String_List;
+      Redirections : Redirection_Stack);
+   --  @ Execute a command.
+   --  @
+   --  @ :param State: current shell state
+   --  @ :param Command: command to be executed.
+   --  @ :param Arguments: list of arguments for the command
+   --  @ :param Redirections: list of redirections to apply
+   --  @ :raise: Shell_Exit, Break_Exception, Continue_Exception
+
+   procedure Eval_Cmd
+     (S : in out Shell_State;
+      T : Shell_Tree;
+      N : Node);
+   --  @ Evaluate a CMD_NODE node
+   --  @
+   --  @ :param S: current shell state
+   --  @ :param T: current script AST
+   --  @ :param N: node to evaluate
 
    ----------
    -- Eval --
@@ -214,7 +226,6 @@ package body Posix_Shell.Tree.Evals is
             end if;
          end if;
       end loop;
-
    end Eval_And_Or_List;
 
    -----------------
@@ -372,47 +383,45 @@ package body Posix_Shell.Tree.Evals is
    -- Eval_Cmd --
    --------------
 
-   procedure Eval_Cmd (S            : in out Shell_State;
-                       Command      : String;
-                       Arguments    : String_List;
-                       Redirections : Redirection_Stack)
+   procedure Eval_Cmd
+     (State        : in out Shell_State;
+      Command      : String;
+      Arguments    : String_List;
+      Redirections : Redirection_Stack)
    is
-      Exit_Status : Integer := 0;
-      Env : String_List := Get_Environment (S);
-      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
+      Exit_Status : Integer;
+      Env         : String_List := Get_Environment (State);
+      Descriptors : constant Shell_Descriptors := Get_Redirections (State);
+
+      --  When the command to be executed is the exec special builtin, then
+      --  the descriptors update with done in place (and thus descriptors not
+      --  restored once the command is finished.
+      Is_Exec     : constant Boolean := Command = "exec";
+
    begin
-      if Command = "exec" then
-         if not Set_Redirections (S, Redirections, Free_Previous => True) then
-            Save_Last_Exit_Status (S, 1);
-            return;
-         end if;
-         Exit_Status := Run
-           (S, Command, Arguments, Env);
-      else
-         if not Set_Redirections (S, Redirections) then
-            Save_Last_Exit_Status (S, 1);
-            return;
-         end if;
-
-         begin
-            --  Export_Environment;
-            Exit_Status := Run
-              (S, Command, Arguments, Env);
-
-         exception
-            when others =>
-               Restore_Redirections (S, Current_Redirs);
-               raise;
-         end;
-         Restore_Redirections (S, Current_Redirs);
-
+      if not Set_Redirections (State, Redirections, In_Place => Is_Exec) then
+         --  If descriptors update fails then do not execute the command and
+         --  set the exit status to 1.
+         Save_Last_Exit_Status (State, 1);
+         return;
       end if;
 
+      begin
+         Exit_Status := Run (State, Command, Arguments, Env);
+      exception
+         when others =>
+            Restore_Redirections (State, Descriptors, In_Place => Is_Exec);
+            raise;
+      end;
+      Restore_Redirections (State, Descriptors, In_Place => Is_Exec);
+
+      --  Free the environment block
       for J in Env'Range loop
          Free (Env (J));
       end loop;
 
-      Save_Last_Exit_Status (S, Exit_Status);
+      --  And finally propagate the command exit status
+      Save_Last_Exit_Status (State, Exit_Status);
    end Eval_Cmd;
 
    --------------
@@ -425,62 +434,47 @@ package body Posix_Shell.Tree.Evals is
       N : Node)
    is
       Pool : constant List_Pool := Token_List_Pool (T);
+
    begin
+
       declare
          Result_String : String_List :=
            Eval_String (S, Get_Token_String (N.Cmd)) &
            Eval_String_List (S, T, N.Arguments);
-
       begin
-
          if Result_String'Length = 0 then
             return;
          end if;
 
          declare
-            Args : constant String_List
+            Args        : constant String_List
               := Result_String (Result_String'First + 1 .. Result_String'Last);
-            Cmd : constant String := Result_String (Result_String'First).all;
-
-            Is_Special_Builtin : Boolean := False;
-
-            New_State : Shell_State;
+            Cmd         : constant String :=
+              Result_String (Result_String'First).all;
+            New_State   : Shell_State;
+            Has_Assigns : constant Boolean :=
+              not Is_Empty (Pool, N.Cmd_Assign_List);
          begin
             Set_Var_Value (S, "LINENO", Line (N.Pos));
 
-            --  Is the command a special builtin ?
-            if Match (Special_Builtin_Matcher, Cmd) then
-               Is_Special_Builtin := True;
-            end if;
-
-            if not Is_Empty (Pool, N.Cmd_Assign_List) and then
-              not Is_Special_Builtin
+            if Has_Assigns and then
+              not Match (Special_Builtin_Matcher, Cmd)
             then
-
+               --  When we execute a command that is not a special builtin and
+               --  that has assignments associated we need to create a
+               --  temporary scope. In that case no Shell_Exit,
+               --  Break_Exception or Continue_Exeception can be raised.
                New_State := Enter_Scope (S);
                Eval_Assign (New_State, T, N, True);
+               Eval_Cmd (State        => New_State,
+                         Command      => Cmd,
+                         Arguments    => Args,
+                         Redirections => N.Redirections);
 
-               if Is_Xtrace_Enabled (S) then
-                  Ada.Text_IO.Put_Line
-                    (Ada.Text_IO.Standard_Error,
-                  "(pos " & Image (N.Pos) & ")");
-               end if;
+               for J in Result_String'Range loop
+                  Free (Result_String (J));
+               end loop;
 
-               if Result_String'Length > 0 then
-                  Eval_Cmd (S => New_State,
-                            Command => Cmd,
-                            Arguments => Args,
-                            Redirections => N.Redirections);
-                  for J in Result_String'Range loop
-                     Free (Result_String (J));
-                  end loop;
-               end if;
-
-               if Is_Xtrace_Enabled (S) then
-                  Ada.Text_IO.Put_Line
-                    (Ada.Text_IO.Standard_Error,
-                  "(return " & Get_Last_Exit_Status (New_State)'Img & ")");
-               end if;
                Leave_Scope (New_State, S);
             else
                --  As stated by posix shell standard (2.14 Special Built-In
@@ -488,44 +482,46 @@ package body Posix_Shell.Tree.Evals is
                --  built-in utilities remain in effect after the built-in
                --  completes. Note that most of the shell such as bash do not
                --  respect this requirement.
+               --  This part of the if statement also handle commands which do
+               --  not have assignements associated. In that case there is
+               --  indeed no need to create a new scope.
 
-               if not Is_Empty (Pool, N.Cmd_Assign_List) then
+               if Has_Assigns then
                   Eval_Assign (S, T, N, True);
                end if;
 
-               if Is_Xtrace_Enabled (S) then
-                  Ada.Text_IO.Put_Line
-                    (Ada.Text_IO.Standard_Error,
-                     "(pos " & Image (N.Pos) & ")");
-               end if;
-
-               if Result_String'Length > 0 then
-                  Eval_Cmd (S            => S,
+               begin
+                  Eval_Cmd (State        => S,
                             Command      => Cmd,
                             Arguments    => Args,
                             Redirections => N.Redirections);
-                  for J in Result_String'Range loop
-                     Free (Result_String (J));
-                  end loop;
-               end if;
+               exception
+                  when others =>
+                     --  We can catch here exceptions not associated to errors
+                     --  such as Shell_Exit, Continue_Exception or
+                     --  Break_Exception
+                     for J in Result_String'Range loop
+                        Free (Result_String (J));
+                     end loop;
+                     raise;
+               end;
 
-               if Is_Xtrace_Enabled (S) then
-                  Ada.Text_IO.Put_Line
-                    (Ada.Text_IO.Standard_Error,
-                     "(return " & Get_Last_Exit_Status (New_State)'Img & ")");
-               end if;
+               for J in Result_String'Range loop
+                  Free (Result_String (J));
+               end loop;
+
             end if;
          end;
       end;
 
-      exception
-         when Variable_Name_Error =>
-            --  The evaluation lead us to use an invalid variable name.
-            --  In this case, do not attempt to run the command, and just
-            --  return 1 as the exit code.  The error message has already
-            --  been printed earlier (during the variable substitution),
-            --  so no need to report anything further at this point.
-            Save_Last_Exit_Status (S, 1);
+   exception
+      when Variable_Name_Error =>
+         --  The evaluation lead us to use an invalid variable name.
+         --  In this case, do not attempt to run the command, and just
+         --  return 1 as the exit code.  The error message has already
+         --  been printed earlier (during the variable substitution),
+         --  so no need to report anything further at this point.
+         Save_Last_Exit_Status (S, 1);
    end Eval_Cmd;
 
    --------------

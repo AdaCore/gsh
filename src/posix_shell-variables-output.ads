@@ -26,20 +26,41 @@ with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 package Posix_Shell.Variables.Output is
 
    function Set_Redirections
-     (S             : in out Shell_State;
-      R             : Redirection_Stack;
-      Free_Previous : Boolean := False)
-     return Boolean;
+     (S        : in out Shell_State;
+      R        : Redirection_Stack;
+      In_Place : Boolean := False)
+      return Boolean;
+   --  @ Apply redirections to the current file descriptors.
+   --  @
+   --  @ :param S: current shell state
+   --  @ :param R: a list of redirections operations
+   --  @ :param In_Place: if True then file descriptors that are overriden by
+   --  @     redirections operations are closed. This means that we cannot
+   --  @     restore the previous state afterwards. The In_Place is
+   --  @     currently used only in the context of the ``exec`` builtin
+   --  @ :return: True if the operation is successfull, False otherwise
 
    function Get_Redirections
      (S : Shell_State)
       return Shell_Descriptors;
-   --  Return the current redirection set.
+   --  @ Retrieves the current list of file descriptors.
+   --  @
+   --  @ :param S: current shell state
+   --  @ :return: the list of file descriptors currently in use
 
    procedure Restore_Redirections
-     (S : in out Shell_State;
-      R : Shell_Descriptors);
-   --  Restore the previous redirections context.
+     (S        : in out Shell_State;
+      R        : Shell_Descriptors;
+      In_Place : Boolean := False);
+   --  @ Restore the previous redirections context.
+   --  @
+   --  @ :param S: current shell state
+   --  @ :param R: list of file descriptors we want to restore. This list
+   --  @     usually comes from a call to Get_Redirections just before a call
+   --  @     to Set_Redirections
+   --  @ :param In_Place: if True then the call is a nop operation. A serie of
+   --  @     call to Set_Redirections/Restore_Redirections should use the same
+   --- @     value for the In_Place parameter.
 
    procedure Set_Pipe_Out (S : in out Shell_State);
    --  Set env to fill the pipe

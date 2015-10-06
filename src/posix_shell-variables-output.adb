@@ -122,26 +122,35 @@ package body Posix_Shell.Variables.Output is
    ----------------------
 
    procedure Restore_Redirections
-     (S : in out Shell_State; R : Shell_Descriptors)
+     (S        : in out Shell_State;
+      R        : Shell_Descriptors;
+      In_Place : Boolean := False)
    is
-      Previous : constant Shell_Descriptors := S.Redirections;
-      Success : Boolean;
    begin
-      GNAT.Task_Lock.Lock;
-      S.Redirections := R;
+      if In_Place then
+         return;
+      end if;
 
-      for I in 0 .. Previous'Last loop
-         --  Close the current redirection file descriptor only if it was not
-         --  the same as the one we want to restore and if it is not stdin,
-         --  stdout or stderr
-         if Previous (I).Can_Be_Closed then
-            Close (Previous (I).Fd);
-            if Previous (I).Delete_On_Close then
-               Delete_File (Previous (I).Filename.all, Success);
+      declare
+         Previous : constant Shell_Descriptors := S.Redirections;
+         Success  : Boolean;
+      begin
+         GNAT.Task_Lock.Lock;
+         S.Redirections := R;
+
+         for I in 0 .. Previous'Last loop
+            --  Close the current redirection file descriptor only if it was
+            --  not the same as the one we want to restore and if it is not
+            --  stdin, stdout or stderr
+            if Previous (I).Can_Be_Closed then
+               Close (Previous (I).Fd);
+               if Previous (I).Delete_On_Close then
+                  Delete_File (Previous (I).Filename.all, Success);
+               end if;
             end if;
-         end if;
-      end loop;
-      GNAT.Task_Lock.Unlock;
+         end loop;
+         GNAT.Task_Lock.Unlock;
+      end;
    end Restore_Redirections;
 
    -----------------------
@@ -149,9 +158,9 @@ package body Posix_Shell.Variables.Output is
    -----------------------
 
    function Set_Redirections
-     (S             : in out Shell_State;
-      R             : Redirection_Stack;
-      Free_Previous : Boolean := False)
+     (S        : in out Shell_State;
+      R        : Redirection_Stack;
+      In_Place : Boolean := False)
      return Boolean
    is
 
@@ -270,7 +279,7 @@ package body Posix_Shell.Variables.Output is
       New_States := Old_States;
 
       --  We are not allowed to close file descriptor we are inheriting
-      if not Free_Previous then
+      if not In_Place then
          for J in 0 .. New_States'Last loop
             New_States (J).Can_Be_Closed := False;
          end loop;
@@ -363,7 +372,7 @@ package body Posix_Shell.Variables.Output is
 
       GNAT.Task_Lock.Lock;
 
-      if Free_Previous then
+      if In_Place then
          for I in 0 .. New_States'Last loop
             --  Close the current redirection file descriptor only if it was
             --  not the same as the one we want to restore and if it is not
