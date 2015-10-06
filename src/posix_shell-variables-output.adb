@@ -121,10 +121,10 @@ package body Posix_Shell.Variables.Output is
    -- Pop_Redirections --
    ----------------------
 
-   procedure Restore_Redirections
-     (S        : in out Shell_State;
-      R        : Shell_Descriptors;
-      In_Place : Boolean := False)
+   procedure Restore_Descriptors
+     (State       : in out Shell_State;
+      Descriptors : Shell_Descriptors;
+      In_Place    : Boolean := False)
    is
    begin
       if In_Place then
@@ -132,11 +132,11 @@ package body Posix_Shell.Variables.Output is
       end if;
 
       declare
-         Previous : constant Shell_Descriptors := S.Redirections;
+         Previous : constant Shell_Descriptors := State.Redirections;
          Success  : Boolean;
       begin
          GNAT.Task_Lock.Lock;
-         S.Redirections := R;
+         State.Redirections := Descriptors;
 
          for I in 0 .. Previous'Last loop
             --  Close the current redirection file descriptor only if it was
@@ -151,23 +151,23 @@ package body Posix_Shell.Variables.Output is
          end loop;
          GNAT.Task_Lock.Unlock;
       end;
-   end Restore_Redirections;
+   end Restore_Descriptors;
 
    -----------------------
    -- Push_Redirections --
    -----------------------
 
-   function Set_Redirections
-     (S        : in out Shell_State;
-      R        : Redirection_Stack;
-      In_Place : Boolean := False)
+   function Apply_Redirections
+     (State        : in out Shell_State;
+      Redirections : Redirection_Stack;
+      In_Place     : Boolean := False)
      return Boolean
    is
 
       Has_Command_Subst : Boolean;
 
       Success    : Boolean := False;
-      Old_States : constant Shell_Descriptors := S.Redirections;
+      Old_States : constant Shell_Descriptors := State.Redirections;
       New_States : Shell_Descriptors;
       On_Windows : constant Boolean := Directory_Separator = '\';
       Has_Errors : Boolean := False;
@@ -211,9 +211,6 @@ package body Posix_Shell.Variables.Output is
           Delete_On_Close : Boolean := False)
       is
       begin
-         if Is_Xtrace_Enabled (S) then
-            Put (S, 2, "fd:" & FD'Img & ", path: " & Path & ASCII.LF);
-         end if;
          New_States (FD).Filename := new String'(Path);
 
          if Write and then not Append and then
@@ -260,8 +257,8 @@ package body Posix_Shell.Variables.Output is
       function Resolve_Filename (A : Token) return String
       is
          Eval_Result : constant String := Resolve_Path
-           (S,
-            Eval_String_Unsplit (S, Get_Token_String (A),
+           (State,
+            Eval_String_Unsplit (State, Get_Token_String (A),
               Has_Command_Subst => Has_Command_Subst));
       begin
          if On_Windows and then Eval_Result = "/dev/null" then
@@ -285,10 +282,10 @@ package body Posix_Shell.Variables.Output is
          end loop;
       end if;
 
-      for J in 1 .. Length (R) loop
+      for J in 1 .. Length (Redirections) loop
 
          declare
-            C : constant Redirection := Element (R, J);
+            C : constant Redirection := Element (Redirections, J);
 
          begin
             case C.Kind is
@@ -311,7 +308,7 @@ package body Posix_Shell.Variables.Output is
                   declare
                      FD_Str : constant String :=
                        Eval_String_Unsplit
-                         (S, Get_Token_String (C.Source),
+                         (State, Get_Token_String (C.Source),
                           Has_Command_Subst => Has_Command_Subst);
                      Source_FD : Integer := 0;
                      Is_Valid  : Boolean := False;
@@ -342,7 +339,9 @@ package body Posix_Shell.Variables.Output is
                      Result_String : aliased String :=
                        (if C.Expand
                         then Eval_String_Unsplit
-                          (S, Get_Token_String (C.Content), IOHere => True,
+                          (State,
+                           Get_Token_String (C.Content),
+                           IOHere => True,
                            Has_Command_Subst => Has_Command_Subst)
                         else Get_Token_String (C.Content));
                   begin
@@ -366,7 +365,7 @@ package body Posix_Shell.Variables.Output is
       --  Ada.Text_IO.Put_Line (New_States (2).Fd'Img);
 
       if Has_Errors then
-         Put (S, 2, "bad redirections" & ASCII.LF);
+         Put (State, 2, "bad redirections" & ASCII.LF);
          return False;
       end if;
 
@@ -387,11 +386,11 @@ package body Posix_Shell.Variables.Output is
             end if;
          end loop;
       end if;
-      S.Redirections := New_States;
+      State.Redirections := New_States;
 
       GNAT.Task_Lock.Unlock;
       return True;
-   end Set_Redirections;
+   end Apply_Redirections;
 
    ---------
    -- Put --
@@ -544,10 +543,10 @@ package body Posix_Shell.Variables.Output is
    -- Get_Current_Redirections --
    ------------------------------
 
-   function Get_Redirections (S : Shell_State) return Shell_Descriptors is
+   function Get_Descriptors (State : Shell_State) return Shell_Descriptors is
    begin
-      return S.Redirections;
-   end Get_Redirections;
+      return State.Redirections;
+   end Get_Descriptors;
 
    --  function Get_Current_Redirections return Shell_Descriptors is
    --  begin

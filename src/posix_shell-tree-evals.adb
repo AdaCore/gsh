@@ -293,22 +293,22 @@ package body Posix_Shell.Tree.Evals is
    ----------------
 
    procedure Eval_Brace (S : in out Shell_State; T : Shell_Tree; N : Node) is
-      Current : constant Shell_Descriptors := Get_Redirections (S);
+      Descriptors : constant Shell_Descriptors := Get_Descriptors (S);
 
    begin
-      if not Set_Redirections (S, N.Redirections) then
+      if not Apply_Redirections (S, N.Redirections) then
          Save_Last_Exit_Status (S, 1);
          return;
       end if;
 
       Eval (S, T, N.Brace_Code);
-      Restore_Redirections (S, Current);
+      Restore_Descriptors (S, Descriptors);
    exception
       when E : Continue_Exception | Break_Exception =>
-         Restore_Redirections (S, Current);
+         Restore_Descriptors (S, Descriptors);
          Reraise_Occurrence (E);
       when Shell_Return_Exception =>
-         Restore_Redirections (S, Current);
+         Restore_Descriptors (S, Descriptors);
    end Eval_Brace;
 
    ---------------
@@ -321,18 +321,16 @@ package body Posix_Shell.Tree.Evals is
       N : Node)
    is
       Has_Command_Subst : Boolean;
-      Case_Value     : constant String :=
+      Case_Value        : constant String :=
         Eval_String_Unsplit (S, Get_Token_String (N.Case_Word),
                              Has_Command_Subst => Has_Command_Subst);
-      Current_Case   : Node := Get_Node (T, N.First_Case);
-      Pattern_Found  : Boolean := False;
-      Current_Redirs : constant Shell_Descriptors :=
-        Get_Redirections (S);
-
-      Cursor : Token_List;
-      Pool   : constant List_Pool := Token_List_Pool (T);
+      Current_Case      : Node := Get_Node (T, N.First_Case);
+      Pattern_Found     : Boolean := False;
+      Descriptors       : constant Shell_Descriptors := Get_Descriptors (S);
+      Cursor            : Token_List;
+      Pool              : constant List_Pool := Token_List_Pool (T);
    begin
-      if not Set_Redirections (S, N.Redirections) then
+      if not Apply_Redirections (S, N.Redirections) then
          Save_Last_Exit_Status (S, 1);
          return;
       end if;
@@ -372,10 +370,10 @@ package body Posix_Shell.Tree.Evals is
          Save_Last_Exit_Status (S, 0);
       end if;
 
-      Restore_Redirections (S, Current_Redirs);
+      Restore_Descriptors (S, Descriptors);
    exception
       when E :  Break_Exception | Continue_Exception =>
-         Restore_Redirections (S, Current_Redirs);
+         Restore_Descriptors (S, Descriptors);
          Reraise_Occurrence (E);
    end Eval_Case;
 
@@ -391,7 +389,7 @@ package body Posix_Shell.Tree.Evals is
    is
       Exit_Status : Integer;
       Env         : String_List := Get_Environment (State);
-      Descriptors : constant Shell_Descriptors := Get_Redirections (State);
+      Descriptors : constant Shell_Descriptors := Get_Descriptors (State);
 
       --  When the command to be executed is the exec special builtin, then
       --  the descriptors update with done in place (and thus descriptors not
@@ -399,7 +397,7 @@ package body Posix_Shell.Tree.Evals is
       Is_Exec     : constant Boolean := Command = "exec";
 
    begin
-      if not Set_Redirections (State, Redirections, In_Place => Is_Exec) then
+      if not Apply_Redirections (State, Redirections, In_Place => Is_Exec) then
          --  If descriptors update fails then do not execute the command and
          --  set the exit status to 1.
          Save_Last_Exit_Status (State, 1);
@@ -410,10 +408,10 @@ package body Posix_Shell.Tree.Evals is
          Exit_Status := Run (State, Command, Arguments, Env);
       exception
          when others =>
-            Restore_Redirections (State, Descriptors, In_Place => Is_Exec);
+            Restore_Descriptors (State, Descriptors, In_Place => Is_Exec);
             raise;
       end;
-      Restore_Redirections (State, Descriptors, In_Place => Is_Exec);
+      Restore_Descriptors (State, Descriptors, In_Place => Is_Exec);
 
       --  Free the environment block
       for J in Env'Range loop
@@ -532,15 +530,14 @@ package body Posix_Shell.Tree.Evals is
       Loop_Var        : constant String := Get_Token_String (N.Loop_Var);
       Loop_Var_Values : String_List :=
         (if not N.Loop_Default_Values then
-         Eval_String_List (S, T, N.Loop_Var_Values) else
-         Eval_String (S, """$@"""));
+            Eval_String_List (S, T, N.Loop_Var_Values) else
+              Eval_String (S, """$@"""));
       Is_Valid        : Boolean;
       Break_Number    : Integer;
-      Current_Redirs  : constant Shell_Descriptors :=
-        Get_Redirections (S);
+      Descriptors     : constant Shell_Descriptors := Get_Descriptors (S);
       My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S) + 1;
    begin
-      if not Set_Redirections (S, N.Redirections) then
+      if not Apply_Redirections (S, N.Redirections) then
          Save_Last_Exit_Status (S, 1);
          return;
       end if;
@@ -557,7 +554,7 @@ package body Posix_Shell.Tree.Evals is
                   null;
                else
                   Set_Loop_Scope_Level (S, My_Nested_Level - 1);
-                  Restore_Redirections (S, Current_Redirs);
+                  Restore_Descriptors (S, Descriptors);
                   raise Continue_Exception with To_String (Break_Number);
                end if;
             when E : Break_Exception =>
@@ -566,7 +563,7 @@ package body Posix_Shell.Tree.Evals is
                   exit;
                else
                   Set_Loop_Scope_Level (S, My_Nested_Level - 1);
-                  Restore_Redirections (S, Current_Redirs);
+                  Restore_Descriptors (S, Descriptors);
                   raise Break_Exception with To_String (Break_Number);
                end if;
          end;
@@ -576,7 +573,7 @@ package body Posix_Shell.Tree.Evals is
          Free (Loop_Var_Values (Index));
       end loop;
       Set_Loop_Scope_Level (S, My_Nested_Level - 1);
-      Restore_Redirections (S, Current_Redirs);
+      Restore_Descriptors (S, Descriptors);
    end Eval_For;
 
    -------------------
@@ -599,9 +596,9 @@ package body Posix_Shell.Tree.Evals is
 
    procedure Eval_If (S : in out Shell_State; T : Shell_Tree; N : Node) is
       Status      : Integer := 0;
-      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
+      Descriptors : constant Shell_Descriptors := Get_Descriptors (S);
    begin
-      if not Set_Redirections (S, N.Redirections) then
+      if not Apply_Redirections (S, N.Redirections) then
          Save_Last_Exit_Status (S, 1);
          return;
       end if;
@@ -615,10 +612,10 @@ package body Posix_Shell.Tree.Evals is
       end if;
 
       Save_Last_Exit_Status (S, Status);
-      Restore_Redirections (S, Current_Redirs);
+      Restore_Descriptors (S, Descriptors);
    exception
       when E :  Break_Exception | Continue_Exception =>
-         Restore_Redirections (S, Current_Redirs);
+         Restore_Descriptors (S, Descriptors);
          Reraise_Occurrence (E);
    end Eval_If;
 
@@ -639,13 +636,13 @@ package body Posix_Shell.Tree.Evals is
 
    procedure Eval_Null_Cmd (S : in out Shell_State; N : Node)
    is
-      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
+      Descriptors : constant Shell_Descriptors := Get_Descriptors (S);
    begin
-      if not Set_Redirections (S, N.Redirections) then
+      if not Apply_Redirections (S, N.Redirections) then
          Save_Last_Exit_Status (S, 1);
          return;
       end if;
-      Restore_Redirections (S, Current_Redirs);
+      Restore_Descriptors (S, Descriptors);
       Save_Last_Exit_Status (S, 0);
    end Eval_Null_Cmd;
 
@@ -750,9 +747,9 @@ package body Posix_Shell.Tree.Evals is
      (S : in out Shell_State; T : Shell_Tree; N : Node)
    is
       New_State : Shell_State := Enter_Scope (S);
-      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
+      Descriptors : constant Shell_Descriptors := Get_Descriptors (S);
    begin
-      if not Set_Redirections (New_State, N.Redirections) then
+      if not Apply_Redirections (New_State, N.Redirections) then
          Save_Last_Exit_Status (S, 1);
          return;
       end if;
@@ -797,7 +794,7 @@ package body Posix_Shell.Tree.Evals is
             null;
       end;
 
-      Restore_Redirections (New_State, Current_Redirs);
+      Restore_Descriptors (New_State, Descriptors);
       Leave_Scope (New_State, S);
    end Eval_Subshell;
 
@@ -810,11 +807,11 @@ package body Posix_Shell.Tree.Evals is
    is
       Is_Valid : Boolean;
       Break_Number : Integer;
-      Current_Redirs : constant Shell_Descriptors := Get_Redirections (S);
+      Descriptors : constant Shell_Descriptors := Get_Descriptors (S);
       Result : Integer := 0;
       My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S) + 1;
    begin
-      if not Set_Redirections (S, N.Redirections) then
+      if not Apply_Redirections (S, N.Redirections) then
          Save_Last_Exit_Status (S, 1);
          return;
       end if;
@@ -839,7 +836,7 @@ package body Posix_Shell.Tree.Evals is
                   null;
                else
                   Set_Loop_Scope_Level (S, My_Nested_Level - 1);
-                  Restore_Redirections (S, Current_Redirs);
+                  Restore_Descriptors (S, Descriptors);
                   raise Continue_Exception with To_String (Break_Number);
                end if;
             when E : Break_Exception =>
@@ -849,14 +846,14 @@ package body Posix_Shell.Tree.Evals is
                   exit;
                else
                   Set_Loop_Scope_Level (S, My_Nested_Level - 1);
-                  Restore_Redirections (S, Current_Redirs);
+                  Restore_Descriptors (S, Descriptors);
                   raise Break_Exception with To_String (Break_Number);
                end if;
          end;
       end loop;
       Save_Last_Exit_Status (S, Result);
       Set_Loop_Scope_Level (S, My_Nested_Level - 1);
-      Restore_Redirections (S, Current_Redirs);
+      Restore_Descriptors (S, Descriptors);
    end Eval_Until_While;
 
 end Posix_Shell.Tree.Evals;
