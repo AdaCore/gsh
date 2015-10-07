@@ -30,35 +30,38 @@ package Posix_Shell.Variables.Output is
       Redirections : Redirection_Stack;
       In_Place     : Boolean := False)
       return Boolean;
-   --  @ Apply redirections to the current file descriptors.
-   --  @
-   --  @ :param State: current shell state
-   --  @ :param Redirections: a list of redirections operations
-   --  @ :param In_Place: if True then file descriptors that are overriden by
-   --  @     redirections operations are closed. This means that we cannot
-   --  @     restore the previous state afterwards. The In_Place is
-   --  @     currently used only in the context of the ``exec`` builtin
-   --  @ :return: True if the operation is successfull, False otherwise
+   --  Apply redirections to the current file descriptors.
+   --
+   --  @param State current shell state
+   --  @param Redirections a list of redirections operations
+   --  @param In_Place
+   --      if True then file descriptors that are overriden by redirections
+   --      operations are closed. This means that we cannot restore the
+   --      previous state afterwards. The In_Place is currently used only in
+   --      the context of the ``exec`` builtin
+   --  @return True if the operation is successfull, False otherwise
 
    function Get_Descriptors (State : Shell_State) return Shell_Descriptors;
-   --  @ Retrieves the current list of file descriptors.
-   --  @
-   --  @ :param State: current shell state
-   --  @ :return: the list of file descriptors currently in use
+   --  Retrieves the current list of file descriptors.
+   --
+   --  @param State current shell state
+   --  @return the list of file descriptors currently in use
 
    procedure Restore_Descriptors
      (State       : in out Shell_State;
       Descriptors : Shell_Descriptors;
       In_Place    : Boolean := False);
-   --  @ Restore the previous descriptors.
-   --  @
-   --  @ :param State: current shell state
-   --  @ :param Descriptors: list of file descriptors we want to restore. This
-   --  @     list usually comes from a call to Get_Descriptors just before a
-   --  @     call to Apply_Redirections
-   --  @ :param In_Place: if True then the call is a nop operation. A serie of
-   --  @     call to Apply_Redirections/Restore_Descriptors should use the same
-   --- @     value for the In_Place parameter.
+   --  Restore the previous descriptors.
+   --
+   --  @param State current shell state
+   --  @param Descriptors
+   --      list of file descriptors we want to restore. This
+   --      list usually comes from a call to Get_Descriptors just before a
+   --      call to Apply_Redirections
+   --  @param In_Place
+   --      if True then the call is a nop operation. A serie of call to
+   --      Apply_Redirections/Restore_Descriptors should use the same
+   --      value for the In_Place parameter.
 
    procedure Set_Pipe_Out (S : in out Shell_State);
    --  Set env to fill the pipe
