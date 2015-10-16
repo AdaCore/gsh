@@ -21,8 +21,8 @@ project Posix_Shell is
    Dev_Switches := ("-g", "-O0");
 
    case Build is
-      when "dev" =>  Default_Switches := Default_Switches & ("-fprofile-arcs", "-ftest-coverage");
-         Default_Libs     := Default_Libs & ("-lgcov");
+      when "dev" =>  Default_Switches := Default_Switches &
+         ("-fpreserve-control-flow", "-fdump-scos");
       when "prod" => null;
    end case;
 
@@ -30,7 +30,8 @@ project Posix_Shell is
 
    case OS is
       when "Windows_NT" =>
-         for Source_Dirs use (".", "src", "src\builtins", "src\gnulib", "src\ddk", "src\readline", "src\lua");
+         for Source_Dirs use (".", "src", "src\builtins", "src\gnulib",
+                              "src\ddk", "src\readline", "src\lua");
       when others =>
          for Source_Dirs use (".", "src", "src/builtins", "src/lua");
    end case;
@@ -67,10 +68,12 @@ project Posix_Shell is
    package Compiler is
       case Build is
          when "prod" =>
-            for Default_Switches ("ada") use ("-O2", "-gnatpn") & Default_Switches;
+            for Default_Switches ("ada") use ("-O2", "-gnatpn") &
+               Default_Switches;
 	         for Default_Switches ("c") use ("-O2", "-DHAVE_CONFIG_H");
          when "dev" =>
-            for Default_Switches ("ada") use ("-gnata") & Dev_Switches & Default_Switches;
+            for Default_Switches ("ada") use ("-gnata") & Dev_Switches &
+               Default_Switches;
             for Default_Switches ("c") use ("-DHAVE_CONFIG_H") & Dev_Switches;
       end case;
    end Compiler;
