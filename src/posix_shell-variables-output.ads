@@ -99,11 +99,6 @@ package Posix_Shell.Variables.Output is
    procedure Warning (S : Shell_State; Msg : String);
    --  Print a warning message on standard error.
 
-   procedure Set_Close_On_Exec
-     (FD            : File_Descriptor;
-      Close_On_Exec : Boolean;
-      Status        : out Boolean);
-
 private
 
 end Posix_Shell.Variables.Output;

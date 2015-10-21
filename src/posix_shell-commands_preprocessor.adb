@@ -21,12 +21,12 @@
 ------------------------------------------------------------------------------
 
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
-with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with Posix_Shell.Functions; use Posix_Shell.Functions;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Ada.Text_IO;
+with OS.Exec; use OS.Exec;
 
 package body Posix_Shell.Commands_Preprocessor is
 

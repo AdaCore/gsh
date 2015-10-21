@@ -31,9 +31,9 @@ project Posix_Shell is
    case OS is
       when "Windows_NT" =>
          for Source_Dirs use (".", "src", "src\builtins", "src\gnulib",
-                              "src\ddk", "src\readline", "src\lua");
+                              "src\ddk", "src\readline", "src\lua", "src\os");
       when others =>
-         for Source_Dirs use (".", "src", "src/builtins", "src/lua");
+         for Source_Dirs use (".", "src", "src/builtins", "src/lua", "src/os");
    end case;
 
    for Languages use ("Ada", "C");

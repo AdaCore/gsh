@@ -23,6 +23,7 @@
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
+with OS.Exec;
 with Ada.Strings.Unbounded;
 pragma Warnings (Off);
 with System.CRTL;
@@ -226,7 +227,7 @@ package body Posix_Shell.Variables.Output is
             New_States (FD).Fd := Open_Read (Path, Binary);
          end if;
 
-         Set_Close_On_Exec (New_States (FD).Fd, True, Success);
+         OS.Exec.Set_Close_On_Exec (New_States (FD).Fd, True, Success);
          New_States (FD).Delete_On_Close := Delete_On_Close;
          New_States (FD).Can_Be_Closed := True;
          if Append and then Write then
@@ -321,7 +322,7 @@ package body Posix_Shell.Variables.Output is
                         GNAT.Task_Lock.Lock;
                         New_States (C.Dup_Target).Fd :=
                           Dup (New_States (Source_FD).Fd);
-                        Set_Close_On_Exec
+                        OS.Exec.Set_Close_On_Exec
                           (New_States (C.Dup_Target).Fd, True, Success);
                         New_States (C.Dup_Target).Can_Be_Closed := True;
                         GNAT.Task_Lock.Unlock;
@@ -467,23 +468,6 @@ package body Posix_Shell.Variables.Output is
       return To_String (Result_Str);
    end Read_Pipe_And_Close;
 
-   -----------------------
-   -- Set_Close_On_Exec --
-   -----------------------
-
-   procedure Set_Close_On_Exec
-     (FD            : File_Descriptor;
-      Close_On_Exec : Boolean;
-      Status        : out Boolean)
-   is
-      function C_Set_Close_On_Exec
-        (FD : File_Descriptor; Close_On_Exec : System.CRTL.int)
-         return System.CRTL.int;
-      pragma Import (C, C_Set_Close_On_Exec, "__gsh_set_close_on_exec");
-   begin
-      Status := C_Set_Close_On_Exec (FD, Boolean'Pos (Close_On_Exec)) = 0;
-   end Set_Close_On_Exec;
-
    -----------------
    -- Set_Pipe_In --
    -----------------
@@ -534,8 +518,8 @@ package body Posix_Shell.Variables.Output is
       --  Keep the other side of the pipe
       S.Redirections (-2) := (Pipe.Input, null, False, True);
 
-      Set_Close_On_Exec (Pipe.Output, True, Success);
-      Set_Close_On_Exec (Pipe.Input, True, Success);
+      OS.Exec.Set_Close_On_Exec (Pipe.Output, True, Success);
+      OS.Exec.Set_Close_On_Exec (Pipe.Input, True, Success);
       --  Needed ?
    end Set_Pipe_Out;
 

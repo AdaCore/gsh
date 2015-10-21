@@ -20,22 +20,9 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Variables; use Posix_Shell.Variables;
+--  Packages under OS hierarchy implement low level runtime functions that do
+--  depend on the shell implementation
 
-package Posix_Shell.Exec is
+package OS is
 
-   procedure Shell_Exit (S : in out Shell_State; Code : Integer);
-   pragma No_Return (Shell_Exit);
-   --  Causes the shell to exit with the given error code.
-
-   Shell_Exit_Exception : exception;
-   --  An exception signaling that we need to exit the current shell.
-   --  At the time when this exception is raised, the exit status has
-   --  already been saved.
-
-   Shell_Return_Exception : exception;
-   --  An exception signaling that we need to return from the current
-   --  shell.  At the time this exception is raised, the exit status
-   --  has already been saved.
-
-end Posix_Shell.Exec;
+end OS;
