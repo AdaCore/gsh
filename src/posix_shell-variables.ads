@@ -29,6 +29,7 @@ with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Strings.Hash;
 with Posix_Shell.Tree; use Posix_Shell.Tree;
+with OS.FS;
 
 package Posix_Shell.Variables is
 
@@ -210,7 +211,7 @@ private
 
    --  A table that maps function names to their associated Node.
    type Shell_Descriptor is record
-      Fd              : File_Descriptor;
+      Fd              : OS.FS.File_Descriptor;
       Filename        : String_Access;
       Delete_On_Close : Boolean;
       Can_Be_Closed   : Boolean;

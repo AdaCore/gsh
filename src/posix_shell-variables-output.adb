@@ -23,36 +23,25 @@
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
-with OS.Exec;
 with Ada.Strings.Unbounded;
 pragma Warnings (Off);
 with System.CRTL;
 pragma Warnings (On);
 with GNAT.Task_Lock;
+with OS.FS;
 
 package body Posix_Shell.Variables.Output is
 
    type Pipe_Type is record
-      Input, Output : GNAT.OS_Lib.File_Descriptor;
+      Input, Output : OS.FS.File_Descriptor;
    end record;
 
    function Create_Pipe (Pipe : not null access Pipe_Type) return Integer;
    pragma Import (C, Create_Pipe, "__gnat_pipe");
 
-   function Open_Append
-     (Name  : C_File_Name;
-      Fmode : Mode) return File_Descriptor;
-
-   function Open_Append
-     (Name  : String;
-      Fmode : Mode) return File_Descriptor;
-
-   function Dup (Fd : File_Descriptor) return File_Descriptor;
-   pragma Import (C, Dup, "__gnat_dup");
-
    procedure Close (S : Shell_State; N : Integer) is
    begin
-      Close (Get_Fd (S, N));
+      OS.FS.Close (Get_Fd (S, N));
    end Close;
 
    ----------------
@@ -66,8 +55,12 @@ package body Posix_Shell.Variables.Output is
       S.Redirections (0) := S.Redirections (-2);
    end Close_Pipe;
 
+   ------------
+   -- Get_Fd --
+   ------------
+
    function Get_Fd
-     (S : Shell_State; N : Integer) return File_Descriptor
+     (S : Shell_State; N : Integer) return OS.FS.File_Descriptor
    is
    begin
       return S.Redirections (N).Fd;
@@ -91,36 +84,9 @@ package body Posix_Shell.Variables.Output is
       Put (S, IO, String'(1 => ASCII.LF));
    end New_Line;
 
-   -----------------------
-   -- Push_Redirections --
-   -----------------------
-
-   function Open_Append
-     (Name  : C_File_Name;
-      Fmode : Mode) return File_Descriptor
-   is
-      function C_Open_Append
-        (Name  : C_File_Name;
-         Fmode : Mode) return File_Descriptor;
-      pragma Import (C, C_Open_Append, "__gnat_open_append");
-   begin
-      return C_Open_Append (Name, Fmode);
-   end Open_Append;
-
-   function Open_Append
-     (Name  : String;
-      Fmode : Mode) return File_Descriptor
-   is
-      C_Name : String (1 .. Name'Length + 1);
-   begin
-      C_Name (1 .. Name'Length) := Name;
-      C_Name (C_Name'Last)      := ASCII.NUL;
-      return Open_Append (C_Name (C_Name'First)'Address, Fmode);
-   end Open_Append;
-
-   ----------------------
-   -- Pop_Redirections --
-   ----------------------
+   -------------------------
+   -- Restore_Descriptors --
+   -------------------------
 
    procedure Restore_Descriptors
      (State       : in out Shell_State;
@@ -144,7 +110,7 @@ package body Posix_Shell.Variables.Output is
             --  not the same as the one we want to restore and if it is not
             --  stdin, stdout or stderr
             if Previous (I).Can_Be_Closed then
-               Close (Previous (I).Fd);
+               OS.FS.Close (Previous (I).Fd);
                if Previous (I).Delete_On_Close then
                   Delete_File (Previous (I).Filename.all, Success);
                end if;
@@ -154,9 +120,9 @@ package body Posix_Shell.Variables.Output is
       end;
    end Restore_Descriptors;
 
-   -----------------------
-   -- Push_Redirections --
-   -----------------------
+   ------------------------
+   -- Apply_Redirections --
+   ------------------------
 
    function Apply_Redirections
      (State        : in out Shell_State;
@@ -174,18 +140,12 @@ package body Posix_Shell.Variables.Output is
       Has_Errors : Boolean := False;
       --  Will be set to true if some redirection were not put in place
 
-      function Is_Null_File (Str : String) return Boolean;
-      pragma Inline (Is_Null_File);
-      --  return True if the filename correspond the name of the null file
-      --  (for example "dev/null" on Unix systems).
-
       function Resolve_Filename (A : Token) return String;
 
       procedure Open_FD
          (FD              : Natural;
           Path            : String;
-          Write           : Boolean := True;
-          Append          : Boolean := False;
+          Mode            : OS.FS.File_Mode;
           Delete_On_Close : Boolean := False);
       --  @ Open a file descriptor
       --  @
@@ -207,53 +167,15 @@ package body Posix_Shell.Variables.Output is
       procedure Open_FD
          (FD              : Natural;
           Path            : String;
-          Write           : Boolean := True;
-          Append          : Boolean := False;
+          Mode            : OS.FS.File_Mode;
           Delete_On_Close : Boolean := False)
       is
       begin
          New_States (FD).Filename := new String'(Path);
-
-         if Write and then not Append and then
-            not Is_Null_File (Path)
-         then
-            Delete_File (Path, Success);
-         end if;
-
-         GNAT.Task_Lock.Lock;
-         if Write then
-            New_States (FD).Fd := Open_Append (Path, Binary);
-         else
-            New_States (FD).Fd := Open_Read (Path, Binary);
-         end if;
-
-         OS.Exec.Set_Close_On_Exec (New_States (FD).Fd, True, Success);
+         New_States (FD).Fd := OS.FS.Open (Path, Mode);
          New_States (FD).Delete_On_Close := Delete_On_Close;
          New_States (FD).Can_Be_Closed := True;
-         if Append and then Write then
-            Lseek (New_States (FD).Fd, 0, Seek_End);
-         end if;
-         GNAT.Task_Lock.Unlock;
       end Open_FD;
-
-      ------------------
-      -- Is_Null_File --
-      ------------------
-
-      function Is_Null_File (Str : String) return Boolean is
-      begin
-
-         if On_Windows and then Str = "NUL" then
-            return True;
-         end if;
-
-         if not On_Windows and then Str = "/dev/null" then
-            return True;
-         end if;
-
-         return False;
-
-      end Is_Null_File;
 
       function Resolve_Filename (A : Token) return String
       is
@@ -270,42 +192,48 @@ package body Posix_Shell.Variables.Output is
       end Resolve_Filename;
 
    begin
-
       --  The new redirection states inherits the unmodifed file
       --  descriptors from the old state.
-
       New_States := Old_States;
 
-      --  We are not allowed to close file descriptor we are inheriting
+      --  If In_Place is set to true it means that the new state replace the
+      --  former one and thus takes oownership of file descriptors owned by
+      --  previous state. If not In_Place (for example, when creating a new
+      --  scope), then the previous state keeps ownership of the file
+      --  descriptors we are inheriting.
+
       if not In_Place then
          for J in 0 .. New_States'Last loop
             New_States (J).Can_Be_Closed := False;
          end loop;
       end if;
 
+      --  Apply the redirection operations the the newly created state
       for J in 1 .. Length (Redirections) loop
-
          declare
             C : constant Redirection := Element (Redirections, J);
-
          begin
             case C.Kind is
                when OPEN_READ =>
-                  Open_FD (C.Open_Target,
-                           Resolve_Filename (C.Filename),
-                           Write => False);
+                  --  Handling of <
+                  Open_FD (FD   => C.Open_Target,
+                           Path => Resolve_Filename (C.Filename),
+                           Mode => OS.FS.Read_Mode);
 
                when OPEN_WRITE =>
-                  Open_FD (C.Open_Target,
-                           Resolve_Filename (C.Filename));
+                  --  Handling of >
+                  Open_FD (FD   => C.Open_Target,
+                           Path => Resolve_Filename (C.Filename),
+                           Mode => OS.FS.Write_Mode);
 
                when OPEN_APPEND =>
-                  Open_FD (C.Open_Target,
-                           Resolve_Filename (C.Filename),
-                           Append => True);
+                  --  Handling of >>
+                  Open_FD (FD   => C.Open_Target,
+                           Path => Resolve_Filename (C.Filename),
+                           Mode => OS.FS.Append_Mode);
 
                when DUPLICATE =>
-
+                  --  Handling of >&
                   declare
                      FD_Str : constant String :=
                        Eval_String_Unsplit
@@ -313,25 +241,23 @@ package body Posix_Shell.Variables.Output is
                           Has_Command_Subst => Has_Command_Subst);
                      Source_FD : Integer := 0;
                      Is_Valid  : Boolean := False;
-
+                     use OS.FS;
                   begin
                      To_Integer (FD_Str, Source_FD, Is_Valid);
                      if Is_Valid and then
-                       New_States (Source_FD).Fd /= Invalid_FD
+                       New_States (Source_FD).Fd /= OS.FS.Invalid_FD
                      then
-                        GNAT.Task_Lock.Lock;
                         New_States (C.Dup_Target).Fd :=
-                          Dup (New_States (Source_FD).Fd);
-                        OS.Exec.Set_Close_On_Exec
-                          (New_States (C.Dup_Target).Fd, True, Success);
+                          OS.FS.Dup (New_States (Source_FD).Fd,
+                                     Close_On_Exec => True);
                         New_States (C.Dup_Target).Can_Be_Closed := True;
-                        GNAT.Task_Lock.Unlock;
                      else
                         Has_Errors := True;
                         exit;
                      end if;
                   end;
                when IOHERE =>
+                  --  Handling of << and <<-
                   declare
                      Fd     : File_Descriptor;
                      Name   : Temp_File_Name;
@@ -346,32 +272,35 @@ package body Posix_Shell.Variables.Output is
                            Has_Command_Subst => Has_Command_Subst)
                         else Get_Token_String (C.Content));
                   begin
+                     --  currently we are creating a temporary file on disk
+                     --  it would be better to use shared memory here.
                      Create_Temp_File (Fd, Name);
                      Result := Write
                        (Fd, Result_String'Address, Result_String'Length);
                      Close (Fd);
 
-                     Open_FD (C.Doc_Target,
-                              Name,
-                              Write           => False,
+                     Open_FD (FD              => C.Doc_Target,
+                              Path            => Name,
+                              Mode            => OS.FS.Read_Mode,
                               Delete_On_Close => True);
                   end;
-               when others =>
+               when NULL_REDIR =>
                   null;
             end case;
          end;
       end loop;
 
-      --  All went well, so we can now push the new states.
-      --  Ada.Text_IO.Put_Line (New_States (2).Fd'Img);
-
       if Has_Errors then
+         --  In case error has been found, just display a message and return
+         --  (???) We are potentially leaking some handlers here
          Put (State, 2, "bad redirections" & ASCII.LF);
          return False;
       end if;
 
+      --  No error was found so push the newly created state as the current
+      --  one. In case the redirections are applied in place, do necessary
+      --  cleanup to avoid leaking file descriptors.
       GNAT.Task_Lock.Lock;
-
       if In_Place then
          for I in 0 .. New_States'Last loop
             --  Close the current redirection file descriptor only if it was
@@ -380,7 +309,7 @@ package body Posix_Shell.Variables.Output is
             if Old_States (I).Can_Be_Closed and then
               Integer (Old_States (I).Fd) /= Integer (New_States (I).Fd)
             then
-               Close (Old_States (I).Fd);
+               OS.FS.Close (Old_States (I).Fd);
                if Old_States (I).Delete_On_Close then
                   Delete_File (Old_States (I).Filename.all, Success);
                end if;
@@ -388,7 +317,6 @@ package body Posix_Shell.Variables.Output is
          end loop;
       end if;
       State.Redirections := New_States;
-
       GNAT.Task_Lock.Unlock;
       return True;
    end Apply_Redirections;
@@ -398,12 +326,8 @@ package body Posix_Shell.Variables.Output is
    ---------
 
    procedure Put (S : Shell_State; IO : Integer; Str : String) is
-      Size   : constant Integer := Str'Length;
-      S_Copy : aliased String := Str;
-      N : Integer;
-      pragma Warnings (Off, N);
    begin
-      N := Write (S.Redirections (IO).Fd, S_Copy'Address, Size);
+      OS.FS.Write (S.Redirections (IO).Fd, Str);
    end Put;
 
    ----------
@@ -418,20 +342,25 @@ package body Posix_Shell.Variables.Output is
    begin
 
       loop
-         N := Read (S.Redirections (IO).Fd, Buffer'Address, 4096);
+         N := OS.FS.Read (S.Redirections (IO).Fd, Buffer);
          if N > 0 then
             Result := Result & Buffer (1 .. N);
          end if;
          exit when N < 4096;
       end loop;
+
       return To_String (Result);
    end Read;
 
+   ----------
+   -- Read --
+   ----------
+
    function Read (S : Shell_State; IO : Integer) return Character is
-      Buffer : String (1 .. 2);
+      Buffer : String (1 .. 1);
       N : Integer;
    begin
-      N := Read (S.Redirections (IO).Fd, Buffer'Address, 1);
+      N := OS.FS.Read (S.Redirections (IO).Fd, Buffer);
       if N > 0 then
          return Buffer (1);
       else
@@ -445,7 +374,7 @@ package body Posix_Shell.Variables.Output is
 
    function Read_Pipe_And_Close
      (S        : in out Shell_State;
-      Input_Fd : File_Descriptor)
+      Input_Fd : OS.FS.File_Descriptor)
       return String
    is
       pragma Unreferenced (S);
@@ -456,14 +385,14 @@ package body Posix_Shell.Variables.Output is
       Result_Str : Unbounded_String := To_Unbounded_String ("");
    begin
       loop
-         N := Read (Input_Fd, Buffer'Address, 32000);
+         N := OS.FS.Read (Input_Fd, Buffer);
          if N > 0 then
             Result_Str := Result_Str & Buffer (1 .. N);
          end if;
          exit when N = 0;
       end loop;
       GNAT.Task_Lock.Lock;
-      Close (Input_Fd);
+      OS.FS.Close (Input_Fd);
       GNAT.Task_Lock.Unlock;
       return To_String (Result_Str);
    end Read_Pipe_And_Close;
@@ -473,7 +402,7 @@ package body Posix_Shell.Variables.Output is
    -----------------
 
    procedure Set_Pipe_In
-     (S : in out Shell_State; Input_Fd : File_Descriptor)
+     (S : in out Shell_State; Input_Fd : OS.FS.File_Descriptor)
    is
    begin
       --  Store the current states and then pop it, allowing us to access
@@ -498,8 +427,7 @@ package body Posix_Shell.Variables.Output is
    procedure Set_Pipe_Out (S : in out Shell_State) is
       Pipe   : aliased Pipe_Type;
       Result : Integer;
-      Success : Boolean;
-      pragma Warnings (Off, Success);
+
    begin
 
       Result := Create_Pipe (Pipe'Access);
@@ -518,8 +446,8 @@ package body Posix_Shell.Variables.Output is
       --  Keep the other side of the pipe
       S.Redirections (-2) := (Pipe.Input, null, False, True);
 
-      OS.Exec.Set_Close_On_Exec (Pipe.Output, True, Success);
-      OS.Exec.Set_Close_On_Exec (Pipe.Input, True, Success);
+      OS.FS.Set_Close_On_Exec (Pipe.Output, True);
+      OS.FS.Set_Close_On_Exec (Pipe.Input, True);
       --  Needed ?
    end Set_Pipe_Out;
 
@@ -531,11 +459,6 @@ package body Posix_Shell.Variables.Output is
    begin
       return State.Redirections;
    end Get_Descriptors;
-
-   --  function Get_Current_Redirections return Shell_Descriptors is
-   --  begin
-   --     return Redirection_Stack (Redirection_Pos);
-   --  end Get_Current_Redirections;
 
    -------------
    -- Warning --

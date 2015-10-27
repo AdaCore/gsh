@@ -37,6 +37,8 @@ with Ada.Exceptions; use Ada.Exceptions;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 with GNAT.Task_Lock;
 with GNAT.Regpat; use GNAT.Regpat;
+with OS.FS;
+with OS;
 
 package body Posix_Shell.Tree.Evals is
 
@@ -133,17 +135,17 @@ package body Posix_Shell.Tree.Evals is
       Status : Integer;
       pragma Warnings (Off, Status);
 
-      Read_Fd : File_Descriptor;
+      Read_Fd : OS.FS.File_Descriptor;
 
       task Eval_Task is
-         entry Start (Pipe_Input : out File_Descriptor);
+         entry Start (Pipe_Input : out OS.FS.File_Descriptor);
          entry Get_Exit_Status;
       end Eval_Task;
 
       task body Eval_Task is
          S_Copy : Shell_State;
       begin
-         accept Start (Pipe_Input : out File_Descriptor) do
+         accept Start (Pipe_Input : out OS.FS.File_Descriptor) do
             --  Create a new scope and create the pipe. The task is in charge
             --  of closing the writable side of the pipe and the main task the
             --  reading part
@@ -157,9 +159,10 @@ package body Posix_Shell.Tree.Evals is
          end Start;
 
          Eval (S_Copy, T);
+
          --  Close the write side (will unblock main task which is doing a read
          --  of the other side of the pipe).
-         Close (Get_Fd (S_Copy, 1));
+         OS.FS.Close (Get_Fd (S_Copy, 1));
 
          accept Get_Exit_Status do
             --  Destroy scope and ensure exit_status is correctly set.
@@ -655,17 +658,19 @@ package body Posix_Shell.Tree.Evals is
       pragma Warnings (Off, Status);
 
       task type Eval_Task is
-         entry Start (Pipe_Input : in out File_Descriptor; N : Node_Id);
+         entry Start (Pipe_Input : in out OS.FS.File_Descriptor; N : Node_Id);
       end Eval_Task;
 
       task body Eval_Task is
          S_Copy   : Shell_State;
          Cmd_Node : Node_Id;
-         Result   : File_Descriptor;
-         My_Input : File_Descriptor := -1;
+         Result   : OS.FS.File_Descriptor;
+         My_Input : OS.FS.File_Descriptor := OS.FS.Invalid_FD;
 
+         use OS.FS;
       begin
-         accept Start (Pipe_Input : in out File_Descriptor; N : Node_Id) do
+         accept Start (Pipe_Input : in out OS.FS.File_Descriptor; N : Node_Id)
+         do
             --  Create a new scope and create the pipe. The task is in charge
             --  of closing the writable side of the pipe and the main task the
             --  reading part
@@ -673,7 +678,7 @@ package body Posix_Shell.Tree.Evals is
             S_Copy := Enter_Scope (S);
             Set_Pipe_Out (S_Copy);
             Result := Get_Fd (S_Copy, -2);
-            if Pipe_Input /= -1 then
+            if Pipe_Input /= OS.FS.Invalid_FD then
                My_Input := Pipe_Input;
                Set_Pipe_In (S_Copy, Pipe_Input);
             end if;
@@ -706,7 +711,7 @@ package body Posix_Shell.Tree.Evals is
          --  end Get_Exit_Status
       end Eval_Task;
 
-      Input_Fd : File_Descriptor := -1;
+      Input_Fd : OS.FS.File_Descriptor := OS.FS.Invalid_FD;
 
       My_Tasks : array (N.Pipe_Childs'First .. N.Pipe_Childs'Last - 1) of
         Eval_Task;

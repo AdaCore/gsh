@@ -39,12 +39,6 @@ package body OS.Exec is
       return Handle;
    pragma Import (C, Portable_Execvp, "__gsh_no_block_spawn");
 
-   function Dup (Fd : File_Descriptor) return File_Descriptor;
-   pragma Import (C, Dup);
-
-   procedure Dup2 (Old_Fd, New_Fd : File_Descriptor);
-   pragma Import (C, Dup2);
-
    --------------------
    -- Blocking_Spawn --
    --------------------
@@ -53,9 +47,9 @@ package body OS.Exec is
      (Args      : Argument_List;
       Cwd       : String;
       Env       : Argument_List;
-      Stdin_Fd  : File_Descriptor;
-      Stdout_Fd : File_Descriptor;
-      Stderr_Fd : File_Descriptor)
+      Stdin_Fd  : OS.FS.File_Descriptor;
+      Stdout_Fd : OS.FS.File_Descriptor;
+      Stderr_Fd : OS.FS.File_Descriptor)
       return Integer
    is
       Pid    : Handle;
@@ -75,9 +69,9 @@ package body OS.Exec is
      (Args      : Argument_List;
       Cwd       : String;
       Env       : Argument_List;
-      Stdin_Fd  : File_Descriptor;
-      Stdout_Fd : File_Descriptor;
-      Stderr_Fd : File_Descriptor)
+      Stdin_Fd  : OS.FS.File_Descriptor;
+      Stdout_Fd : OS.FS.File_Descriptor;
+      Stderr_Fd : OS.FS.File_Descriptor)
       return Handle
    is
       Result     : Handle;
@@ -90,6 +84,7 @@ package body OS.Exec is
       Success : Boolean;
       pragma Warnings (Off, Success);
 
+      use OS.FS;
    begin
       GNAT.Task_Lock.Lock;
       Normalize_Arguments (Args, Arg_List);
@@ -123,7 +118,7 @@ package body OS.Exec is
 
       --  This does not return on Unix systems
       declare
-         Input, Output, Error : File_Descriptor;
+         Input, Output, Error : OS.FS.File_Descriptor;
 
       begin
          --  Since Windows does not have a separate fork/exec, we need to
@@ -134,31 +129,31 @@ package body OS.Exec is
          --    - revert to the previous stdin, stdout and stderr.
 
          if Stdin_Fd /= 0 then
-            Input  := Dup (Standin);
-            Dup2 (Stdin_Fd,  GNAT.OS_Lib.Standin);
+            Input  := OS.FS.Dup (OS.FS.Standin);
+            OS.FS.Dup2 (Stdin_Fd,  OS.FS.Standin);
          end if;
 
          if Stdout_Fd /= 1 then
-            Output := Dup (Standout);
+            Output := OS.FS.Dup (OS.FS.Standout);
             --  Ada.Text_IO.Put_Line (Stdout_Fd'Img & ", " & Output'Img);
-            Dup2 (Stdout_Fd, GNAT.OS_Lib.Standout);
+            Dup2 (Stdout_Fd, OS.FS.Standout);
 
          end if;
 
          if Stderr_Fd /= 2 then
-            Error  := Dup (Standerr);
+            Error  := OS.FS.Dup (OS.FS.Standerr);
 
             --  Since we are still called from the parent process, there is
             --  no way currently we can cleanly close the unneeded ends of
             --  the pipes, but this doesn't really matter. We could close
             --  Pipe1.Output, Pipe2.Input, Pipe3.Input.
 
-            Dup2 (Stderr_Fd, GNAT.OS_Lib.Standerr);
+            Dup2 (Stderr_Fd, OS.FS.Standerr);
          end if;
 
-         Set_Close_On_Exec (GNAT.OS_Lib.Standin, False, Success);
-         Set_Close_On_Exec (GNAT.OS_Lib.Standout, False, Success);
-         Set_Close_On_Exec (GNAT.OS_Lib.Standerr, False, Success);
+         Set_Close_On_Exec (OS.FS.Standin, False);
+         Set_Close_On_Exec (OS.FS.Standout, False);
+         Set_Close_On_Exec (OS.FS.Standerr, False);
 
          Result := Portable_Execvp
            (C_Arg_List'Address, C_Cwd_Addr, C_Env_Addr);
@@ -166,23 +161,23 @@ package body OS.Exec is
             Free (Arg_List (K));
          end loop;
 
-         Set_Close_On_Exec (GNAT.OS_Lib.Standin, True, Success);
-         Set_Close_On_Exec (GNAT.OS_Lib.Standout, True, Success);
-         Set_Close_On_Exec (GNAT.OS_Lib.Standerr, True, Success);
+         Set_Close_On_Exec (OS.FS.Standin, True);
+         Set_Close_On_Exec (OS.FS.Standout, True);
+         Set_Close_On_Exec (OS.FS.Standerr, True);
          --  Restore the old descriptors
 
          if Stdin_Fd /= 0 then
-            Dup2 (Input,  GNAT.OS_Lib.Standin);
+            Dup2 (Input,  OS.FS.Standin);
             Close (Input);
          end if;
 
          if Stdout_Fd /= 1 then
-            Dup2 (Output, GNAT.OS_Lib.Standout);
+            Dup2 (Output, OS.FS.Standout);
             Close (Output);
          end if;
 
          if Stderr_Fd /= 2 then
-            Dup2 (Error,  GNAT.OS_Lib.Standerr);
+            Dup2 (Error,  OS.FS.Standerr);
             Close (Error);
          end if;
       end;
@@ -287,23 +282,5 @@ package body OS.Exec is
          end loop;
       end if;
    end Normalize_Arguments;
-
-   -----------------------
-   -- Set_Close_On_Exec --
-   -----------------------
-
-   procedure Set_Close_On_Exec
-     (FD            : File_Descriptor;
-      Close_On_Exec : Boolean;
-      Status        : out Boolean)
-   is
-      function C_Set_Close_On_Exec
-        (FD            : File_Descriptor;
-         Close_On_Exec : Integer)
-         return Integer;
-      pragma Import (C, C_Set_Close_On_Exec, "__gsh_set_close_on_exec");
-   begin
-      Status := C_Set_Close_On_Exec (FD, Boolean'Pos (Close_On_Exec)) = 0;
-   end Set_Close_On_Exec;
 
 end OS.Exec;

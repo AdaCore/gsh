@@ -21,7 +21,6 @@
 ------------------------------------------------------------------------------
 
 with Interfaces.C.Strings; use Interfaces.C.Strings;
-with Interfaces.C; use Interfaces.C;
 
 package body Posix_Shell.Fileutils is
 
@@ -46,6 +45,7 @@ package body Posix_Shell.Fileutils is
                        Preserve_Attributes : Boolean)
                        return unsigned_long
    is
+      pragma Warnings (Off);
       function Internal
         (Source              : chars_ptr;
          Target              : chars_ptr;
@@ -53,7 +53,7 @@ package body Posix_Shell.Fileutils is
          Preserve_Attributes : Boolean)
          return unsigned_long;
       pragma Import (C, Internal, "__gsh_copy_file");
-
+      pragma Warnings (On);
       Source_Ptr : chars_ptr := New_String (Source);
       Target_Ptr : chars_ptr := New_String (Target);
       Result     : unsigned_long;

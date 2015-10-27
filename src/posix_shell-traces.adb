@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -22,58 +22,20 @@
 
 package body Posix_Shell.Traces is
 
-   function Open_Append
-     (Name  : C_File_Name;
-      Fmode : Mode) return File_Descriptor;
-   function Open_Append
-     (Name  : String;
-      Fmode : Mode) return File_Descriptor;
-
-   -----------------
-   -- Open_Append --
-   -----------------
-
-   function Open_Append
-     (Name  : C_File_Name;
-      Fmode : Mode) return File_Descriptor
-   is
-      function C_Open_Append
-        (Name  : C_File_Name;
-         Fmode : Mode) return File_Descriptor;
-      pragma Import (C, C_Open_Append, "__gnat_open_append");
-   begin
-      return C_Open_Append (Name, Fmode);
-   end Open_Append;
-
-   -----------------
-   -- Open_Append --
-   -----------------
-
-   function Open_Append
-     (Name  : String;
-      Fmode : Mode) return File_Descriptor
-   is
-      C_Name : String (1 .. Name'Length + 1);
-   begin
-      C_Name (1 .. Name'Length) := Name;
-      C_Name (C_Name'Last)      := ASCII.NUL;
-      return Open_Append (C_Name (C_Name'First)'Address, Fmode);
-   end Open_Append;
-
    ---------
    -- Log --
    ---------
 
    procedure Log (Logger : String; Msg : String) is
       Final : constant String := Logger & ":" & Msg & ASCII.LF;
-      N : Integer;
+      use OS.FS;
    begin
       if Enable_Traces then
-         if Logger_Handler = Invalid_FD then
-            Logger_Handler := Open_Append ("/tmp/gsh.out", Binary);
+         if Logger_Handler = OS.FS.Invalid_FD then
+            Logger_Handler := OS.FS.Open ("/tmp/gsh.out", Append_Mode);
          end if;
 
-         N := Write (Logger_Handler, Final'Address, Final'Length);
+         OS.FS.Write (Logger_Handler, Final);
       end if;
    end Log;
 

@@ -66,7 +66,8 @@ package Posix_Shell.Variables.Output is
    procedure Set_Pipe_Out (S : in out Shell_State);
    --  Set env to fill the pipe
 
-   procedure Set_Pipe_In (S : in out Shell_State; Input_Fd : File_Descriptor);
+   procedure Set_Pipe_In (S        : in out Shell_State;
+                          Input_Fd : OS.FS.File_Descriptor);
    --  Set env to read the pipe
 
    procedure Close_Pipe (S : in out Shell_State);
@@ -74,11 +75,11 @@ package Posix_Shell.Variables.Output is
 
    function Read_Pipe_And_Close
      (S : in out Shell_State;
-      Input_Fd : File_Descriptor) return String;
+      Input_Fd : OS.FS.File_Descriptor) return String;
    --  Read the pipe content, then close it, and return the content read.
 
    function Get_Fd
-     (S : Shell_State; N : Integer) return File_Descriptor;
+     (S : Shell_State; N : Integer) return OS.FS.File_Descriptor;
 
    procedure Close (S : Shell_State; N : Integer);
 

@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -101,6 +101,7 @@ package body Posix_Shell.List_Pools is
 
    function Is_Empty (Pool : List_Pool; Source : Token_List) return Boolean
    is
+      pragma Unreferenced (Pool);
    begin
       return Source = 0;
    end Is_Empty;

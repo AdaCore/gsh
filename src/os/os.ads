@@ -25,4 +25,6 @@
 
 package OS is
 
+   OS_Error : exception;
+
 end OS;

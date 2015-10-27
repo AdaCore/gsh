@@ -459,7 +459,7 @@ package body Posix_Shell.Variables is
       Iterate (Import_Env_Aux'Unrestricted_Access);
 
       --  Initialize redirections to default values
-      State.Redirections := (others => (Invalid_FD, null, False, False));
+      State.Redirections := (others => (OS.FS.Invalid_FD, null, False, False));
       State.Redirections (1) := (1, null, False, False);
       State.Redirections (2) := (2, null, False, False);
       State.Redirections (0) := (0, null, False, False);
