@@ -72,7 +72,7 @@ project Posix_Shell is
                Default_Switches;
 	         for Default_Switches ("c") use ("-O2", "-DHAVE_CONFIG_H");
          when "dev" =>
-            for Default_Switches ("ada") use ("-gnata") & Dev_Switches &
+            for Default_Switches ("ada") use ("-gnata", "-gnatwe") & Dev_Switches &
                Default_Switches;
             for Default_Switches ("c") use ("-DHAVE_CONFIG_H") & Dev_Switches;
       end case;
