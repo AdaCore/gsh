@@ -41,3 +41,6 @@ struct gsh_dir_entry {
   char name[512];
 };
 
+#define READ_MODE  0
+#define WRITE_MODE  1
+#define APPEND_MODE 2

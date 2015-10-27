@@ -38,6 +38,7 @@
 
 #if defined(__APPLE__)
 #include <copyfile.h>
+#define open64 open
 #endif
 
 #include "gsh.h"
@@ -103,6 +104,32 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[])
   result = posix_spawn(&pid, args[0], NULL, NULL, args, env);
   chdir(path);
   return (void *) (long) pid;
+}
+
+int
+__gsh_open(char *path, int kind)
+{
+  int fd;
+  int mode;
+  int perm;
+
+  if (kind > READ_MODE)
+    {
+      mode = O_WRONLY | O_CREAT | O_BINARY | O_CLOEXEC;
+      if (kind == APPEND_MODE)
+	{
+	  mode = mode | O_APPEND;
+	}
+      perm = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+    }
+  else
+    {
+      perm = S_IRUSR | S_IRGRP | S_IROTH;
+      mode = O_RDONLY | O_BINARY | O_CLOEXEC;
+    }
+
+  fd = open64 (path, mode, perm);
+  return fd < 0 ? -1 : fd;
 }
 
 unsigned long

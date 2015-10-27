@@ -39,12 +39,13 @@
 #include <signal.h>
 #include <io.h>
 #include <subauth.h>
-
+#include <fcntl.h>
+#include <sys/stat.h>
 #include "gsh.h"
 
 extern UINT CurrentCodePage;
 #define S2WSC(wstr,str,len) \
-   MultiByteToWideChar (CurrentCodePage,0,str,-1,wstr,len)
+   MultiByteToWideChar (CurrentCodePage, 0, str, -1, wstr, len)
 
 static DWORD windows_bid = 0;
 
@@ -55,6 +56,34 @@ long
 __gsh_getpid (void)
 {
   return (long) getpid ();
+}
+
+int
+__gsh_open (char *path, int kind)
+{
+  int fd;
+  int mode;
+  int perm;
+  TCHAR wpath[32768];
+
+  if (kind > READ_MODE)
+    {
+      mode = O_WRONLY | O_CREAT | O_BINARY | O_NOINHERIT;
+      if (kind == APPEND_MODE)
+	{
+	  mode = mode | O_APPEND;
+	}
+      perm = S_IWRITE;
+    }
+  else
+    {
+      perm = S_IREAD;
+      mode = O_RDONLY | O_BINARY | O_NOINHERIT;
+    }
+
+  S2WSC (wpath, path, 32768);
+  fd = _topen (wpath, mode, perm);
+  return fd < 0 ? -1 : fd;
 }
 
 int
