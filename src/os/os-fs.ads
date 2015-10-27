@@ -33,6 +33,14 @@ package OS.FS is
    Invalid_FD : constant File_Descriptor := -1;
    --  File descriptor returned when error in opening/creating file
 
+   To_Stdout : constant File_Descriptor := -2;
+   --  Use by some functions to indicate that a descriptor is a copy of the
+   --  stdout descriptor
+
+   Null_FD   : constant File_Descriptor := -3;
+   --  Use by some functions to redirect a file descriptor to the null file
+   --  (i.e /dev/null on unix or NUL on windows)
+
    function Is_Null_File (Filename : String) return Boolean;
    pragma Inline (Is_Null_File);
    --  Return true if the path correspond to the system 'null' file

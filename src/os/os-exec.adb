@@ -28,10 +28,6 @@ package body OS.Exec is
      (Args : Argument_List;
       Norm_Args : in out Argument_List);
 
-   function Waitpid (H : Handle) return Integer;
-   pragma Import (C, Waitpid, "__gsh_waitpid");
-   --  Wait for a specific process id, and return its exit code
-
    function Portable_Execvp
      (Args : System.Address;
       Cwd  : System.Address;
@@ -44,12 +40,56 @@ package body OS.Exec is
    --------------------
 
    function Blocking_Spawn
+     (Args            : Argument_List;
+      Cwd             : String                := "";
+      Env             : Argument_List         := Null_Argument_List;
+      Stdin_Fd        : OS.FS.File_Descriptor := OS.FS.Standin;
+      Stderr_Fd       : OS.FS.File_Descriptor := OS.FS.Standerr;
+      Status          : out Integer)
+      return Ada.Strings.Unbounded.Unbounded_String
+   is
+      use OS.FS;
+      use Ada.Strings.Unbounded;
+
+      Pipe_Input, Pipe_Output : OS.FS.File_Descriptor;
+      Output                  : Unbounded_String;
+      Real_Stderr_Fd          : OS.FS.File_Descriptor := Stderr_Fd;
+      Buffer                  : String (1 .. 4096);
+      Pid                     : Handle;
+      N                       : Integer;
+   begin
+      Open_Pipe (Pipe_Input, Pipe_Output);
+
+      if Stderr_Fd = To_Stdout then
+         Real_Stderr_Fd := Pipe_Output;
+      end if;
+
+      Pid := Non_Blocking_Spawn
+        (Args, Cwd, Env, Stdin_Fd, Pipe_Output, Real_Stderr_Fd);
+      Close (Pipe_Output);
+      loop
+         N := Read (Pipe_Input, Buffer);
+         if N > 0 then
+            Output := Output & Buffer (1 .. N);
+         end if;
+         exit when N = 0;
+      end loop;
+
+      Status := Wait (Pid);
+      return Output;
+   end Blocking_Spawn;
+
+   --------------------
+   -- Blocking_Spawn --
+   --------------------
+
+   function Blocking_Spawn
      (Args      : Argument_List;
-      Cwd       : String;
-      Env       : Argument_List;
-      Stdin_Fd  : OS.FS.File_Descriptor;
-      Stdout_Fd : OS.FS.File_Descriptor;
-      Stderr_Fd : OS.FS.File_Descriptor)
+      Cwd       : String                := "";
+      Env       : Argument_List         := Null_Argument_List;
+      Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
+      Stdout_Fd : OS.FS.File_Descriptor := OS.FS.Standout;
+      Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr)
       return Integer
    is
       Pid    : Handle;
@@ -57,7 +97,7 @@ package body OS.Exec is
    begin
       Pid := Non_Blocking_Spawn
         (Args, Cwd, Env, Stdin_Fd, Stdout_Fd, Stderr_Fd);
-      Result := Waitpid (Pid);
+      Result := Wait (Pid);
       return Result;
    end Blocking_Spawn;
 
@@ -67,11 +107,11 @@ package body OS.Exec is
 
    function Non_Blocking_Spawn
      (Args      : Argument_List;
-      Cwd       : String;
-      Env       : Argument_List;
-      Stdin_Fd  : OS.FS.File_Descriptor;
-      Stdout_Fd : OS.FS.File_Descriptor;
-      Stderr_Fd : OS.FS.File_Descriptor)
+      Cwd       : String                := "";
+      Env       : Argument_List         := Null_Argument_List;
+      Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
+      Stdout_Fd : OS.FS.File_Descriptor := OS.FS.Standout;
+      Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr)
       return Handle
    is
       Result     : Handle;
@@ -184,6 +224,10 @@ package body OS.Exec is
       GNAT.Task_Lock.Unlock;
       return Result;
    end Non_Blocking_Spawn;
+
+   -------------------------
+   -- Normalize_Arguments --
+   -------------------------
 
    procedure Normalize_Arguments
      (Args : Argument_List;
