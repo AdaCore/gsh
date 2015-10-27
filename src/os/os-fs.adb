@@ -229,6 +229,45 @@ package body OS.FS is
       return Result;
    end Open;
 
+   ---------------
+   -- Open_Pipe --
+   ---------------
+
+   procedure Open_Pipe (Pipe_Input  : out File_Descriptor;
+                        Pipe_Output : out File_Descriptor)
+   is
+      type Pipe_Type is record
+         Input, Output : OS.FS.File_Descriptor;
+      end record;
+
+      function Create_Pipe (Pipe : not null access Pipe_Type) return Integer;
+      pragma Import (C, Create_Pipe, "__gnat_pipe");
+
+      Status : Integer;
+      Result : aliased Pipe_Type;
+   begin
+      GNAT.Task_Lock.Lock;
+      Status := Create_Pipe (Result'Access);
+
+      if Status /= 0 then
+         GNAT.Task_Lock.Unlock;
+         raise OS_Error with "cannot open pipe";
+      end if;
+
+      Pipe_Input := Result.Input;
+      Pipe_Output := Result.Output;
+
+      begin
+         Set_Close_On_Exec (Pipe_Input, True);
+         Set_Close_On_Exec (Pipe_Output, True);
+      exception
+         when OS_Error =>
+            GNAT.Task_Lock.Unlock;
+            raise;
+      end;
+      GNAT.Task_Lock.Unlock;
+   end Open_Pipe;
+
    ----------
    -- Read --
    ----------

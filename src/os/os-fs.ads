@@ -127,4 +127,12 @@ package OS.FS is
    --      otherwise it will
    --  @raise OS_Error if the operation fails
 
+   procedure Open_Pipe (Pipe_Input  : out File_Descriptor;
+                        Pipe_Output : out File_Descriptor);
+   --  Open a pipe
+   --
+   --  @param Pipe_Input file descriptor of the pipe input
+   --  @param Pipe_Output file descriptor of the pipe output
+   --  @raise OS_Error in case the pipe cannot be opened
+
 end OS.FS;
