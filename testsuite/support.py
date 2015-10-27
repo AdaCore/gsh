@@ -21,7 +21,8 @@ class ShellDriver(TestDriver):
 
         trace = os.path.join(self.global_env['output_dir'],
                              self.test_env['test_name'] + '.trace')
-        if self.test_env.get('coverage', True):
+        if self.test_env.get('coverage', True) and \
+                self.global_env['options'].enable_coverage:
             cmd_line = ['gnatcov', 'run', '-o', trace, '-eargs'] + cmd_line
         p = Run(cmd_line,
                 cwd=self.test_tmp,
