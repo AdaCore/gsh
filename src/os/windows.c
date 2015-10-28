@@ -179,7 +179,8 @@ __gsh_set_close_on_exec (int fd,
 }
 
 HANDLE
-__gsh_no_block_spawn (char *args[], char *cwd, char *env[])
+__gsh_no_block_spawn (char *args[], char *cwd, char *env[],
+		      int pstdin, int pstdout, int pstderr)
 {
   BOOL result;
   STARTUPINFO SI;
@@ -192,12 +193,15 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[])
   /* Startup info. */
   SI.cb          = sizeof (STARTUPINFO);
   SI.lpReserved  = NULL;
-  SI.lpReserved2 = NULL;
   SI.lpDesktop   = NULL;
-  SI.cbReserved2 = 0;
   SI.lpTitle     = NULL;
-  SI.dwFlags     = 0;
+  SI.dwFlags     = STARTF_USESTDHANDLES;
   SI.wShowWindow = SW_HIDE;
+  SI.cbReserved2 = 0;
+  SI.lpReserved2 = NULL;
+  SI.hStdInput   = (HANDLE) _get_osfhandle (pstdin);
+  SI.hStdOutput  = (HANDLE) _get_osfhandle (pstdout);
+  SI.hStdError   = (HANDLE) _get_osfhandle (pstderr);
 
   /* Security attributes. */
   SA.nLength = sizeof (SECURITY_ATTRIBUTES);

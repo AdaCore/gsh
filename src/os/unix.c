@@ -81,7 +81,8 @@ __gsh_set_close_on_exec (int fd,
 }
 
 void *
-__gsh_no_block_spawn (char *args[], char *cwd, char *env[])
+__gsh_no_block_spawn (char *args[], char *cwd, char *env[],
+		      int pstdin, int pstdout, int pstderr)
 {
   pid_t pid;
   char path[4097];
@@ -90,6 +91,25 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[])
 
   char *new_args[4097];
   int index = 0;
+
+  posix_spawn_file_actions_t actions;
+  posix_spawn_file_actions_init (&actions);
+
+  if (pstdin != 0)
+    {
+      posix_spawn_file_actions_adddup2(&action, pstdin, 0);
+      posix_spawn_file_actions_addclose(&action, pstdin);
+    }
+  if (pstdout != 1)
+    {
+      posix_spawn_file_actions_adddup2(&action, pstdout, 1);
+      posix_spawn_file_actions_addclose(&action, pstdout);
+    }
+  if (pstderr != 2)
+    {
+      posix_spawn_file_actions_adddup2(&action, pstderr, 2);
+      posix_spawn_file_actions_addclose(&action, pstderr);
+    }
 
   cursor = args;
   while (cursor[0] != NULL)
@@ -101,7 +121,7 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[])
   new_args[index] = NULL;
   getcwd(path, 4097);
   chdir(cwd);
-  result = posix_spawn(&pid, args[0], NULL, NULL, args, env);
+  result = posix_spawn(&pid, args[0], &actions, NULL, args, env);
   chdir(path);
   return (void *) (long) pid;
 }

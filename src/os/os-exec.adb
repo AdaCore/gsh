@@ -24,14 +24,18 @@ with System;
 with GNAT.Task_Lock;
 
 package body OS.Exec is
+
    procedure Normalize_Arguments
-     (Args : Argument_List;
+     (Args      : Argument_List;
       Norm_Args : in out Argument_List);
 
    function Portable_Execvp
-     (Args : System.Address;
-      Cwd  : System.Address;
-      Env  : System.Address)
+     (Args   : System.Address;
+      Cwd    : System.Address;
+      Env    : System.Address;
+      Stdin  : OS.FS.File_Descriptor;
+      Stdout : OS.FS.File_Descriptor;
+      Stderr : OS.FS.File_Descriptor)
       return Handle;
    pragma Import (C, Portable_Execvp, "__gsh_no_block_spawn");
 
@@ -156,71 +160,20 @@ package body OS.Exec is
          C_Env_Addr := C_Env'Address;
       end if;
 
-      --  This does not return on Unix systems
-      declare
-         Input, Output, Error : OS.FS.File_Descriptor;
+      Set_Close_On_Exec (Stdin_Fd, False);
+      Set_Close_On_Exec (Stdout_Fd, False);
+      Set_Close_On_Exec (Stderr_Fd, False);
 
-      begin
-         --  Since Windows does not have a separate fork/exec, we need to
-         --  perform the following actions:
-         --    - save stdin, stdout, stderr
-         --    - replace them by our pipes
-         --    - create the child with process handle inheritance
-         --    - revert to the previous stdin, stdout and stderr.
+      Result := Portable_Execvp
+        (C_Arg_List'Address, C_Cwd_Addr, C_Env_Addr,
+         Stdin_Fd, Stdout_Fd, Stderr_Fd);
+      for K in Arg_List'Range loop
+         Free (Arg_List (K));
+      end loop;
 
-         if Stdin_Fd /= 0 then
-            Input  := OS.FS.Dup (OS.FS.Standin);
-            OS.FS.Dup2 (Stdin_Fd,  OS.FS.Standin);
-         end if;
-
-         if Stdout_Fd /= 1 then
-            Output := OS.FS.Dup (OS.FS.Standout);
-            --  Ada.Text_IO.Put_Line (Stdout_Fd'Img & ", " & Output'Img);
-            Dup2 (Stdout_Fd, OS.FS.Standout);
-
-         end if;
-
-         if Stderr_Fd /= 2 then
-            Error  := OS.FS.Dup (OS.FS.Standerr);
-
-            --  Since we are still called from the parent process, there is
-            --  no way currently we can cleanly close the unneeded ends of
-            --  the pipes, but this doesn't really matter. We could close
-            --  Pipe1.Output, Pipe2.Input, Pipe3.Input.
-
-            Dup2 (Stderr_Fd, OS.FS.Standerr);
-         end if;
-
-         Set_Close_On_Exec (OS.FS.Standin, False);
-         Set_Close_On_Exec (OS.FS.Standout, False);
-         Set_Close_On_Exec (OS.FS.Standerr, False);
-
-         Result := Portable_Execvp
-           (C_Arg_List'Address, C_Cwd_Addr, C_Env_Addr);
-         for K in Arg_List'Range loop
-            Free (Arg_List (K));
-         end loop;
-
-         Set_Close_On_Exec (OS.FS.Standin, True);
-         Set_Close_On_Exec (OS.FS.Standout, True);
-         Set_Close_On_Exec (OS.FS.Standerr, True);
-         --  Restore the old descriptors
-
-         if Stdin_Fd /= 0 then
-            Dup2 (Input,  OS.FS.Standin);
-            Close (Input);
-         end if;
-
-         if Stdout_Fd /= 1 then
-            Dup2 (Output, OS.FS.Standout);
-            Close (Output);
-         end if;
-
-         if Stderr_Fd /= 2 then
-            Dup2 (Error,  OS.FS.Standerr);
-            Close (Error);
-         end if;
-      end;
+      Set_Close_On_Exec (Stdin_Fd, True);
+      Set_Close_On_Exec (Stdout_Fd, True);
+      Set_Close_On_Exec (Stderr_Fd, True);
       GNAT.Task_Lock.Unlock;
       return Result;
    end Non_Blocking_Spawn;
