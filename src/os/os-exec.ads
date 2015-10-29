@@ -20,13 +20,13 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with GNAT.OS_Lib; use GNAT.OS_Lib;
+with GNAT.Strings;
 with Ada.Strings.Unbounded;
 with OS.FS;
 
 package OS.Exec is
 
-   subtype Argument_List is String_List;
+   subtype Argument_List is GNAT.Strings.String_List;
 
    Null_Argument_List : constant Argument_List;
 

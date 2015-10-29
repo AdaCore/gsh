@@ -21,6 +21,7 @@
 ------------------------------------------------------------------------------
 
 with System;
+with GNAT.Strings; use GNAT.Strings;
 with GNAT.Task_Lock;
 
 package body OS.Exec is
