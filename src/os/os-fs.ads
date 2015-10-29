@@ -20,6 +20,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with GNAT.Strings;
+
 package OS.FS is
 
    type File_Descriptor is new Integer;
@@ -86,6 +88,17 @@ package OS.FS is
    --  @raise OS_Error if the not all the data can be written
 
    function Read (FD : File_Descriptor; Buffer : in out String) return Integer;
+   --  Read content of a file
+   --
+   --  @param FD a file descriptor
+   --  @param Buffer receive the content from the file
+   --  @return Integer number of bytes read
+
+   function Read (FD : File_Descriptor) return GNAT.Strings.String_Access;
+   --  Read complete content of a file
+   --
+   --  @param FD file descriptor of the file to be read
+   --  @return the file content
 
    procedure Close (FD : File_Descriptor);
    pragma Inline (Close);
@@ -142,5 +155,12 @@ package OS.FS is
    --  @param Pipe_Input file descriptor of the pipe input
    --  @param Pipe_Output file descriptor of the pipe output
    --  @raise OS_Error in case the pipe cannot be opened
+
+   function File_Length (FD : File_Descriptor) return Long_Integer;
+   --  Return the length of a file
+   --
+   --  @param FD file descriptor of the file
+   --  @return the file length
+   pragma Import (C, File_Length, "__gnat_file_length_long");
 
 end OS.FS;

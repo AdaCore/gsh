@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -21,6 +21,7 @@
 ------------------------------------------------------------------------------
 
 with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
+with OS.FS;
 
 package body Posix_Shell.Buffers is
 
@@ -156,30 +157,16 @@ package body Posix_Shell.Buffers is
    --------------------------
 
    function New_Buffer_From_File (Filename : String) return Buffer is
-      F : constant File_Descriptor := Open_Read (Filename, Binary);
-      Expected_Bytes_Read : Integer;
-      Bytes_Read : Integer;
+      FD      : constant OS.FS.File_Descriptor := OS.FS.Open (Filename);
+      Result  : Buffer;
+      Content : String_Access;
    begin
-      if F = Invalid_FD then
-         --  The Open_Read failed.
-         --  Error (Filename & ": Unable to open for reading");
-         raise Buffer_Read_Error;
-      end if;
-
-      Expected_Bytes_Read := Integer (File_Length (F));
-
-      declare
-         Buffer_Str : aliased String (1 .. Expected_Bytes_Read);
-      begin
-         Bytes_Read := Read (F, Buffer_Str'Address, Expected_Bytes_Read);
-         Close (F);
-
-         if Bytes_Read /= Expected_Bytes_Read then
-            raise Buffer_Read_Error;
-         end if;
-
-         return New_Buffer (Buffer_Str);
-      end;
+      Result.Pos := (1, 1);
+      Content := OS.FS.Read (FD);
+      Result.S := new String'(Strip_CR (Content.all));
+      Free (Content);
+      OS.FS.Close (FD);
+      return Result;
    end New_Buffer_From_File;
 
    ------------

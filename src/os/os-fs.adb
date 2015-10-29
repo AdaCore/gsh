@@ -291,6 +291,28 @@ package body OS.FS is
       return Integer (Result);
    end Read;
 
+   ----------
+   -- Read --
+   ----------
+
+   function Read (FD : File_Descriptor) return GNAT.Strings.String_Access
+   is
+      use GNAT.Strings;
+      Length : constant Long_Integer := File_Length (FD);
+      Buffer : constant String_Access := new String (1 .. Integer (Length));
+      N      : Integer;
+   begin
+      if Length = 0 then
+         return Buffer;
+      end if;
+
+      N := Read (FD, Buffer.all);
+      if N /= Integer (Length) then
+         raise OS_Error with "cannot read complete file content";
+      end if;
+      return Buffer;
+   end Read;
+
    -----------------------
    -- Set_Close_On_Exec --
    -----------------------

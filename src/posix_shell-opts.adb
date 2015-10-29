@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -31,6 +31,7 @@ with GNAT.OS_Lib;
 with GNAT.Strings; use GNAT.Strings;
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 with Posix_Shell.Traces; use Posix_Shell.Traces;
+with OS;
 
 package body Posix_Shell.Opts is
 
@@ -166,7 +167,7 @@ package body Posix_Shell.Opts is
          begin
             B.all := New_Buffer_From_File (Argument (Arg_Number));
          exception
-            when Buffer_Read_Error =>
+            when OS.OS_Error =>
                Put_Line (Standard_Error,
                          Argument (Arg_Number) &
                          ": no such file or directory");

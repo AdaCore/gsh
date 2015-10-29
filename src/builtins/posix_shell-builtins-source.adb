@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -29,6 +29,7 @@ with Posix_Shell.Parser;                use Posix_Shell.Parser;
 with Posix_Shell.Tree.Evals;            use Posix_Shell.Tree.Evals;
 with Posix_Shell.Tree;                  use Posix_Shell.Tree;
 with Posix_Shell.Variables.Output;      use Posix_Shell.Variables.Output;
+with OS;
 
 package body Posix_Shell.Builtins.Source is
 
@@ -51,7 +52,7 @@ package body Posix_Shell.Builtins.Source is
       begin
          T := Parse_File (Resolve_Path (S, Args (Args'First).all));
       exception
-         when Buffer_Read_Error =>
+         when OS.OS_Error =>
             return 1;
       end;
 
