@@ -28,7 +28,7 @@ with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Ada.Text_IO;
 with OS.Exec; use OS.Exec;
 
-package body Posix_Shell.Commands_Preprocessor is
+package body Posix_Shell.Commands is
 
    function Get_Launcher
      (S : Shell_State; Filename : String_Access) return String_List;
@@ -241,4 +241,4 @@ package body Posix_Shell.Commands_Preprocessor is
       return Exit_Status;
    end Run;
 
-end Posix_Shell.Commands_Preprocessor;
+end Posix_Shell.Commands;
