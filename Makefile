@@ -44,6 +44,5 @@ install:
 	fi
 
 clean:
-	-rm -rf obj/*
-	-rm -rf lua/src/*.o
-	-rm -rf lua/src/lib*.a
+	gprclean -r -P posix_shell -XBUILD=prod
+	gprclean -r -P posix_shell -XBUILD=dev        

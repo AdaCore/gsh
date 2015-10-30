@@ -1,26 +1,12 @@
-with "lua/lua.gpr";
-with "os/os.gpr";
-
-project Posix_Shell is
-
+library project OS is
+   for Library_Name use "os";
+   for Library_Dir use "lib";
    type Build_Type is ("dev", "prod");
-   type Boolean_Type is ("true", "false");
-
    Build     : Build_Type   := external ("BUILD", "dev");
    Build_Dir : Build_Type   := Build;
    OS        := external("OS", "");
 
    Default_Switches := ("-gnat12", "-gnatwcfijklmopruvz", "-gnaty");
-   Default_Libs := ();
-
-   case OS is
-      when "Windows_NT" =>
-         Default_Libs := ("-lntdll",
-                          "-Wl,--stack=0x2000000");
-      when others =>
-         Default_Libs := ("-lreadline", "-lm", "-ldl");
-   end case;
-
    Dev_Switches := ("-g", "-O0");
 
    case Build is
@@ -28,27 +14,17 @@ project Posix_Shell is
          ("-fpreserve-control-flow", "-fdump-scos");
       when "prod" => null;
    end case;
-
-   for Main use ("gsh_lexer.adb", "gsh.adb", "builtin.adb", "gsh_unit.adb");
-
+     
    case OS is
-      when "Windows_NT" =>
-         for Source_Dirs use (".", "src", "src\builtins", "src\gnulib",
-                              "src\readline", "src\lua");
-      when others =>
-         for Source_Dirs use (".", "src", "src/builtins", "src/lua");
+       when "Windows_NT" => 
+           for Source_Dirs use ("src", "src/ddk");
+       when others =>
+           for Source_Dirs use ("src");
    end case;
 
    for Languages use ("Ada", "C");
 
    for Object_Dir use "obj/" & Build_Dir;
-
-   package Linker is
-      case Build is
-         when "prod" => for Default_Switches ("ada") use Default_Libs;
-         when "dev" =>  for Default_Switches ("ada") use Default_Libs;
-      end case;
-   end Linker;
 
    package Binder is
       case Build is
@@ -64,7 +40,6 @@ project Posix_Shell is
          when "dev" =>
             for Default_Switches ("c") use ("-g");
             for Default_Switches ("ada") use ("-g");
-
       end case;
    end Builder;
 
@@ -73,12 +48,12 @@ project Posix_Shell is
          when "prod" =>
             for Default_Switches ("ada") use ("-O2", "-gnatpn") &
                Default_Switches;
-	         for Default_Switches ("c") use ("-O2", "-DHAVE_CONFIG_H");
+	    for Default_Switches ("c") use ("-O2");
          when "dev" =>
             for Default_Switches ("ada") use ("-gnata", "-gnatwe") & Dev_Switches &
                Default_Switches;
-            for Default_Switches ("c") use ("-DHAVE_CONFIG_H") & Dev_Switches;
+            for Default_Switches ("c") use Dev_Switches;
       end case;
    end Compiler;
 
-end Posix_Shell;
+end OS;
