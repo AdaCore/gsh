@@ -1,3 +1,5 @@
+with "lua/lua.gpr";
+
 project Posix_Shell is
 
    type Build_Type is ("dev", "prod");
@@ -12,10 +14,10 @@ project Posix_Shell is
 
    case OS is
       when "Windows_NT" =>
-         Default_Libs := ("-lntdll", "lua\src\liblua.a",
+         Default_Libs := ("-lntdll",
                           "-Wl,--stack=0x2000000");
       when others =>
-         Default_Libs := ("-lreadline", "lua/src/liblua.a", "-lm", "-ldl");
+         Default_Libs := ("-lreadline", "-lm", "-ldl");
    end case;
 
    Dev_Switches := ("-g", "-O0");
