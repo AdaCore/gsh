@@ -24,7 +24,7 @@ with GNAT.Directory_Operations;
 with System;
 with GNAT.Task_Lock;
 with GNAT.OS_Lib;
-with Interfaces.C; use Interfaces.C;
+with Interfaces.C.Strings; use Interfaces.C.Strings;
 
 package body OS.FS is
 
@@ -44,6 +44,10 @@ package body OS.FS is
    --  @return same string with null character appended
    pragma Inline (To_C);
 
+   -----------
+   -- Close --
+   -----------
+
    procedure Close (FD : File_Descriptor) is
       function C_Close (FD : File_Descriptor) return int;
       pragma Import (C, C_Close, "close");
@@ -53,6 +57,39 @@ package body OS.FS is
    begin
       Status := C_Close (FD);
    end Close;
+
+   ---------------
+   -- Copy_File --
+   ---------------
+
+   function Copy_File (Source              : String;
+                       Target              : String;
+                       Fail_If_Exists      : Boolean;
+                       Preserve_Attributes : Boolean)
+                       return unsigned_long
+   is
+      pragma Warnings (Off);
+      function Internal
+        (Source              : chars_ptr;
+         Target              : chars_ptr;
+         Fail_If_Exists      : Boolean;
+         Preserve_Attributes : Boolean)
+         return unsigned_long;
+      pragma Import (C, Internal, "__gsh_copy_file");
+      pragma Warnings (On);
+      Source_Ptr : chars_ptr := New_String (Source);
+      Target_Ptr : chars_ptr := New_String (Target);
+      Result     : unsigned_long;
+
+   begin
+      Result := Internal (Source_Ptr,
+                          Target_Ptr,
+                          Fail_If_Exists,
+                          Preserve_Attributes);
+      Free (Source_Ptr);
+      Free (Target_Ptr);
+      return Result;
+   end Copy_File;
 
    -----------------
    -- Delete_File --
@@ -327,6 +364,48 @@ package body OS.FS is
       end if;
       return Buffer;
    end Read;
+
+   -------------------
+   -- Relative_Path --
+   -------------------
+
+   function Relative_Path (P   : String;
+                           Dir : String;
+                           Path_Prefix : String := ".") return String is
+   begin
+
+      if P = Dir then
+         return Path_Prefix;
+
+      elsif P'Length > Dir'Length then
+
+         if P (P'First .. Dir'Length) = Dir then
+
+            if P (Dir'Length + 2 .. P'Last) = Path_Prefix then
+               return Path_Prefix;
+
+            elsif P (Dir'Length + 2 .. P'Last) = Path_Prefix & "/." then
+               return Path_Prefix;
+
+            elsif Dir'Length + 2 + Path_Prefix'Length < P'Last then
+               if P (Dir'Length + 2 ..
+                       Dir'Length + 1 + Path_Prefix'Length) = Path_Prefix
+               then
+                  return P (Dir'Length + 2 .. P'Last);
+               else
+                  return Path_Prefix & "/" & P (Dir'Length + 2 .. P'Last);
+               end if;
+            else
+               return Path_Prefix & "/" & P (Dir'Length + 2 .. P'Last);
+            end if;
+
+         else
+            return P;
+         end if;
+      else
+         return P;
+      end if;
+   end Relative_Path;
 
    -----------------------
    -- Set_Close_On_Exec --

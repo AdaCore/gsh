@@ -30,7 +30,7 @@ with GNAT.Directory_Operations;
 
 with Posix_Shell.Rm;               use Posix_Shell.Rm;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
-with Posix_Shell.Fileutils;        use Posix_Shell.Fileutils;
+with OS.FS;                        use OS.FS;
 
 package body Posix_Shell.Builtins.Cp is
 

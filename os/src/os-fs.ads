@@ -21,6 +21,7 @@
 ------------------------------------------------------------------------------
 
 with GNAT.Strings;
+with Interfaces.C; use Interfaces.C;
 
 package OS.FS is
 
@@ -168,4 +169,22 @@ package OS.FS is
    --
    --  @param FD file descriptor
    --  @return True if the file descriptor is a console, False otherwise
+
+   function Relative_Path (P   : String;
+                           Dir : String;
+                           Path_Prefix : String  := ".") return String;
+   --  From an abosulte path, returns the relative path to a directory (full
+   --  path expected)
+
+   function Copy_File
+     (Source              : String;
+      Target              : String;
+      Fail_If_Exists      : Boolean;
+      Preserve_Attributes : Boolean)
+      return unsigned_long;
+   --  Copy file Source to Target. Return 0 if the operation is successfull
+   --  and a system specific error code otherwise. If Fail_If_Exits is True
+   --  then the operation fails if the target file exists, otherwise the file
+   --  is replaced. If Preserve_Attributes is True then attributes are
+   --  preserved.
 end OS.FS;

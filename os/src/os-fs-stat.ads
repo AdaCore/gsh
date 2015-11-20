@@ -22,20 +22,11 @@
 
 --  This unit provides various interface to the filesystem
 
-with System;
-with Interfaces.C; use Interfaces.C;
-
-package Posix_Shell.Fileutils is
+package OS.FS.Stat is
 
    type File_Attributes is private;
    --  Record containing information about a file or directory on the
    --  filesystem
-
-   type Dir_Entry is private;
-   --  Record containing information about a directory entry
-
-   type Dir_Handle is new System.Address;
-   --  Handle on directory
 
    function File_Information (Path : String) return File_Attributes;
    --  Retrieve file information about a file located at Path
@@ -55,46 +46,6 @@ package Posix_Shell.Fileutils is
    function Is_Symbolic_Link (FI : File_Attributes) return Boolean;
    --  Return True if the file is a symbolic link
 
-   function Open (Path : String) return Dir_Handle;
-   --  Open a directory in order to list its entries
-
-   procedure Close (D : Dir_Handle);
-   --  Close an handle to a directory
-
-   function Read (D : Dir_Handle) return Dir_Entry;
-   --  Read the next entry in a directory. A Null Dir_Entry will be returned if
-   --  there is no more entry available.
-
-   function Is_Null (DE : Dir_Entry) return Boolean;
-   --  Return True if the entry is a null entry
-
-   function File_Information (DE : Dir_Entry) return File_Attributes;
-   --  Get File_Attributes of the directory entry DE
-
-   function Name (DE : Dir_Entry) return String;
-   --  Get the name of the directory entry DE
-
-   function Image (DE : Dir_Entry) return String;
-   --  String image of a Dir_Entry structure
-
-   function Relative_Path (P   : String;
-                           Dir : String;
-                           Path_Prefix : String  := ".") return String;
-   --  From an abosulte path, returns the relative path to a directory (full
-   --  path expected)
-
-   function Copy_File
-     (Source              : String;
-      Target              : String;
-      Fail_If_Exists      : Boolean;
-      Preserve_Attributes : Boolean)
-      return unsigned_long;
-   --  Copy file Source to Target. Return 0 if the operation is successfull
-   --  and a system specific error code otherwise. If Fail_If_Exits is True
-   --  then the operation fails if the target file exists, otherwise the file
-   --  is replaced. If Preserve_Attributes is True then attributes are
-   --  preserved.
-
 private
 
    type File_Attributes is record
@@ -111,14 +62,9 @@ private
    end record;
    pragma Convention (C_Pass_By_Copy, File_Attributes);
 
-   type Dir_Entry is record
-      Info : File_Attributes;
-      Name : Interfaces.C.char_array (0 .. 511);
-   end record;
-
    pragma Inline (Exists);
    pragma Inline (Is_Regular_File);
    pragma Inline (Is_Directory);
    pragma Inline (Is_Symbolic_Link);
 
-end Posix_Shell.Fileutils;
+end OS.FS.Stat;
