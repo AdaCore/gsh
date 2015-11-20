@@ -62,141 +62,206 @@ __declspec(dllimport) BOOL WINAPI GetVolumePathNameW(
 WCHAR digit_image[] = L"0123456789ABCDEF";
 WCHAR trash_dir[] = L"\\tmp\\trash\\";
 
-UNICODE_STRING Empty_Unicode_String = { Length: 0, MaximumLength: 1, Buffer: L"" };
+/* Define some utility functions to manipulate the UNICODE_STRING representing
+   paths.  */
+
+#define MAX_UPATH 32767
+#define MAX_WPATH MAX_UPATH - 4
+
+UNICODE_STRING Empty_Unicode_String = {Length:        0,
+				       MaximumLength: 1,
+				       Buffer:        L"" };
+
+#define UNICODE_PATH(name) \
+    UNICODE_STRING name; \
+    WCHAR name ## _buffer[MAX_UPATH]; \
+    name.Length = 4 * sizeof(WCHAR); \
+    name.MaximumLength = sizeof(WCHAR) * MAX_UPATH; \
+    name.Buffer = name ## _buffer; \
+    memcpy(name.Buffer, L"\\??\\", 5 * sizeof(WCHAR))
+
+void
+upath_append (UNICODE_STRING* upath, WCHAR *str)
+{
+  memcpy (upath->Buffer + upath->Length / sizeof (WCHAR),
+	  str,
+	  sizeof (WCHAR) * wcslen (str) + sizeof (WCHAR));
+  upath->Length = upath->Length + wcslen (str) * sizeof (WCHAR);
+}
+
+WCHAR *
+upath2wpath (UNICODE_STRING upath)
+{
+  /* return unicode string buffer without initial \??\ */
+  return upath.Buffer + 4;
+}
 
 NTSTATUS NTAPI NtQueryAttributesFile (POBJECT_ATTRIBUTES,
-                                        PFILE_BASIC_INFORMATION);
+				      PFILE_BASIC_INFORMATION);
 
-NTSTATUS
+/* Move file with handle h to dest */
+static NTSTATUS
+move (HANDLE h, UNICODE_STRING dest)
+{
+  PFILE_RENAME_INFORMATION mv_info;
+  ULONG mv_info_size;
+  IO_STATUS_BLOCK io;
+  NTSTATUS status;
+
+  mv_info_size = sizeof (FILE_RENAME_INFORMATION) + dest.Length;
+  mv_info = (PFILE_RENAME_INFORMATION) malloc (mv_info_size);
+  mv_info->ReplaceIfExists = TRUE;
+  mv_info->RootDirectory = NULL;
+  mv_info->FileNameLength = dest.Length;
+  memcpy (mv_info->FileName, dest.Buffer, dest.Length);
+
+  status = NtSetInformationFile (h, &io,
+				 mv_info,
+				 mv_info_size,
+				 FileRenameInformation);
+  free (mv_info);
+  if (!NT_SUCCESS (status))
+    {
+      return status;
+    }
+  return STATUS_SUCCESS;
+}
+
+/* Move file with handle h and path filename to trash.
+ *
+ * We attempt to move the file to VOLUME/tmp/trash/<fileid>. On local
+ * filesystems the fileid is unique thus there cannot be any conflict
+ */
+static NTSTATUS
 move_away(HANDLE h, UNICODE_STRING filename)
 {
-   IO_STATUS_BLOCK io;
-   OBJECT_ATTRIBUTES attr;
+  IO_STATUS_BLOCK io;
+  FILE_INTERNAL_INFORMATION file_info;
+  UNICODE_PATH (dest);
+  WCHAR root_dir[MAX_PATH];
+  NTSTATUS status;
+  LONGLONG file_id;
+  int i;
 
-   FILE_NAME_INFORMATION query_size;
-   FILE_INTERNAL_INFORMATION file_internal_info;
+  /* Retrieve volume associated with the current path */
+  GetVolumePathNameW(upath2wpath (filename),
+		     root_dir,
+                     MAX_PATH);
+  upath_append (&dest, root_dir);
 
-   PFILE_RENAME_INFORMATION rename_information;
-   ULONG rename_information_size;
+  /* Append to dest our trash directory */
+  upath_append (&dest, trash_dir);
 
-   FILE_DISPOSITION_INFORMATION disp = { TRUE };
+  /* Use the file id which is unique to complete the destination path.  */
+  status = NtQueryInformationFile(h, &io, &file_info,
+				  sizeof(file_info),
+				  FileInternalInformation);
+  if (!NT_SUCCESS(status)) return status;
 
-   UNICODE_STRING dest;
-   WCHAR root_dir[MAX_PATH];
-   WCHAR from_buffer[MAX_PATH];
-   WCHAR dest_buffer[MAX_PATH];
-   NTSTATUS status;
-   LONGLONG file_id;
-   int i;
+  file_id = file_info.IndexNumber.QuadPart;
+  for (i=0; i < 16; i++) {
+    dest.Buffer[dest.Length / sizeof(WCHAR) + 15 - i] =
+    digit_image[file_id & 0xF];
+    file_id >>= 4;
+  }
+  dest.Length += 16 * sizeof(WCHAR);
+  /* Ensure that strings stored in UNICODE_STRING are always null ended.  */
+  dest.Buffer[dest.Length / sizeof(WCHAR)] = L'\0';
 
-   /* Retrieve volume associated with the current path */
-   memcpy(from_buffer, filename.Buffer, filename.Length);
-   from_buffer[filename.Length] = L'\0';
-   /* Note: we ignore the \??\ as only native api understand it */
-   GetVolumePathNameW(from_buffer + 4, root_dir, MAX_PATH);
-
-   /* Now compute the destination path */
-   dest.Length = 4 * sizeof(WCHAR);
-   dest.MaximumLength = sizeof(WCHAR) * MAX_PATH;
-   dest.Buffer = dest_buffer;
-   memcpy(dest.Buffer, L"\\??\\", 4 * sizeof(WCHAR));
-   memcpy(dest.Buffer + dest.Length / sizeof(WCHAR),
-          root_dir,
-          sizeof(WCHAR) * wcslen(root_dir));
-   dest.Length = dest.Length + wcslen(root_dir) * sizeof(WCHAR);
-
-   /* Append to dest our trash directory */
-   memcpy(dest.Buffer + dest.Length / sizeof(WCHAR),
-          trash_dir, sizeof(trash_dir));
-
-   /* When adjusting dest length ignore the null charater at the end of
-      trash_dir. */
-   dest.Length += sizeof(trash_dir) - sizeof(WCHAR);
-
-   /* Use the file id which is unique to complete the destination path.  */
-   status = NtQueryInformationFile(h, &io, &file_internal_info,
-                                   sizeof(file_internal_info),
-                                   FileInternalInformation);
-   if (!NT_SUCCESS(status)) return status;
-
-   file_id = file_internal_info.IndexNumber.QuadPart;
-   for (i=0; i < 16; i++) {
-       dest.Buffer[dest.Length / sizeof(WCHAR) + 15 - i] =
-          digit_image[file_id & 0xF];
-       file_id >>= 4;
-   }
-   dest.Length += 16 * sizeof(WCHAR);
-
-   /* Not really useful but great if we want to print our buffer using
-      printf.  */
-   dest.Buffer[dest.Length / sizeof(WCHAR)] = L'\0';
-
-   /* First compute the size of the FILE_RENAME_INFORMATION struct */
-   rename_information_size = sizeof(FILE_RENAME_INFORMATION) + dest.Length;
-   rename_information = (PFILE_RENAME_INFORMATION) malloc (rename_information_size);
-   rename_information->ReplaceIfExists = TRUE;
-   rename_information->RootDirectory = NULL;
-   rename_information->FileNameLength = dest.Length;
-   memcpy(rename_information->FileName, dest.Buffer, dest.Length);
-
-   /* Do the renaming */
-   status = NtSetInformationFile(h, &io, rename_information, rename_information_size, FileRenameInformation);
-   if (!NT_SUCCESS(status))
-   {
-      printf ("rename from %ls to %ls failed (%X)\n", filename.Buffer, dest.Buffer, status);
-      return status;
-   }
-
-   /* Now we should be ready to resume our deletion process */
-   return STATUS_SUCCESS;
+  /* Move the file.  */
+  return move (h, dest);
 }
+
+/* Check if a directory is empty or "about" to be empty
+ *
+ * If this is the case the function return NT_SUCCESS, any other status
+ * otherwise.  */
 static NTSTATUS
 is_dir_empty (HANDLE h)
 {
-   IO_STATUS_BLOCK io;
-   const ULONG bufsiz = 3 * sizeof (FILE_NAMES_INFORMATION)
-                       + 3 * PATH_MAX * sizeof (WCHAR);
-   PFILE_NAMES_INFORMATION pfni = (PFILE_NAMES_INFORMATION) malloc (bufsiz);
+  IO_STATUS_BLOCK io;
+  #define FNI FILE_NAMES_INFORMATION
 
-   NTSTATUS status = NtQueryDirectoryFile (h, NULL, NULL, 0, &io, pfni,
-                                           bufsiz, FileNamesInformation,
-                                           FALSE, NULL, TRUE);
-   if (!NT_SUCCESS (status)) { free(pfni); return status; }
+  /* We allocate 3 times the size of the structure in order to fit at least
+   * three entries. This way most of the time with one system call we will be
+   * able to check if the directory is empty or not. Indeed we expect the
+   * function to return at least . and .. entries. */
+  const ULONG fni_size = 3 * sizeof (FNI) + 3 * PATH_MAX * sizeof (WCHAR);
+  ULONG fni_offset;
+  FNI *pfni = (FNI *) malloc (fni_size);
+  FNI *fni_cursor;
 
-   int cnt = 1;
-   do
-
-   {
-      while (pfni->NextEntryOffset)
-        {
-          if (++cnt > 2)
-            {
-              UNICODE_STRING fname;
-              OBJECT_ATTRIBUTES attr;
-              FILE_BASIC_INFORMATION fbi;
-
-              pfni = (PFILE_NAMES_INFORMATION)
-                     ((char *) pfni + pfni->NextEntryOffset);
-              fname.Length = pfni->FileNameLength;
-              fname.MaximumLength = fname.Length;
-              fname.Buffer = pfni->FileName;
-              InitializeObjectAttributes (&attr, &fname, 0, h, NULL);
-              status = NtQueryAttributesFile (&attr, &fbi);
-              if (status != STATUS_DELETE_PENDING
-                  && status != STATUS_OBJECT_NAME_NOT_FOUND
-                  && status != STATUS_OBJECT_PATH_NOT_FOUND)
-                {
-                  free(pfni);
-                  return STATUS_DIRECTORY_NOT_EMPTY;
-                }
-            }
-          pfni = (PFILE_NAMES_INFORMATION) ((char *) pfni + pfni->NextEntryOffset);
-        }
+  NTSTATUS status = NtQueryDirectoryFile (h, NULL, NULL, 0, &io,
+					  pfni,
+					  fni_size,
+					  FileNamesInformation,
+					  FALSE, NULL, TRUE);
+  if (status == STATUS_NO_MORE_FILES)
+    {
+      free(pfni);
+      return STATUS_SUCCESS;
     }
-  while (NT_SUCCESS (NtQueryDirectoryFile (h, NULL, NULL, 0, &io, pfni,
-                                           bufsiz, FileNamesInformation,
-                                           FALSE, NULL, FALSE)));
-  free(pfni);
+
+  if (!NT_SUCCESS (status))
+    {
+      /* the system call fails so return an error */
+      free(pfni);
+      return status;
+    }
+
+  /* Skip the first two entries which are .. and . */
+  fni_cursor = pfni;
+  fni_offset = fni_cursor->NextEntryOffset;
+  if (fni_offset == 0)
+    {
+      free(pfni);
+      return STATUS_SUCCESS;
+    }
+  fni_cursor = (FNI *) ((char *) fni_cursor + fni_offset);
+  fni_offset = fni_cursor->NextEntryOffset;
+  if (fni_offset == 0)
+    {
+      free(pfni);
+      return STATUS_SUCCESS;
+    }
+  fni_cursor = (FNI *) ((char *) fni_cursor + fni_offset);
+
+  do
+    {
+      do
+	{
+	  UNICODE_STRING fname;
+	  OBJECT_ATTRIBUTES attr;
+	  FILE_BASIC_INFORMATION fbi;
+
+
+	  fname.Length = fni_cursor->FileNameLength;
+	  fname.MaximumLength = fname.Length;
+	  fname.Buffer = fni_cursor->FileName;
+
+	  InitializeObjectAttributes (&attr, &fname, 0, h, NULL);
+	  status = NtQueryAttributesFile (&attr, &fbi);
+	  if (status != STATUS_DELETE_PENDING
+	      && status != STATUS_OBJECT_NAME_NOT_FOUND
+	      && status != STATUS_OBJECT_PATH_NOT_FOUND)
+	    {
+	      free (pfni);
+	      return STATUS_DIRECTORY_NOT_EMPTY;
+	    }
+
+	  fni_offset = fni_cursor->NextEntryOffset;
+
+	  if (fni_offset > 0)
+	    {
+	      fni_cursor = (FNI *) ((char *) fni_cursor + fni_offset);
+	    }
+
+	} while (fni_cursor != 0);
+    }
+    while (NT_SUCCESS (NtQueryDirectoryFile (h, NULL, NULL, 0, &io, pfni,
+					     fni_size, FileNamesInformation,
+					     FALSE, NULL, FALSE)));
+  free (pfni);
   return STATUS_SUCCESS;
 }
 
@@ -238,7 +303,7 @@ safe_unlink (UNICODE_STRING name)
 
    /* Retrieve file attributes */
    status = NtQueryAttributesFile(&attr, &file_basic_information);
-   if (!NT_SUCCESS (status)) return (UNLINK_RESULT) { status, 0x1 };
+  if (!NT_SUCCESS (status)) return (UNLINK_RESULT) { status, 0x1 };
 
    /* The file is read-only so first attempt to remove that flag. Otherwise
       we will be able to delete the file only by moving it away which takes
