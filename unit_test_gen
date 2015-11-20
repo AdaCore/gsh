@@ -13,13 +13,13 @@ TYPE_LIST = {
         'kind': LUA_MANAGED,
         'image': 'Posix_Shell.Lexer.Image',
         'constants': ['T_EOF', 'T_WORD']},
-    'Posix_Shell.Fileutils.Dir_Entry': {
+    'OS.FS.Dir.Dir_Entry': {
         'kind': LUA_MANAGED,
-        'image': 'Posix_Shell.Fileutils.Image'},
-    'Posix_Shell.Fileutils.File_Attributes': {
+        'image': 'OS.FS.Dir.Image'},
+    'OS.FS.Stat.File_Attributes': {
         'kind': LUA_MANAGED,
-        'image': 'Posix_Shell.Fileutils.Image'},
-    'Posix_Shell.Fileutils.Dir_Handle': {
+        'image': 'OS.FS.Stat.Image'},
+    'OS.FS.Dir.Dir_Handle': {
         'kind': LUA_MANAGED}
 }
 
@@ -52,34 +52,34 @@ FUNCTION_LIST = {
     'Posix_Shell.Lexer.Read_Command_Token':
         {'args': ['Posix_Shell.Lexer.Token_Buffer'],
          'return': 'Posix_Shell.Lexer.Token'},
-    'Posix_Shell.Fileutils.File_Information':
+    'OS.FS.Stat.File_Information':
         {'args': ['String'],
-         'return': 'Posix_Shell.Fileutils.File_Attributes'},
-    'Posix_Shell.Fileutils.Exists':
-        {'args': ['Posix_Shell.Fileutils.File_Attributes'],
+         'return': 'OS.FS.Stat.File_Attributes'},
+    'OS.FS.Stat.Exists':
+        {'args': ['OS.FS.Stat.File_Attributes'],
          'return': 'Boolean'},
-    'Posix_Shell.Fileutils.Is_Regular_File':
-        {'args': ['Posix_Shell.Fileutils.File_Attributes'],
+    'OS.FS.Stat.Is_Regular_File':
+        {'args': ['OS.FS.Stat.File_Attributes'],
          'return': 'Boolean'},
-    'Posix_Shell.Fileutils.Is_Directory':
-        {'args': ['Posix_Shell.Fileutils.File_Attributes'],
+    'OS.FS.Stat.Is_Directory':
+        {'args': ['OS.FS.Stat.File_Attributes'],
          'return': 'Boolean'},
-    'Posix_Shell.Fileutils.Is_Symbolic_Link':
-        {'args': ['Posix_Shell.Fileutils.File_Attributes'],
+    'OS.FS.Stat.Is_Symbolic_Link':
+        {'args': ['OS.FS.Stat.File_Attributes'],
          'return': 'Boolean'},
-    'Posix_Shell.Fileutils.Open':
+    'OS.FS.Dir.Open':
         {'args': ['String'],
-         'return': 'Posix_Shell.Fileutils.Dir_Handle'},
-    'Posix_Shell.Fileutils.Close':
-        {'args': ['Posix_Shell.Fileutils.Dir_Handle']},
-    'Posix_Shell.Fileutils.Read':
-        {'args': ['Posix_Shell.Fileutils.Dir_Handle'],
-         'return': 'Posix_Shell.Fileutils.Dir_Entry'},
-    'Posix_Shell.Fileutils.Is_Null':
-        {'args': ['Posix_Shell.Fileutils.Dir_Entry'],
+         'return': 'OS.FS.Dir.Dir_Handle'},
+    'OS.FS.Dir.Close':
+        {'args': ['OS.FS.Dir.Dir_Handle']},
+    'OS.FS.Dir.Read':
+        {'args': ['OS.FS.Dir.Dir_Handle'],
+         'return': 'OS.FS.Dir.Dir_Entry'},
+    'OS.FS.Dir.Is_Null':
+        {'args': ['OS.FS.Dir.Dir_Entry'],
          'return': 'Boolean'},
-   'Posix_Shell.Fileutils.Name':
-        {'args': ['Posix_Shell.Fileutils.Dir_Entry'],
+   'OS.FS.Dir.Name':
+        {'args': ['OS.FS.Dir.Dir_Entry'],
          'return': 'String'},
 }
 
