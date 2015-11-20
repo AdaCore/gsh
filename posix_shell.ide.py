@@ -308,22 +308,6 @@ class TestsuiteWidget(object):
 
 
 def initialize_project_plugin():
-    try:
-        import yaml
-        print yaml.__version__
-    except Exception:
-        import subprocess
-        module_dir = os.path.join(
-            os.path.dirname(GPS.Project('posix_shell').file().name()),
-            'modules')
-        if not os.path.isdir(module_dir):
-            os.mkdir(module_dir)
-        subprocess.call(
-            ['scp',
-             'kwai.gnat.com:~gnatmail/thirdparties/python/PyYAML-3.11.tar.gz',
-             module_dir])
-        easy_install.main(["-U", "-Z", "-i", module_dir, "PyYAML"])
-        pkg_resources.require('PyYAML')
     GSHActions()
 
 
