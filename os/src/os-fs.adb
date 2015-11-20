@@ -149,6 +149,21 @@ package body OS.FS is
 
    end Dup2;
 
+   ----------------
+   -- Is_Console --
+   ----------------
+
+   function Is_Console (FD : File_Descriptor) return Boolean
+   is
+      function Is_Console_Internal
+        (Fd : File_Descriptor)
+         return Integer;
+      pragma Import (C, Is_Console_Internal, "__gsh_is_console");
+
+   begin
+      return Is_Console_Internal (FD) /= 0;
+   end Is_Console;
+
    ------------------
    -- Is_Null_File --
    ------------------
@@ -331,7 +346,11 @@ package body OS.FS is
    begin
       Status := C_Set_Close_On_Exec (FD, Boolean'Pos (Close_On_Exec));
       if Status /= 0 then
-         raise OS_Error with "cannot set close_on_exec flag";
+         --  On Windows at least we cannot set close_on_exec on console file
+         --  file descriptor. So in that case ignore the error.
+         if not Is_Console (FD) then
+            raise OS_Error with "cannot set close_on_exec flag";
+         end if;
       end if;
    end Set_Close_On_Exec;
 

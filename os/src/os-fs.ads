@@ -163,4 +163,9 @@ package OS.FS is
    --  @return the file length
    pragma Import (C, File_Length, "__gnat_file_length_long");
 
+   function Is_Console (FD : File_Descriptor) return Boolean;
+   --  Check if a file descriptor is a console, tty, terminal, ...
+   --
+   --  @param FD file descriptor
+   --  @return True if the file descriptor is a console, False otherwise
 end OS.FS;

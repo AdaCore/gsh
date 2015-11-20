@@ -178,6 +178,12 @@ __gsh_set_close_on_exec (int fd,
 
 }
 
+int
+__gsh_is_console (int fd)
+{
+  return _isatty (fd);
+}
+
 HANDLE
 __gsh_no_block_spawn (char *args[], char *cwd, char *env[],
 		      int pstdin, int pstdout, int pstderr)
