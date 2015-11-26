@@ -31,8 +31,7 @@ Alternatively to just compile the gsh binary you can do:
 License
 -------
 
-Unless stated otherwise files are provided under terms of the GNU General
-Public License version 3.
+All files are provided under terms of the GNU General Public License version 3.
 
 The project includes fragments of other projects with licenses compatible
 with the GNU General Public License version 3:
