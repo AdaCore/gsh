@@ -1,4 +1,4 @@
-GSH - A posix shell for Windows
+GSH - A POSIX shell for Windows
 ===============================
 
 General Information
