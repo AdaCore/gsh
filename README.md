@@ -4,17 +4,19 @@ GSH - A POSIX shell for Windows
 General Information
 -------------------
 
-GSH is an implementation of a POSIX shell developed for the Windows platform.
-The current focus of the project is to provide an efficient UNIX shell
-implementation for Windows for non interactive usage.
+GSH is an implementation of a [POSIX shell](http://pubs.opengroup.org/onlinepubs/9699919799/)
+developed for the Windows platform.
 
-GSH can be used to compile projects depending on autotools, UNIX make, ...
-As it targets specifically Windows platform, implementation differs quite
-significantly from the most used ones such as bash, zsh. For example the
-shell implementation does not depends on the fork system call (and doesn't try
-to emulate that system call as on Cygwin) and thus can achieve better
-performance. The gain in time can be up to 3 or 4 in comparison to projects
-such as Cygwin.
+The aim of the project is to provide an efficient UNIX shell
+instantiation for Windows, for non interactive usage.
+
+GSH can be used to compile projects depending on autotools, UNIX make,...
+As it targets specifically Windows platform, GSH differs significantly
+from the most used ones such as bash, zsh. Among others, its implementation
+does not depend on the ['fork system call'](https://en.wikipedia.org/wiki/Fork_%28system_call%29)
+and doesn't emulate that system call (as it's done on Cygwin).
+This allows better compiling performance (the build times can be up to 3 or
+4 times faster than builds performed by projects such as Cygwin).
 
 Build & Installation
 --------------------
