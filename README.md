@@ -31,13 +31,19 @@ Alternatively to just compile the `gsh` binary you can do:
 License
 -------
 
-All files are provided under terms of the GNU General Public License version 3 [license](http://www.gnu.org/licenses/gpl-3.0.en.html)
+All files are provided under terms of the GNU General Public License version 3
+[license](http://www.gnu.org/licenses/gpl-3.0.en.html).
 
 The project includes fragments of other projects with licenses compatible
 with the GNU General Public License version 3:
 
-* [`src/readline`](src/readline) contains the source of the GNU readline library [website](https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html)
-* `src/gnulib` contains part of the GNU Portability Library [website](https://www.gnu.org/software/gnulib/)
-* `lua/src` contains the sources of Lua 5.2 [website](http://www.lua.org/)
-* `gnutools` contains some executables from the GNUWin project [website](http://gnuwin32.sourceforge.net/)
-* `os/src/ddk` contains the DDK part of the mingw-w64 project [website](http://mingw-w64.org/doku.php)
+* [`src/readline`](src/readline) contains the source of the GNU readline
+  library [website](https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html)
+* [`src/gnulib`](src/gnulib) contains part of the GNU Portability Library
+  [website](https://www.gnu.org/software/gnulib/)
+* [`lua/src`](lua/src) contains the sources of Lua 5.2
+  [website](http://www.lua.org/)
+* [`gnutools`](gnutools) contains some executables from the GNUWin project
+  [website](http://gnuwin32.sourceforge.net/)
+* [`os/src/ddk`](os/src/ddk) contains the DDK part of the mingw-w64 project
+  [website](http://mingw-w64.org/doku.php)
