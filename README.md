@@ -36,7 +36,7 @@ All files are provided under terms of the GNU General Public License version 3 [
 The project includes fragments of other projects with licenses compatible
 with the GNU General Public License version 3:
 
-* `src/readline` contains the source of the GNU readline library [website](https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html)
+* [`src/readline`](src/readline) contains the source of the GNU readline library [website](https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html)
 * `src/gnulib` contains part of the GNU Portability Library [website](https://www.gnu.org/software/gnulib/)
 * `lua/src` contains the sources of Lua 5.2 [website](http://www.lua.org/)
 * `gnutools` contains some executables from the GNUWin project [website](http://gnuwin32.sourceforge.net/)
