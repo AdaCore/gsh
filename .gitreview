@@ -1,6 +1,5 @@
 [gerrit]
 host=git.adacore.com
-port=29418
-project=posixshell
+project=gsh
 defaultbranch=master
 defaultremote=origin
