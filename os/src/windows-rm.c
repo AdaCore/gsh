@@ -28,7 +28,7 @@
  * compiler. */
 #ifdef _WIN32
 #include "basetsd.h"
-
+#include "gsh.h"
 
 #ifdef _W64
 
@@ -43,6 +43,14 @@ __declspec(dllimport) BOOL WINAPI GetVolumePathNameW(
     LPCWSTR lpszFileName,
     LPWSTR lpszVolumePathName,
     unsigned long cchBufferLength);
+
+extern int CurrentCodePage;
+__declspec(dllimport) int WINAPI WideCharToMultiByte
+  (int CodePage, ULONG dwFlags, LPCWCH lpWideCharStr,
+  int cchWideChar, LPSTR lpMultiByteStr,
+  int cbMultiByte, LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar);
+#define WS2SC(str,wstr,len, wlen) \
+   WideCharToMultiByte (CurrentCodePage,0,wstr,wlen,str,len,NULL,NULL)
 
 #else /* _W64 */
 
@@ -127,6 +135,73 @@ move (HANDLE h, UNICODE_STRING dest)
   return STATUS_SUCCESS;
 }
 
+/* Given a handle on a directory return next directory entry
+ *
+ * When the last entry is reached an entry with an empty filename is returned.
+ */
+struct gsh_dir_entry
+__gsh_next_entry (void *handle)
+{
+  struct gsh_dir_entry result;
+  NTSTATUS status;
+  const ULONG fdi_size = sizeof (FILE_DIRECTORY_INFORMATION) +
+  PATH_MAX * sizeof (WCHAR);
+  FILE_DIRECTORY_INFORMATION *pfdi = (FILE_DIRECTORY_INFORMATION *) malloc (fdi_size);
+  IO_STATUS_BLOCK io;
+  int written;
+
+  status = NtQueryDirectoryFile ((HANDLE) handle, NULL, NULL, 0, &io,
+				 pfdi,
+				 fdi_size,
+				 FileDirectoryInformation,
+				 TRUE, NULL, FALSE);
+  if (NT_SUCCESS (status))
+    {
+      result.fi.error = 0;
+      result.fi.exists = 1;
+      result.fi.readable = 1;
+      result.fi.writable = ~pfdi->FileAttributes & FILE_ATTRIBUTE_READONLY;
+      result.fi.executable = 1;
+
+      result.fi.symbolic_link = pfdi->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT;
+      result.fi.directory = pfdi->FileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+
+      if (result.fi.directory == 0 && result.fi.symbolic_link == 0)
+	{
+	  result.fi.regular = 1;
+	}
+      else
+	{
+	  result.fi.regular = 0;
+	}
+
+      result.fi.stamp = (long long) pfdi->LastWriteTime.QuadPart;
+      result.fi.length = (long long) pfdi->EndOfFile.QuadPart;
+
+      written = WS2SC(result.name,
+		      pfdi->FileName,
+		      512,
+	              pfdi->FileNameLength / sizeof (WCHAR));
+      result.name[written] = '\0';
+    }
+  else
+    {
+      result.fi.error = 1;
+      result.fi.exists = 0;
+      result.fi.readable = 0;
+      result.fi.writable = 0;
+      result.fi.executable = 0;
+      result.fi.symbolic_link = 0;
+      result.fi.regular = 0;
+      result.fi.directory = 0;
+      result.fi.stamp = 0;
+      result.fi.length = 0;
+      strcpy(result.name, "");
+    }
+
+  return result;
+}
+
 /* Move file with handle h and path filename to trash.
  *
  * We attempt to move the file to VOLUME/tmp/trash/<fileid>. On local
@@ -171,6 +246,7 @@ move_away(HANDLE h, UNICODE_STRING filename)
   /* Move the file.  */
   return move (h, dest);
 }
+
 
 /* Check if a directory is empty or "about" to be empty
  *
@@ -269,6 +345,23 @@ typedef struct {
    NTSTATUS last_error_code;
    ULONG    debug;
 } UNLINK_RESULT;
+
+NTSTATUS
+__gsh_u_open_directory (UNICODE_STRING name, HANDLE *handle)
+{
+  OBJECT_ATTRIBUTES attr;
+  IO_STATUS_BLOCK io;
+  NTSTATUS status;
+
+  InitializeObjectAttributes(&attr, &name, OBJ_CASE_INSENSITIVE, NULL, NULL);
+  status = NtOpenFile (handle,
+		       FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | SYNCHRONIZE,
+		       &attr,
+		       &io,
+		       FILE_SHARE_VALID_FLAGS,
+		       FILE_OPEN_FOR_BACKUP_INTENT | FILE_SYNCHRONOUS_IO_NONALERT);
+  return status;
+}
 
 UNLINK_RESULT
 safe_unlink (UNICODE_STRING name)

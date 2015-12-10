@@ -249,19 +249,51 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[],
     }
 }
 
+void *
+__gsh_open_directory (char *path)
+
+{
+  /* Initialize the UNICODE string that contains the file name using native
+      representation.  */
+
+  unsigned int len = strlen(path);
+
+  WCHAR wname[len + 1];
+  WCHAR wname2[len + 1 + 4];
+  UNICODE_STRING name;
+  NTSTATUS  result;
+  HANDLE handle;
+
+  S2WSC (wname, path, len + 1);
+  _tcscpy(wname2, L"\\??\\");
+  _tcscat(wname2, wname);
+
+  name.Length = (len + 4) * sizeof (WCHAR);
+  name.MaximumLength = name.Length;
+  name.Buffer = wname2;
+
+   result = __gsh_u_open_directory (name, &handle);
+   if (NT_SUCCESS(result))
+      return handle;
+
+   return NULL;
+}
+
+
 struct gsh_file_attributes
 __gsh_file_information(char *path)
 {
   struct gsh_file_attributes result;
-  HANDLE fd;
+  HANDLE fd = __gsh_open_directory (path);
+
   BY_HANDLE_FILE_INFORMATION fi;
   BOOL status;
-  fd = CreateFileA(path, 0,
+  /* fd = CreateFileA(path, 0,
 		  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 		  NULL,
 		  OPEN_EXISTING,
 		  FILE_ATTRIBUTE_NORMAL,
-		  NULL);
+		  NULL); */
   if (fd == INVALID_HANDLE_VALUE)
     {
       result.error = 1;
@@ -288,7 +320,17 @@ __gsh_file_information(char *path)
 
   result.symbolic_link = fi.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT;
   result.directory = fi.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
-  result.regular = ~result.directory & ~result.symbolic_link;
+
+  if (result.directory == 0 && result.symbolic_link == 0)
+    {
+      result.regular = 1;
+    }
+  else
+    {
+    result.regular = 0;
+    }
+
+
 
   result.stamp = ((long long) fi.ftLastWriteTime.dwHighDateTime) << 32;
   result.stamp = result.stamp + (long long) fi.ftLastWriteTime.dwLowDateTime;
@@ -298,23 +340,6 @@ __gsh_file_information(char *path)
   return result;
 }
 
-void *
-__gsh_open_directory (char *path)
-
-{
-  HANDLE result;
-  char  extended_path[MAX_PATH];
-  WIN32_FIND_DATAA data;
-
-  strcpy(extended_path, path);
-  strcat(extended_path, "/*.*");
-
-  result = FindFirstFileA (extended_path, &data);
-  if (result == INVALID_HANDLE_VALUE)
-    {
-      return NULL;
-    }
-}
 
 void
 __gsh_close_directory (void *handle)
@@ -322,50 +347,6 @@ __gsh_close_directory (void *handle)
   CloseHandle ((HANDLE) handle);
 }
 
-struct gsh_dir_entry
-__gsh_next_entry (void *handle)
-{
-  struct gsh_dir_entry result;
-  WIN32_FIND_DATAA data;
-  BOOL status;
-
-  status = FindNextFileA( (HANDLE) handle, &data);
-  if (status)
-    {
-      result.fi.error = 0;
-      result.fi.exists = 1;
-      result.fi.readable = 1;
-      result.fi.writable = ~data.dwFileAttributes & FILE_ATTRIBUTE_READONLY;
-      result.fi.executable = 1;
-
-      result.fi.symbolic_link = data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT;
-      result.fi.directory = data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
-      result.fi.regular = ~result.fi.directory & ~result.fi.symbolic_link;
-
-      result.fi.stamp = ((long long) data.ftLastWriteTime.dwHighDateTime) << 32;
-      result.fi.stamp = result.fi.stamp + (long long) data.ftLastWriteTime.dwLowDateTime;
-      result.fi.length = ((long long) data.nFileSizeHigh) << 32;
-      result.fi.length = result.fi.length + (long long) data.nFileSizeLow;
-
-      strncpy(result.name, data.cFileName, 512);
-    }
-  else
-    {
-      result.fi.error = 1;
-      result.fi.exists = 0;
-      result.fi.readable = 0;
-      result.fi.writable = 0;
-      result.fi.executable = 0;
-      result.fi.symbolic_link = 0;
-      result.fi.regular = 0;
-      result.fi.directory = 0;
-      result.fi.stamp = 0;
-      result.fi.length = 0;
-      strcpy(result.name, "");
-    }
-
-  return result;
-}
 
 typedef struct {
    NTSTATUS last_error_code;
@@ -382,7 +363,6 @@ __gsh_unlink (char *path)
       representation.  */
 
   unsigned int len = strlen(path);
-
   WCHAR wname[len + 1];
   WCHAR wname2[len + 1 + 4];
   UNICODE_STRING name;
