@@ -288,13 +288,8 @@ __gsh_file_information(char *path)
 
   BY_HANDLE_FILE_INFORMATION fi;
   BOOL status;
-  /* fd = CreateFileA(path, 0,
-		  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-		  NULL,
-		  OPEN_EXISTING,
-		  FILE_ATTRIBUTE_NORMAL,
-		  NULL); */
-  if (fd == INVALID_HANDLE_VALUE)
+
+  if (fd == NULL)
     {
       result.error = 1;
       result.exists = 0;
@@ -315,11 +310,34 @@ __gsh_file_information(char *path)
   result.error = 0;
   result.exists = 1;
   result.readable = 1;
-  result.writable = ~fi.dwFileAttributes & FILE_ATTRIBUTE_READONLY;
+  if (~fi.dwFileAttributes & FILE_ATTRIBUTE_READONLY)
+    {
+      result.writable = 1;
+    }
+  else
+    {
+      result.writable = 0;
+    }
+
   result.executable = 1;
 
-  result.symbolic_link = fi.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT;
-  result.directory = fi.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+  if (fi.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+    {
+      result.symbolic_link = 1;
+    }
+  else
+    {
+      result.symbolic_link = 0;
+    }
+
+  if (fi.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+    {
+      result.directory = 1;
+    }
+  else
+    {
+      result.directory = 0;
+    }
 
   if (result.directory == 0 && result.symbolic_link == 0)
     {
@@ -327,10 +345,8 @@ __gsh_file_information(char *path)
     }
   else
     {
-    result.regular = 0;
+      result.regular = 0;
     }
-
-
 
   result.stamp = ((long long) fi.ftLastWriteTime.dwHighDateTime) << 32;
   result.stamp = result.stamp + (long long) fi.ftLastWriteTime.dwLowDateTime;

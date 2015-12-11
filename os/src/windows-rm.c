@@ -160,11 +160,34 @@ __gsh_next_entry (void *handle)
       result.fi.error = 0;
       result.fi.exists = 1;
       result.fi.readable = 1;
-      result.fi.writable = ~pfdi->FileAttributes & FILE_ATTRIBUTE_READONLY;
+      if (~pfdi->FileAttributes & FILE_ATTRIBUTE_READONLY)
+	{
+	  result.fi.writable = 1;
+	}
+      else
+	{
+	  result.fi.writable = 0;
+	}
+
       result.fi.executable = 1;
 
-      result.fi.symbolic_link = pfdi->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT;
-      result.fi.directory = pfdi->FileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+      if (pfdi->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+	{
+	  result.fi.symbolic_link = 1;
+	}
+      else
+	{
+	  result.fi.symbolic_link = 0;
+	}
+
+      if (pfdi->FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+	{
+	  result.fi.directory = 1;
+	}
+      else
+	{
+	  result.fi.directory = 0;
+	}
 
       if (result.fi.directory == 0 && result.fi.symbolic_link == 0)
 	{
