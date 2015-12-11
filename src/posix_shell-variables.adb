@@ -639,6 +639,23 @@ package body Posix_Shell.Variables is
       Free (Current.Current_Dir);
    end Leave_Scope;
 
+   --------------------
+   -- Normalize_Path --
+   --------------------
+
+   function Normalize_Path
+     (State : Shell_State;
+      Path  : String)
+      return String
+   is
+   begin
+      return GNAT.OS_Lib.Normalize_Pathname
+        (Resolve_Path
+           (State,
+            Path),
+         Resolve_Links => False);
+   end Normalize_Path;
+
    -----------------------
    -- Register_Function --
    -----------------------

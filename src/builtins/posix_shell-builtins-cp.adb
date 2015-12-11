@@ -276,10 +276,7 @@ package body Posix_Shell.Builtins.Cp is
 
       declare
          Target_Path : constant String :=
-           GNAT.OS_Lib.Normalize_Pathname
-             (Resolve_Path (S,
-                            Args (Args'Last).all),
-              Resolve_Links => False);
+           Normalize_Path (S, Args (Args'Last).all);
          Target_Attrs : constant File_Attributes :=
            File_Information (Target_Path);
       begin
@@ -294,9 +291,7 @@ package body Posix_Shell.Builtins.Cp is
 
          --  Iterate the files
          for Index in File_List_Start .. File_List_End loop
-            Cp_Tree (GNAT.OS_Lib.Normalize_Pathname
-                     (Resolve_Path (S, Args (Index).all),
-                        Resolve_Links => False),
+            Cp_Tree (Normalize_Path (S, Args (Index).all),
                      Target_Path,
                      Target_Attrs);
          end loop;

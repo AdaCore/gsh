@@ -100,6 +100,25 @@ package Posix_Shell.Variables is
 
    function Resolve_Path
      (State : Shell_State; Path : String) return String;
+   --  Transform path into absolute path
+   --
+   --  Note that the path is not normalized (i.e: .. and . not removed)
+   --
+   --  @param State the current shell state
+   --  @param Path the path to transform
+   --  @return an absolute path
+
+   function Normalize_Path
+     (State : Shell_State;
+      Path  : String)
+      return String;
+   --  Transform a path into an absolute normalized path
+   --
+   --  Note that the function does not resolve symbolic links
+   --
+   --  @param State the current shell state
+   --  @param Path the path to transform
+   --  @return the normalized path
 
    function Enter_Scope (Previous : Shell_State) return Shell_State;
    --  Given the current state create a new scope and return its state
@@ -247,4 +266,6 @@ private
       File_Expansion_Enabled : Boolean := True;
    end record;
 
+   pragma Inline (Normalize_Path);
+   pragma Inline (Resolve_Path);
 end Posix_Shell.Variables;

@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -75,9 +75,7 @@ package body Posix_Shell.Builtins.Mkdir is
       --  Iterate other the files
       for Index in File_List_Start .. Args'Last loop
          declare
-            CP : constant String := GNAT.OS_Lib.Normalize_Pathname
-              (Resolve_Path (S, Args (Index).all),
-               Resolve_Links => False);
+            CP : constant String := Normalize_Path (S, Args (Index).all);
          begin
             if Create_Intermediates then
                Recursive_Make_Dir (CP);

@@ -168,9 +168,7 @@ package body Posix_Shell.Builtins.Rm is
       for Index in File_List_Start .. Args'Last loop
          declare
             Filename : constant String :=
-              GNAT.OS_Lib.Normalize_Pathname
-                (Resolve_Path (S, Args (Index).all),
-                 Resolve_Links => False);
+              Normalize_Path (S, Args (Index).all);
             Filename_Info : constant OS.FS.Stat.File_Attributes :=
               OS.FS.Stat.File_Information (Filename);
          begin
