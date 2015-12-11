@@ -24,13 +24,14 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Directories;
 with Interfaces.C;                 use Interfaces.C;
 with GNAT.Directory_Operations;
 
 with Posix_Shell.Rm;               use Posix_Shell.Rm;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 with OS.FS;                        use OS.FS;
+with OS.FS.Stat;                   use OS.FS.Stat;
+with OS.FS.Dir;
 
 package body Posix_Shell.Builtins.Cp is
 
@@ -59,20 +60,20 @@ package body Posix_Shell.Builtins.Cp is
       procedure Cp_Tree
         (Filename            : String;
          Target_Name         : String;
-         Target_Is_Directory : Boolean);
+         Target_Attrs        : File_Attributes);
 
       -------------
       -- Cp_Tree --
       -------------
 
       procedure Cp_Tree
-        (Filename            : String;
-         Target_Name         : String;
-         Target_Is_Directory : Boolean)
+        (Filename     : String;
+         Target_Name  : String;
+         Target_Attrs : File_Attributes)
       is
 
          Target_Path : constant String :=
-           (if Target_Is_Directory then
+           (if Is_Directory (Target_Attrs) then
                Target_Name &
                GNAT.Directory_Operations.Dir_Separator &
                GNAT.Directory_Operations.Base_Name (Filename)
@@ -151,49 +152,48 @@ package body Posix_Shell.Builtins.Cp is
          procedure Recursive_Copy (Source_Path : String;
                                    Target_Path : String) is
 
-            Search  : Ada.Directories.Search_Type;
-            Dir_Ent : Ada.Directories.Directory_Entry_Type;
+            Search  : OS.FS.Dir.Dir_Handle;
+            Dir_Ent : OS.FS.Dir.Dir_Entry;
+
+            Target_Path_Attrs : constant File_Attributes :=
+              File_Information (Target_Path);
          begin
             --  Check if target_path is a directory and it exists
-            if GNAT.OS_Lib.Is_Regular_File (Target_Path) then
+            if Is_Regular_File (Target_Path_Attrs) then
                Error  (S, "cp: " & Target_Path & "is not a directory");
                Got_Errors := True;
-            elsif not GNAT.OS_Lib.Is_Directory (Target_Path) then
+            elsif not Is_Directory (Target_Path_Attrs) then
                GNAT.Directory_Operations.Make_Dir (Target_Path);
             end if;
 
-            Ada.Directories.Start_Search (Search,
-                                          Directory => Source_Path,
-                                          Pattern   => "");
+            Search := OS.FS.Dir.Open (Source_Path);
 
-            while Ada.Directories.More_Entries (Search) loop
-               Ada.Directories.Get_Next_Entry (Search, Dir_Ent);
+            loop
+               Dir_Ent := OS.FS.Dir.Read (Search);
+               exit when OS.FS.Dir.Is_Null (Dir_Ent);
 
                declare
-                  Base_Name : constant String :=
-                                Ada.Directories.Simple_Name (Dir_Ent);
+                  Base_Name : constant String := OS.FS.Dir.Name (Dir_Ent);
                   Source    : constant String :=
-                                Source_Path &
-                                GNAT.Directory_Operations.Dir_Separator &
-                                Base_Name;
+                    Source_Path &
+                    GNAT.Directory_Operations.Dir_Separator &
+                    Base_Name;
                   Target    : constant String :=
-                                Target_Path &
-                                GNAT.Directory_Operations.Dir_Separator &
-                                Base_Name;
+                    Target_Path &
+                    GNAT.Directory_Operations.Dir_Separator &
+                    Base_Name;
+                  Source_Attrs : constant File_Attributes :=
+                    OS.FS.Dir.File_Information (Dir_Ent);
                begin
-                  --  copy ignoring '.' and '..' entries
-                  if Base_Name /= "." and then Base_Name /= ".." then
-                     if GNAT.OS_Lib.Is_Regular_File (Source) then
-                        Simple_Copy (Source, Target);
-
-                     elsif GNAT.OS_Lib.Is_Directory (Source) then
-                        Recursive_Copy (Source,
-                                        Target);
-                     end if;
+                  if Is_Regular_File (Source_Attrs) then
+                     Simple_Copy (Source, Target);
+                  elsif Is_Directory (Source_Attrs) then
+                     Recursive_Copy (Source, Target);
                   end if;
-
                end;
             end loop;
+
+            OS.FS.Dir.Close (Search);
          exception
             when GNAT.Directory_Operations.Directory_Error =>
                Got_Errors := True;
@@ -202,9 +202,10 @@ package body Posix_Shell.Builtins.Cp is
                         Target_Path & "'");
          end Recursive_Copy;
 
+         Filename_Attrs : constant File_Attributes :=
+           File_Information (Filename);
       begin
-
-         if GNAT.OS_Lib.Is_Directory (Filename) then
+         if Is_Directory (Filename_Attrs) then
 
             if not Recursive then
                Got_Errors := True;
@@ -215,7 +216,7 @@ package body Posix_Shell.Builtins.Cp is
             end if;
             Recursive_Copy (Filename, Target_Path);
 
-         elsif GNAT.OS_Lib.Is_Regular_File (Filename) then
+         elsif Is_Regular_File (Filename_Attrs) then
             Simple_Copy (Filename, Target_Path);
 
          elsif On_Windows and then
@@ -279,14 +280,13 @@ package body Posix_Shell.Builtins.Cp is
              (Resolve_Path (S,
                             Args (Args'Last).all),
               Resolve_Links => False);
-         Target_Is_Directory : constant Boolean :=
-           GNAT.OS_Lib.Is_Directory (Target_Path);
+         Target_Attrs : constant File_Attributes :=
+           File_Information (Target_Path);
       begin
-
          if File_List_Start /= File_List_End then
             --  When a list of elements is to be copied, args'last must be an
             --  existing directory.
-            if not Target_Is_Directory then
+            if not Is_Directory (Target_Attrs) then
                Error (S, "cp: no such directory '" & Target_Path & "'");
                return 1;
             end if;
@@ -298,7 +298,7 @@ package body Posix_Shell.Builtins.Cp is
                      (Resolve_Path (S, Args (Index).all),
                         Resolve_Links => False),
                      Target_Path,
-                     Target_Is_Directory);
+                     Target_Attrs);
          end loop;
 
          if Got_Errors then
