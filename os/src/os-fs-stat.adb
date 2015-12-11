@@ -53,7 +53,8 @@ package body OS.FS.Stat is
         ", readable: " & FI.Readable'Img &
         ", executable: " & FI.Executable'Img &
         ", regular: " & FI.Regular'Img &
-        ", directory: " & FI.Directory'Img;
+        ", directory: " & FI.Directory'Img &
+        ", link: " & FI.Symbolic_Link'Img;
    end Image;
 
    ------------
