@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2014, AdaCore                   --
+--                       Copyright (C) 2010-2015, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -24,12 +24,13 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Directories; use Ada.Directories;
 with Interfaces.C; use Interfaces.C;
 with GNAT.Directory_Operations;
 
 with Posix_Shell.Rm; use Posix_Shell.Rm;
 with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
+with OS.FS.Dir;
+with OS.FS.Stat;
 
 package body Posix_Shell.Builtins.Rm is
 
@@ -46,14 +47,18 @@ package body Posix_Shell.Builtins.Rm is
       Force           : Boolean := False;
       Got_Errors      : Boolean := False;
 
-      procedure Rm_Tree (Filename : String);
+      procedure Rm_Tree (Filename : String;
+                         Filename_Info : OS.FS.Stat.File_Attributes);
 
-      procedure Rm_Tree (Filename : String) is
-         Search      : Search_Type;
-         Dir_Ent     : Directory_Entry_Type;
+      procedure Rm_Tree (Filename : String;
+                         Filename_Info : OS.FS.Stat.File_Attributes)
+      is
+         Search      : OS.FS.Dir.Dir_Handle;
+         Dir_Ent     : OS.FS.Dir.Dir_Entry;
+
          Status      : long;
       begin
-         if GNAT.OS_Lib.Is_Regular_File (Filename) then
+         if OS.FS.Stat.Is_Regular_File (Filename_Info) then
             Status := Delete_File (Filename);
             if Status /= 0 then
                Error (S, "rm: cannot remove `" &
@@ -62,7 +67,7 @@ package body Posix_Shell.Builtins.Rm is
                   Got_Errors := True;
                end if;
             end if;
-         elsif GNAT.OS_Lib.Is_Directory (Filename) then
+         elsif OS.FS.Stat.Is_Directory (Filename_Info) then
 
             if not Recursive then
                Error (S, "rm: cannot remove `" &
@@ -71,22 +76,23 @@ package body Posix_Shell.Builtins.Rm is
                return;
             end if;
 
-            Start_Search (Search, Directory => Filename, Pattern => "");
-            while More_Entries (Search) loop
-               Get_Next_Entry (Search, Dir_Ent);
+            Search := OS.FS.Dir.Open (Filename);
+            loop
+               Dir_Ent := OS.FS.Dir.Read (Search);
+               exit when OS.FS.Dir.Is_Null (Dir_Ent);
 
                declare
-                  Base_Name : constant String :=
-                    Simple_Name (Dir_Ent);
+                  Base_Name : constant String := OS.FS.Dir.Name (Dir_Ent);
                   File_Name : constant String :=
                     Filename & GNAT.Directory_Operations.Dir_Separator &
                     Base_Name;
+                  FI        : constant OS.FS.Stat.File_Attributes :=
+                    OS.FS.Dir.File_Information (Dir_Ent);
                begin
-                  if GNAT.OS_Lib.Is_Directory (File_Name) then
+
+                  if OS.FS.Stat.Is_Directory (FI) then
                      --  Recurse ignoring '.' and '..' entries
-                     if Base_Name /= "." and then Base_Name /= ".." then
-                        Rm_Tree (File_Name);
-                     end if;
+                     Rm_Tree (File_Name, FI);
                   else
                      Status := Delete_File (File_Name);
                      if Status /= 0 then
@@ -100,7 +106,7 @@ package body Posix_Shell.Builtins.Rm is
                end;
 
             end loop;
-            End_Search (Search);
+            OS.FS.Dir.Close (Search);
 
             Status := Delete_File (Filename);
             if Status /= 0 then
@@ -160,9 +166,16 @@ package body Posix_Shell.Builtins.Rm is
 
       --  Iterate other the files
       for Index in File_List_Start .. Args'Last loop
-         Rm_Tree (GNAT.OS_Lib.Normalize_Pathname
-                  (Resolve_Path (S, Args (Index).all),
-                     Resolve_Links => False));
+         declare
+            Filename : constant String :=
+              GNAT.OS_Lib.Normalize_Pathname
+                (Resolve_Path (S, Args (Index).all),
+                 Resolve_Links => False);
+            Filename_Info : constant OS.FS.Stat.File_Attributes :=
+              OS.FS.Stat.File_Information (Filename);
+         begin
+            Rm_Tree (Filename, Filename_Info);
+         end;
       end loop;
       if Got_Errors then
          return 1;
