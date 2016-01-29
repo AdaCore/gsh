@@ -31,7 +31,7 @@ with Ada.Exceptions;                use Ada.Exceptions;
 with Posix_Shell.Annotated_Strings; use Posix_Shell.Annotated_Strings;
 with Posix_Shell.Buffers;           use Posix_Shell.Buffers;
 with Posix_Shell.Exec;              use Posix_Shell.Exec;
-with Posix_Shell.GNULib;            use Posix_Shell.GNULib;
+with GNU;                           use GNU;
 with Posix_Shell.Lexer;             use Posix_Shell.Lexer;
 with Posix_Shell.Parser;            use Posix_Shell.Parser;
 with Posix_Shell.Subst.Arith;       use Posix_Shell.Subst.Arith;
