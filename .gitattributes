@@ -1,6 +1,7 @@
 /src/readline/* no-precommit-check
-/src/gnulib/* no-precommit-check
-/src/gnulib/*/* no-precommit-check
+/gnu/src/win32/* no-precommit-check
+/gnu/src/win32/sys/* no-precommit-check
+/gnu/src/* no-precommit-check
 /src/builtins/posix_shell-builtins-cp.adb no-precommit-check
 os/src/ddk/* no-precommit-check
 os/src/ddk/*/* no-precommit-check
