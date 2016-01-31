@@ -34,7 +34,6 @@ with OS.FS;
 package Posix_Shell.Variables is
 
    type Shell_State is private;
-   type Shell_State_Access is access all Shell_State;
    --  Due to the approach taken in the implementation to use threads instead
    --  of processes (no fork on Windows), the shell state contains all the
    --  state needed by a shell "process". This means:
@@ -123,10 +122,10 @@ package Posix_Shell.Variables is
    function Enter_Scope (Previous : Shell_State) return Shell_State;
    --  Given the current state create a new scope and return its state
 
-   procedure Leave_Scope
-     (Current  : in out Shell_State;
-      Previous : in out Shell_State);
-   --  restore previous env values
+   function Leave_Scope
+     (State : in out Shell_State)
+      return Integer;
+   --  Leave scope and return last exit status associated with that scope
 
    procedure Save_Last_Exit_Status
      (State : in out Shell_State; Exit_Status : Integer);
@@ -158,8 +157,6 @@ package Posix_Shell.Variables is
    --  ${N+1} becomes $1, ${N+2} becomes $2, etc...  If N is greater
    --  than the number of positional parameters, then the shift is
    --  not performed, and Success is set to False.
-
-   procedure Deallocate (S : in out Shell_State_Access);
 
    function Get_Loop_Scope_Level (S : Shell_State) return Natural;
 
@@ -238,15 +235,8 @@ private
    --  State of Stdin, Stdout or Stderr (file descriptor and filename
    --  if relevant).
 
-   type Shell_Descriptors is array (-2 .. 13) of Shell_Descriptor;
-   --  State of Stdin, Stdout and Stderr.
-   --  ??? brobecker/2007-04-23:
-   --  ???    I think that 0 .. 2 are stdin, stdout and stderr,
-   --  ???    and 3 .. 4 are pipe-in and pipe-out.
-
-   --  procedure Push_Redirections
-   --  (S : in out Shell_State; R : Redirection_Op_Stack);
-   --  Set a new redirection context.
+   type Shell_Descriptors is array (0 .. 15) of Shell_Descriptor;
+   --  List of descriptors
 
    type Trap_Action_List is array (0 .. 15) of String_Access;
 

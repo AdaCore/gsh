@@ -62,7 +62,7 @@ package body Posix_Shell.Opts is
       Is_Login_Shell : Boolean := False;
       --  when true gshrc will be sourced
 
-      GSHRC_Status : Integer := 0;
+      GSHRC_Status : Eval_Result;
       pragma Unreferenced (GSHRC_Status);
    begin
       Is_Interactive := False;
@@ -86,7 +86,7 @@ package body Posix_Shell.Opts is
 
             if Arg = "-n" then
                Do_Script_Evaluation := False;
-               Dump_Node_Table := True;
+               --  Dump_Node_Table := True;
             elsif Arg = "--debug-lexer" then
                Debug_Lexer := True;
             elsif Arg = "--enable-traces" then

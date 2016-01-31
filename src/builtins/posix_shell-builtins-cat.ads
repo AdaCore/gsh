@@ -27,6 +27,6 @@
 package Posix_Shell.Builtins.Cat is
 
    function Cat_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Eval_Result;
 
 end Posix_Shell.Builtins.Cat;

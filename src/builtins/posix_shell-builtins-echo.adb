@@ -36,7 +36,7 @@ package body Posix_Shell.Builtins.Echo is
    function Echo_Builtin
      (S : in out Shell_State;
       Args : String_List)
-      return Integer
+      return Eval_Result
    is
       Enable_Newline : Boolean := True;
       Enable_Backslash : Boolean := False;
@@ -136,7 +136,7 @@ package body Posix_Shell.Builtins.Echo is
       if Enable_Newline then
          New_Line (S, 1);
       end if;
-      return 0;
+      return (RESULT_STD, 0);
    end Echo_Builtin;
 
    -------------------
@@ -144,7 +144,7 @@ package body Posix_Shell.Builtins.Echo is
    -------------------
 
    function REcho_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
       function Replace_LF (S : String) return String;
 
@@ -173,7 +173,7 @@ package body Posix_Shell.Builtins.Echo is
          end if;
       end loop;
       New_Line (S, 1);
-      return 0;
+      return (RESULT_STD, 0);
    end REcho_Builtin;
 
 end Posix_Shell.Builtins.Echo;

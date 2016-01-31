@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2015, AdaCore                   --
+--                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -21,7 +21,7 @@
 ------------------------------------------------------------------------------
 
 with Posix_Shell.Variables; use Posix_Shell.Variables;
-with Posix_Shell.Lexer; use Posix_Shell.Lexer;
+with Posix_Shell.Lexer;     use Posix_Shell.Lexer;
 
 package Posix_Shell.Variables.Output is
 
@@ -63,25 +63,33 @@ package Posix_Shell.Variables.Output is
    --      Apply_Redirections/Restore_Descriptors should use the same
    --      value for the In_Place parameter.
 
-   procedure Set_Pipe_Out (S : in out Shell_State);
-   --  Set env to fill the pipe
-
-   procedure Set_Pipe_In (S        : in out Shell_State;
-                          Input_Fd : OS.FS.File_Descriptor);
-   --  Set env to read the pipe
-
-   procedure Close_Pipe (S : in out Shell_State);
-   --  Close the pipe in the current context
+   procedure Set_Descriptor
+     (State : in out Shell_State;
+      IO    : Integer;
+      Fd    : OS.FS.File_Descriptor);
+   --  Override file descriptor associated with IO number IO
+   --
+   --  @param State the current shell state
+   --  @param IO
+   --      the IO number to be changed. If the IO number was associated with
+   --      an opened file the previous file descriptor might be closed.
+   --  @param Fd file descriptor to associate with IO
 
    function Read_Pipe_And_Close
-     (S : in out Shell_State;
+     (S        : in out Shell_State;
       Input_Fd : OS.FS.File_Descriptor) return String;
    --  Read the pipe content, then close it, and return the content read.
+   --  ??? should be move outside (no need for shell state here)
 
-   function Get_Fd
-     (S : Shell_State; N : Integer) return OS.FS.File_Descriptor;
-
-   procedure Close (S : Shell_State; N : Integer);
+   function Get_File_Descriptor
+     (State : Shell_State;
+      IO    : Integer)
+      return OS.FS.File_Descriptor;
+   --  Get real file descriptor associated with IO number
+   --
+   --  @param State the shell state
+   --  @param IO IO number to retrieve
+   --  @return a file descriptor. This can be Invalid_FD.
 
    procedure Put (S : Shell_State; IO : Integer; Str : String);
    --  Print S in the given IO descriptor (no new line added).
@@ -99,7 +107,5 @@ package Posix_Shell.Variables.Output is
 
    procedure Warning (S : Shell_State; Msg : String);
    --  Print a warning message on standard error.
-
-private
 
 end Posix_Shell.Variables.Output;

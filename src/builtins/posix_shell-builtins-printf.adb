@@ -30,16 +30,16 @@ with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
 package body Posix_Shell.Builtins.Printf is
 
    function Printf_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
       Format_String : constant String := Args (Args'First).all;
-      Output : Unbounded_String := To_Unbounded_String ("");
-      Index  : Integer := Format_String'First;
-      CC     : Character := Format_String (Index);
+      Output        : Unbounded_String := To_Unbounded_String ("");
+      Index         : Integer := Format_String'First;
+      CC            : Character := Format_String (Index);
       Is_Left_Align : Boolean := False;
-      CS_Index : Integer := Args'First + 1;
-      Number_First : Integer;
-      String_Size : Integer := -1;
+      CS_Index      : Integer := Args'First + 1;
+      Number_First  : Integer;
+      String_Size   : Integer := -1;
    begin
       loop
          case CC is
@@ -118,7 +118,7 @@ package body Posix_Shell.Builtins.Printf is
       end loop;
 
       Put (S, 1, To_String (Output));
-      return 0;
+      return (RESULT_STD, 0);
    end Printf_Builtin;
 
 end Posix_Shell.Builtins.Printf;

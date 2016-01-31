@@ -27,9 +27,9 @@
 package Posix_Shell.Builtins.Echo is
 
    function Echo_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Eval_Result;
 
    function REcho_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Eval_Result;
 
 end Posix_Shell.Builtins.Echo;

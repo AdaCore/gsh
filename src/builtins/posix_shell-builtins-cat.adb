@@ -36,18 +36,18 @@ package body Posix_Shell.Builtins.Cat is
    function Cat_Builtin
      (S : in out Shell_State;
       Args : String_List)
-      return Integer
+      return Eval_Result
    is
-      Fd : File_Descriptor;
+      Fd     : File_Descriptor;
       Buffer : aliased String (1 .. 8192);
-      R : Integer;
+      R      : Integer;
    begin
 
       --  If no argument is given to cat then we assume that stdin should be
       --  dump.
       if Args'Length = 0 then
          Put (S, 1, Read (S, 0));
-         return 0;
+         return (RESULT_STD, 0);
       end if;
 
       for J in Args'Range loop
@@ -78,7 +78,7 @@ package body Posix_Shell.Builtins.Cat is
          end if;
       end loop;
 
-      return 0;
+      return (RESULT_STD, 0);
    end Cat_Builtin;
 
 end Posix_Shell.Builtins.Cat;

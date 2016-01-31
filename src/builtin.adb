@@ -33,7 +33,7 @@ with Posix_Shell; use Posix_Shell;
 -------------
 
 function Builtin return Integer is
-   Status        : Integer := 0;
+   Status        : Eval_Result;
    State         : Shell_State;
 begin
    --  Import into our state the current process environment
@@ -58,7 +58,12 @@ begin
 
       Status := Execute_Builtin (State, Cmd, Arguments);
 
-      return Status;
+      case Status.Kind is
+         when RESULT_STD =>
+            return Status.Status;
+         when others =>
+            return 127;
+      end case;
 
    exception
       when others =>

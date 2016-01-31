@@ -27,7 +27,7 @@
 package Posix_Shell.Builtins.Cd is
 
    function Change_Dir_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer;
+     (S : in out Shell_State; Args : String_List) return Eval_Result;
    --  Implement the "cd" builtin.
 
 end Posix_Shell.Builtins.Cd;

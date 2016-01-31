@@ -128,10 +128,10 @@ package body Posix_Shell.Commands is
       Cmd  : String;
       Args : String_List;
       Env  : String_List)
-      return Integer
+      return Eval_Result
    is
       Exec_Path   : String_Access := null;
-      Exit_Status : Integer;
+      Exit_Status : Eval_Result;
       Args_First  : Integer := Args'First;
       Opt_Args    : access String_List := null;
    begin
@@ -149,14 +149,16 @@ package body Posix_Shell.Commands is
       --  Handle builtins first.
       if Is_Builtin (Cmd) then
          Exit_Status := Execute_Builtin (S, Cmd, Args);
-         Save_Last_Exit_Status (S, Exit_Status);
+         if Exit_Status.Kind = RESULT_STD then
+            Save_Last_Exit_Status (S, Exit_Status.Status);
+         end if;
+         --  Ada.Text_IO.Put_Line ("from builtin " & Exit_Status.Kind'Img);
          return Exit_Status;
       end if;
 
       --  Next, is this a function ?
       if Is_Function (S, Cmd) then
-         Execute_Function (S, Cmd, Args);
-         return Get_Last_Exit_Status (S);
+         return Execute_Function (S, Cmd, Args);
       end if;
 
       --  This command can only be an executable. See if we can
@@ -182,7 +184,7 @@ package body Posix_Shell.Commands is
 
       if Exec_Path = null then
          Put (S, 2, Cmd & ": command not found"); New_Line (S, 2);
-         return 127;
+         return (RESULT_STD, 127);
       end if;
 
       if Is_Xtrace_Enabled (S) then
@@ -202,7 +204,7 @@ package body Posix_Shell.Commands is
          if Cmd_Line (Cmd_Line'First) = null then
             Put (S, 2, Cmd & ": can't launch program");
             New_Line (S, 2);
-            Exit_Status := 127;
+            Exit_Status := (RESULT_STD, 127);
          else
 
             if Is_Xtrace_Enabled (S) then
@@ -211,13 +213,13 @@ package body Posix_Shell.Commands is
                                   Cmd_Line (Cmd_Line'First).all);
                Ada.Text_IO.New_Line (Ada.Text_IO.Standard_Error);
             end if;
-            Exit_Status := Blocking_Spawn
+            Exit_Status := (RESULT_STD, Blocking_Spawn
               (Cmd_Line,
                Get_Current_Dir (S),
                Env,
-               Get_Fd (S, 0),
-               Get_Fd (S, 1),
-               Get_Fd (S, 2));
+               Get_File_Descriptor (S, 0),
+               Get_File_Descriptor (S, 1),
+               Get_File_Descriptor (S, 2)));
          end if;
          for J in Launcher'Range loop
             Free (Launcher (J));
@@ -228,7 +230,7 @@ package body Posix_Shell.Commands is
             for J in Launcher'Range loop
                Free (Launcher (J));
             end loop;
-            Exit_Status := 127;
+            Exit_Status := (RESULT_STD, 127);
       end;
 
       if Opt_Args /= null then

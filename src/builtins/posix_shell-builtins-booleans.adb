@@ -31,12 +31,12 @@ package body Posix_Shell.Builtins.Booleans is
    ------------------
 
    function True_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
       pragma Unreferenced (Args);
       pragma Unreferenced (S);
    begin
-      return 0;
+      return (RESULT_STD, 0);
    end True_Builtin;
 
    -------------------
@@ -46,12 +46,12 @@ package body Posix_Shell.Builtins.Booleans is
    function False_Builtin
      (S : in out Shell_State;
       Args : String_List)
-      return Integer
+      return Eval_Result
    is
       pragma Unreferenced (Args);
       pragma Unreferenced (S);
    begin
-      return 1;
+      return (RESULT_STD, 1);
    end False_Builtin;
 
 end Posix_Shell.Builtins.Booleans;

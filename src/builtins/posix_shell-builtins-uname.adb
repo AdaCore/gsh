@@ -33,7 +33,7 @@ package body Posix_Shell.Builtins.Uname is
    -------------------
 
    function Uname_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
       Kernel_Name       : Boolean := False;
       Node_Name         : Boolean := False;
@@ -58,11 +58,11 @@ package body Posix_Shell.Builtins.Uname is
                   when '-' =>
                      if Arg = "--help" then
                         Put (S, 1, "usage: uname [OPTIONS]" & ASCII.LF);
-                        return 0;
+                        return (RESULT_STD, 0);
 
                      elsif Arg = "--" then
                            Put (S, 2, "uname: unexpected operand" & ASCII.LF);
-                           return 1;
+                           return (RESULT_STD, 1);
                      else
                         for Index2 in Arg'First + 1 .. Arg'Last loop
                            case Arg (Index2) is
@@ -84,14 +84,14 @@ package body Posix_Shell.Builtins.Uname is
                               when others =>
                                  Put (S, 2,
                                       "uname: unknown option" & ASCII.LF);
-                                 return 1;
+                                 return (RESULT_STD, 1);
                            end case;
                         end loop;
                      end if;
 
                   when others =>
                      Put (S, 2, "uname: extra operand" & ASCII.LF);
-                     return 1;
+                     return (RESULT_STD, 1);
                end case;
             end;
          end loop;
@@ -159,7 +159,7 @@ package body Posix_Shell.Builtins.Uname is
 
       Put (S, 1, "" & ASCII.LF);
 
-      return 0;
+      return (RESULT_STD, 0);
    end Uname_Builtin;
 
 end Posix_Shell.Builtins.Uname;

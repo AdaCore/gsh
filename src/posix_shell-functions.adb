@@ -20,35 +20,37 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
 with Posix_Shell.Tree; use Posix_Shell.Tree;
+
 package body Posix_Shell.Functions is
 
    ----------------------
    -- Execute_Function --
    ----------------------
 
-   procedure Execute_Function
+   function Execute_Function
      (State : in out Shell_State;
       Name  : String;
-      Args : String_List)
+      Args  : String_List)
+     return Eval_Result
    is
       Function_Tree : constant Shell_Tree :=
         Get_Function (State, Name);
       Saved_Pos_Params : constant Pos_Params_State :=
         Get_Positional_Parameters (State);
+      Result : Eval_Result;
 
    begin
       Set_Positional_Parameters (State, Args, False);
 
-      Eval (State, Function_Tree);
+      Result := Eval (State, Function_Tree);
       Restore_Positional_Parameters (State, Saved_Pos_Params);
 
-   exception
-      when Shell_Exit_Exception =>
-         Restore_Positional_Parameters (State, Saved_Pos_Params);
-         raise;
+      if Result.Kind = RESULT_RETURN then
+         Result := (RESULT_STD, Result.Status);
+      end if;
+      return Result;
    end Execute_Function;
 
 end Posix_Shell.Functions;

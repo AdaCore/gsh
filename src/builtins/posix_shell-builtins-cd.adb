@@ -33,24 +33,25 @@ package body Posix_Shell.Builtins.Cd is
    ------------------------
 
    function Change_Dir_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
+      Status : Integer;
    begin
       --  If there was no argument provided, then cd to the HOME directory.
       --  If HOME directory is not provided, then the behavior is
       --  implementation-defined, and we simply do nothing.
       if Args'Length =  0 then
-         return Change_Dir (S, Get_Var_Value (S, "HOME"));
-      end if;
-
-      --  "-" is a special case: It should be equivalent to
-      --  ``cd "$OLDPWD" && pwd''
-      if Args (Args'First).all = "-" then
-         return Change_Dir
+         Status := Change_Dir (S, Get_Var_Value (S, "HOME"));
+      elsif Args (Args'First).all = "-" then
+         --  "-" is a special case: It should be equivalent to
+         --  ``cd "$OLDPWD" && pwd''
+         Status := Change_Dir
            (S, Get_Var_Value (S, "OLDPWD"), Verbose => True);
-      end if;
+      else
 
-      return Change_Dir (S, Args (Args'First).all);
+         Status := Change_Dir (S, Args (Args'First).all);
+      end if;
+      return (RESULT_STD, Status);
    end Change_Dir_Builtin;
 
 end Posix_Shell.Builtins.Cd;

@@ -28,13 +28,10 @@ with Ada.Environment_Variables; use Ada.Environment_Variables;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Interfaces.C; use Interfaces.C;
 with Ada.Strings.Maps.Constants; use Ada.Strings.Maps.Constants;
-with Ada.Unchecked_Deallocation;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
 
 package body Posix_Shell.Variables is
-
-   --  Global variable containing the current scope
 
    function Portable_Getpid return Interfaces.C.long;
    pragma Import (C, Portable_Getpid, "getpid");
@@ -55,15 +52,6 @@ package body Posix_Shell.Variables is
          raise Variable_Name_Error;
       end if;
    end Check_Variable_Name;
-
-   procedure Deallocate (S : in out Shell_State_Access) is
-      procedure Internal_Free is
-        new Ada.Unchecked_Deallocation
-          (Shell_State,
-           Shell_State_Access);
-   begin
-      Internal_Free (S);
-   end Deallocate;
 
    -----------------
    -- Enter_Scope --
@@ -98,18 +86,23 @@ package body Posix_Shell.Variables is
       begin
          Insert (Result.Fun_Table, K, (V.Code, False));
       end Enter_Scope_Aux2;
+
    begin
+      --  Increment scope level
       Result.Scope_Level := Previous.Scope_Level + 1;
+
       --  Create a new var table based on the previous context
       Reserve_Capacity (Result.Var_Table, 256);
+
       Iterate (Previous.Var_Table,
                Enter_Scope_Aux'Unrestricted_Access);
+
+      --  Copy the function table
       Iterate (Previous.Fun_Table,
                Enter_Scope_Aux2'Unrestricted_Access);
 
       --  Copy also the positional parameters status
       Result.Pos_Params := Previous.Pos_Params;
-      Result.Redirections := Previous.Redirections;
 
       --  Copy the current directory information
       Result.Current_Dir := new String'(Previous.Current_Dir.all);
@@ -117,12 +110,23 @@ package body Posix_Shell.Variables is
       --  Reset to 0 for/until/while nested level
       Result.Loop_Scope_Level := 0;
 
+      --  Create a copy of all the file descriptors
+      for Fd_Index in Previous.Redirections'Range loop
+         Result.Redirections (Fd_Index) :=
+           (OS.FS.Dup (Previous.Redirections (Fd_Index).Fd),
+            null,
+            False,
+            True);
+      end loop;
+
       Result.XTrace_Enabled := Previous.XTrace_Enabled;
       Result.File_Expansion_Enabled := Previous.File_Expansion_Enabled;
 
       Result.Script_Name := Previous.Script_Name;
       Result.Last_Exit_Status := Previous.Last_Exit_Status;
+
       return Result;
+
    end Enter_Scope;
 
    ---------------------
@@ -594,9 +598,9 @@ package body Posix_Shell.Variables is
    -- Leave_Scope --
    -----------------
 
-   procedure Leave_Scope
-     (Current  : in out Shell_State;
-      Previous : in out Shell_State)
+   function Leave_Scope
+     (State  : in out Shell_State)
+     return Integer
    is
       procedure Leave_Scope_Aux (Position : String_Maps.Cursor);
 
@@ -607,36 +611,54 @@ package body Posix_Shell.Variables is
       procedure Leave_Scope_Aux (Position : String_Maps.Cursor) is
          V : Var_Value := Element (Position);
       begin
-         if V.Scope_Owner = Current.Scope_Level and then V.Val /= null then
+         if V.Scope_Owner = State.Scope_Level and then V.Val /= null then
             Free (V.Val);
          end if;
       end Leave_Scope_Aux;
+      Success : Boolean;
+      use type OS.FS.File_Descriptor;
+
    begin
 
       --  Clear variable table
-      Iterate (Current.Var_Table,
+      Iterate (State.Var_Table,
                Leave_Scope_Aux'Unrestricted_Access);
-      Clear (Current.Var_Table);
-
-      --  Propagate exit status
-      Previous.Last_Exit_Status := Current.Last_Exit_Status;
+      Clear (State.Var_Table);
 
       --  Clear positional parameters
-      if Current.Pos_Params.Scope = Current.Scope_Level then
-         for J in Current.Pos_Params.Table'Range loop
-            Free (Current.Pos_Params.Table (J));
+      if State.Pos_Params.Scope = State.Scope_Level then
+         for J in State.Pos_Params.Table'Range loop
+            Free (State.Pos_Params.Table (J));
          end loop;
       end if;
 
       --  Free Trap actions
-      for J in Current.Trap_Actions'Range loop
-         if Current.Trap_Actions (J) /= null then
-            Free (Current.Trap_Actions (J));
+      for J in State.Trap_Actions'Range loop
+         if State.Trap_Actions (J) /= null then
+            Free (State.Trap_Actions (J));
          end if;
       end loop;
 
-      --  Free Current dir
-      Free (Current.Current_Dir);
+      for J in State.Redirections'Range loop
+         declare
+            Current : Shell_Descriptor := State.Redirections (J);
+         begin
+            if Current.Can_Be_Closed then
+               if Current.Fd /= OS.FS.Invalid_FD then
+                  OS.FS.Close (Current.Fd);
+               end if;
+
+               if Current.Delete_On_Close then
+                  Delete_File (Current.Filename.all, Success);
+                  Free (Current.Filename);
+               end if;
+            end if;
+         end;
+      end loop;
+
+      --  Free current dir
+      Free (State.Current_Dir);
+      return State.Last_Exit_Status;
    end Leave_Scope;
 
    --------------------

@@ -46,7 +46,7 @@ package body Posix_Shell.Builtins.Cp is
    --      when using runtime 'Copy_File'
 
    function Cp_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
       On_Windows      : constant Boolean := Directory_Separator = '\';
       Exec_Extension  : constant String := ".exe";
@@ -259,7 +259,7 @@ package body Posix_Shell.Builtins.Cp is
                   when 'p' => Preserve := Full;
                   when others =>
                      Error (S, "cp: unknown option: " & Args (Index).all);
-                     return 1;
+                     return (RESULT_STD, 1);
                end case;
             end loop;
          else
@@ -271,7 +271,7 @@ package body Posix_Shell.Builtins.Cp is
       --  Check for operands presence.
       if File_List_Start > File_List_End then
          Error (S, "cp: missing operand");
-         return 1;
+         return (RESULT_STD, 1);
       end if;
 
       declare
@@ -285,7 +285,7 @@ package body Posix_Shell.Builtins.Cp is
             --  existing directory.
             if not Is_Directory (Target_Attrs) then
                Error (S, "cp: no such directory '" & Target_Path & "'");
-               return 1;
+               return (RESULT_STD, 1);
             end if;
          end if;
 
@@ -297,9 +297,9 @@ package body Posix_Shell.Builtins.Cp is
          end loop;
 
          if Got_Errors then
-            return 1;
+            return (RESULT_STD, 1);
          else
-            return 0;
+            return (RESULT_STD, 0);
          end if;
       end;
    end Cp_Builtin;

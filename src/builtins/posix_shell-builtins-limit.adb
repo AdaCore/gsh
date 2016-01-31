@@ -31,12 +31,12 @@ package body Posix_Shell.Builtins.Limit is
    -------------------
 
    function Limit_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
       pragma Unreferenced (Args);
       pragma Unreferenced (S);
    begin
-      return 0;
+      return (RESULT_STD, 0);
    end Limit_Builtin;
 
 end Posix_Shell.Builtins.Limit;

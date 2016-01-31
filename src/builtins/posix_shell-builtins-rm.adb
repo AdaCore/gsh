@@ -39,7 +39,7 @@ package body Posix_Shell.Builtins.Rm is
    ----------------
 
    function Rm_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
 
       File_List_Start : Integer := Args'First;
@@ -145,7 +145,7 @@ package body Posix_Shell.Builtins.Rm is
                   when 'r' => Recursive := True;
                   when others =>
                      Error (S, "rm: unknown option: " & Args (Index).all);
-                     return 1;
+                     return (RESULT_STD, 1);
                end case;
             end loop;
          else
@@ -158,9 +158,9 @@ package body Posix_Shell.Builtins.Rm is
       if File_List_Start > Args'Last then
          if not Force then
             Error (S, "rm: missing operand");
-            return 1;
+            return (RESULT_STD, 1);
          else
-            return 0;
+            return (RESULT_STD, 0);
          end if;
       end if;
 
@@ -176,9 +176,9 @@ package body Posix_Shell.Builtins.Rm is
          end;
       end loop;
       if Got_Errors then
-         return 1;
+         return (RESULT_STD, 1);
       else
-         return 0;
+         return (RESULT_STD, 0);
       end if;
    end Rm_Builtin;
 

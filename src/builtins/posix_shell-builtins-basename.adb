@@ -33,13 +33,13 @@ package body Posix_Shell.Builtins.Basename is
    ----------------------
 
    function Basename_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
       First : Integer := 0;
    begin
       if Args'Length = 0 then
          Error (S, "basename: need at least one operand");
-         return 1;
+         return (RESULT_STD, 1);
       end if;
 
       if Args (Args'First).all = "--" then
@@ -50,17 +50,17 @@ package body Posix_Shell.Builtins.Basename is
 
       if Args'Last - First + 1 > 2 then
          Error (S, "basename: does not accept more than two operands");
-         return 1;
+         return (RESULT_STD, 1);
       end if;
 
       if Args (First).all = "" then
          Put (S, 1, "" & ASCII.LF);
-         return 0;
+         return (RESULT_STD, 0);
       end if;
 
       if Args (First).all = "//" or else Args (First).all = "\\" then
          Put (S, 1, Args (First).all & ASCII.LF);
-         return 0;
+         return (RESULT_STD, 0);
       end if;
 
       declare
@@ -73,7 +73,7 @@ package body Posix_Shell.Builtins.Basename is
             if Filename_End < Filename_Start then
                --  Only slashes and backslashes in the path so return a /
                Put (S, 1, "/" & ASCII.LF);
-               return 0;
+               return (RESULT_STD, 0);
             end if;
          end loop;
 
@@ -94,13 +94,13 @@ package body Posix_Shell.Builtins.Basename is
                   Put (S, 1,
                        Path (Filename_Start .. Filename_End - Ext'Length)
                        & ASCII.LF);
-                  return 0;
+                  return (RESULT_STD, 0);
                end if;
             end;
          end if;
 
          Put (S, 1, Path (Filename_Start .. Filename_End) & ASCII.LF);
-         return 0;
+         return (RESULT_STD, 0);
       end;
    end Basename_Builtin;
 

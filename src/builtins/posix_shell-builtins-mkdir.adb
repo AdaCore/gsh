@@ -36,7 +36,9 @@ package body Posix_Shell.Builtins.Mkdir is
    -------------------
 
    function Mkdir_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S    : in out Shell_State;
+      Args : String_List)
+      return Eval_Result
    is
       File_List_Start : Integer := Args'First;
       Create_Intermediates : Boolean := False;
@@ -57,7 +59,7 @@ package body Posix_Shell.Builtins.Mkdir is
                   when others =>
                      Error (S, "mkdir: unknown option: " &
                             Args (Index).all);
-                     return 1;
+                     return (RESULT_STD, 1);
                end case;
             end loop;
          else
@@ -69,7 +71,7 @@ package body Posix_Shell.Builtins.Mkdir is
       --  Check for operands presence.
       if File_List_Start > Args'Last then
          Error (S, "mkdir: too few arguments");
-         return 1;
+         return (RESULT_STD, 1);
       end if;
 
       --  Iterate other the files
@@ -90,9 +92,9 @@ package body Posix_Shell.Builtins.Mkdir is
       end loop;
 
       if Got_Errors then
-         return 1;
+         return (RESULT_STD, 1);
       else
-         return 0;
+         return (RESULT_STD, 0);
       end if;
    end Mkdir_Builtin;
 

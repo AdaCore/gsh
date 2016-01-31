@@ -130,6 +130,10 @@ package body OS.FS is
       Result : File_Descriptor;
       use GNAT.OS_Lib;
    begin
+      if FD = Invalid_FD then
+         return FD;
+      end if;
+
       if Close_On_Exec then
          GNAT.Task_Lock.Lock;
       end if;
@@ -318,6 +322,7 @@ package body OS.FS is
             raise;
       end;
       GNAT.Task_Lock.Unlock;
+
    end Open_Pipe;
 
    ----------

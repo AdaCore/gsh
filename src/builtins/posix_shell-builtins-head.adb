@@ -37,12 +37,12 @@ package body Posix_Shell.Builtins.Head is
    function Head_Builtin
      (S : in out Shell_State;
       Args : String_List)
-      return Integer
+      return Eval_Result
    is
-      Buffer : String_Access := null;
-      Current_Arg : Integer := Args'First;
-      Args_Last : constant Integer := Args'Last;
-      Line_Number : Integer := 10;
+      Buffer             : String_Access := null;
+      Current_Arg        : Integer := Args'First;
+      Args_Last          : constant Integer := Args'Last;
+      Line_Number        : Integer := 10;
       Enable_Minus_N_Opt : Boolean := True;
 
    begin
@@ -63,7 +63,7 @@ package body Posix_Shell.Builtins.Head is
                if Current_Arg > Args_Last then
                   Put (S, 2,
                        "head: option -n requires an argument" & ASCII.LF);
-                  return 1;
+                  return (RESULT_STD, 1);
                end if;
 
                   --  Check that the argument is an integer
@@ -71,7 +71,7 @@ package body Posix_Shell.Builtins.Head is
 
                if not Is_Valid then
                   Put (S, 2, "head: invalid context" & ASCII.LF);
-                  return 1;
+                  return (RESULT_STD, 1);
                end if;
             elsif CA = "--" then
                exit;
@@ -82,7 +82,7 @@ package body Posix_Shell.Builtins.Head is
                            Line_Number, Is_Valid);
                if not Is_Valid or else not Enable_Minus_N_Opt then
                   Put (S, 2, "head: invalid option" & ASCII.LF);
-                  return 1;
+                  return (RESULT_STD, 1);
                end if;
 
                --  Only one -<number> option is accepted
@@ -112,7 +112,7 @@ package body Posix_Shell.Builtins.Head is
             Close (Fd);
             if Byte_Reads /= Integer (Length) then
                Put (S, 2, "head: cannot read file");
-               return 1;
+               return (RESULT_STD, 1);
             end if;
          end;
       end if;
@@ -120,7 +120,7 @@ package body Posix_Shell.Builtins.Head is
       Put (S, 1, To_Line (Buffer.all, Line_Number));
 
       Free (Buffer);
-      return 0;
+      return (RESULT_STD, 0);
    end Head_Builtin;
 
 end Posix_Shell.Builtins.Head;

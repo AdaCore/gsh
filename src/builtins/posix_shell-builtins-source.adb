@@ -24,7 +24,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Exec;                  use Posix_Shell.Exec;
 with Posix_Shell.Parser;                use Posix_Shell.Parser;
 with Posix_Shell.Tree.Evals;            use Posix_Shell.Tree.Evals;
 with Posix_Shell.Tree;                  use Posix_Shell.Tree;
@@ -38,22 +37,23 @@ package body Posix_Shell.Builtins.Source is
    --------------------
 
    function Source_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
-      T : Shell_Tree;
-      Return_Code : Integer;
+      T                : Shell_Tree;
+      Return_Code      : Eval_Result;
       Saved_Pos_Params : Pos_Params_State;
    begin
       if Args'Length = 0 then
          Error (S, ".: filename argument required");
-         return 2;
+         return (RESULT_STD, 2);
       end if;
 
       begin
          T := Parse_File (Resolve_Path (S, Args (Args'First).all));
+         Allow_Return (T);
       exception
          when OS.OS_Error =>
-            return 1;
+            return (RESULT_STD, 1);
       end;
 
       --  If some arguments are provided for the script, then set
@@ -70,14 +70,11 @@ package body Posix_Shell.Builtins.Source is
            (S, Args (Args'First + 1 .. Args'Last), False);
       end if;
 
-      begin
-         Eval (S, T);
-         Return_Code := Get_Last_Exit_Status (S);
-         Free_Node (T);
-      exception
-         when Shell_Return_Exception =>
-            Return_Code := Get_Last_Exit_Status (S);
-      end;
+      Return_Code := Eval (S, T);
+      if Return_Code.Kind = RESULT_RETURN then
+         Return_Code := (RESULT_STD, Return_Code.Status);
+      end if;
+      Free_Node (T);
 
       --  Restore the positional parameters if necessary.
       if Args'Length > 1 then

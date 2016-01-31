@@ -120,4 +120,24 @@ package Posix_Shell is
 
    subtype Node_Id is Natural;
    Null_Node : constant Node_Id := 0;
+
+   type Result_Kind is
+     (RESULT_STD,
+      RESULT_EXIT,
+      RESULT_RETURN,
+      RESULT_BREAK,
+      RESULT_CONTINUE);
+
+   type Eval_Result (Kind : Result_Kind := RESULT_STD) is record
+      case Kind is
+         when RESULT_STD | RESULT_EXIT | RESULT_RETURN =>
+            Status : Integer;
+         when RESULT_BREAK | RESULT_CONTINUE =>
+            Level : Integer;
+      end case;
+   end record;
+
+   Continue_Exception : exception;
+   Break_Exception : exception;
+
 end Posix_Shell;

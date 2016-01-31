@@ -92,7 +92,7 @@ package body Posix_Shell.Builtins.Command is
    ---------------------
 
    function Command_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
 
       From : constant String := "command";
@@ -126,7 +126,7 @@ package body Posix_Shell.Builtins.Command is
                      --  treated
                      Error (S,
                             From & ": -p option is currently not handled");
-                     return 1;
+                     return (RESULT_STD, 1);
 
                   when 'v' | 'V' =>
                      Invoke_Command := False;
@@ -134,7 +134,7 @@ package body Posix_Shell.Builtins.Command is
                   when others =>
                      Error (S,
                             From & ": unknown option: " & Args (Index).all);
-                     return 1;
+                     return (RESULT_STD, 1);
                end case;
             end loop;
          else
@@ -149,10 +149,15 @@ package body Posix_Shell.Builtins.Command is
             Command   : constant String := Args (Command_List_Start).all;
             Arguments : constant String_List :=
               Args (Command_List_Start + 1 .. Args'Last);
-            Result    : Integer;
+            Result    : Eval_Result;
          begin
             Result := Run (S, Command, Arguments, Get_Environment (S));
-            return Result;
+            case Result.Kind is
+               when RESULT_STD =>
+                  return (RESULT_STD, Result.Status);
+               when others =>
+                  return (RESULT_STD, 1);
+            end case;
          end;
 
       else
@@ -164,7 +169,8 @@ package body Posix_Shell.Builtins.Command is
          end loop;
       end if;
 
-      return Boolean'Pos (Got_Errors);
+      return (RESULT_STD,
+              Boolean'Pos (Got_Errors));
 
    end Command_Builtin;
 
@@ -206,11 +212,11 @@ package body Posix_Shell.Builtins.Command is
    ------------------
 
    function Type_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
       From       : constant String := "type";
    begin
-      return Common_to_Type_and_Which (S, Args, From, False);
+      return (RESULT_STD, Common_to_Type_and_Which (S, Args, From, False));
    end Type_Builtin;
 
    -------------------
@@ -218,11 +224,11 @@ package body Posix_Shell.Builtins.Command is
    -------------------
 
    function Which_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
       From       : constant String := "which";
    begin
-      return Common_to_Type_and_Which (S, Args, From);
+      return (RESULT_STD, Common_to_Type_and_Which (S, Args, From));
    end Which_Builtin;
 
 end Posix_Shell.Builtins.Command;

@@ -33,7 +33,7 @@ package body Posix_Shell.Builtins.Wc is
    ----------------
 
    function Wc_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
 
       Global_Line_Count : Integer := 0;
@@ -113,7 +113,7 @@ package body Posix_Shell.Builtins.Wc is
                      Put (S, 2,
                           "unexpected option " &
                             Args (Index) (Char_Index) & ASCII.LF);
-                     return 1;
+                     return (RESULT_STD, 1);
                end case;
             end loop;
          else
@@ -179,7 +179,7 @@ package body Posix_Shell.Builtins.Wc is
          Count (Read (S, 0), "");
       end if;
 
-      return 0;
+      return (RESULT_STD, 0);
    end Wc_Builtin;
 
 end Posix_Shell.Builtins.Wc;

@@ -26,10 +26,11 @@ with Posix_Shell.Variables; use Posix_Shell.Variables;
 
 package Posix_Shell.Functions is
 
-   procedure Execute_Function
+   function Execute_Function
      (State : in out Shell_State;
       Name  : String;
-      Args  : String_List);
+      Args  : String_List)
+     return Eval_Result;
    --  Execute the given function with the provide arguments, and
    --  return the function exit status.
    --

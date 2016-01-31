@@ -21,7 +21,6 @@
 ------------------------------------------------------------------------------
 
 with Posix_Shell.Subst; use Posix_Shell.Subst;
-with Posix_Shell.Exec; use Posix_Shell.Exec;
 with Posix_Shell.Utils; use Posix_Shell.Utils;
 with Ada.Strings.Unbounded;
 pragma Warnings (Off);
@@ -32,39 +31,18 @@ with OS.FS;
 
 package body Posix_Shell.Variables.Output is
 
-   type Pipe_Type is record
-      Input, Output : OS.FS.File_Descriptor;
-   end record;
+   -------------------------
+   -- Get_File_Descriptor --
+   -------------------------
 
-   function Create_Pipe (Pipe : not null access Pipe_Type) return Integer;
-   pragma Import (C, Create_Pipe, "__gnat_pipe");
-
-   procedure Close (S : Shell_State; N : Integer) is
-   begin
-      OS.FS.Close (Get_Fd (S, N));
-   end Close;
-
-   ----------------
-   -- Close_Pipe --
-   ----------------
-
-   procedure Close_Pipe (S : in out Shell_State) is
-   begin
-      Close (S, 0);
-      --  restore stdin
-      S.Redirections (0) := S.Redirections (-2);
-   end Close_Pipe;
-
-   ------------
-   -- Get_Fd --
-   ------------
-
-   function Get_Fd
-     (S : Shell_State; N : Integer) return OS.FS.File_Descriptor
+   function Get_File_Descriptor
+     (State : Shell_State;
+      IO    : Integer)
+      return OS.FS.File_Descriptor
    is
    begin
-      return S.Redirections (N).Fd;
-   end Get_Fd;
+      return State.Redirections (IO).Fd;
+   end Get_File_Descriptor;
 
    -----------
    -- Error --
@@ -397,59 +375,28 @@ package body Posix_Shell.Variables.Output is
       return To_String (Result_Str);
    end Read_Pipe_And_Close;
 
-   -----------------
-   -- Set_Pipe_In --
-   -----------------
+   ---------------------
+   --  Set_Descriptor --
+   ---------------------
 
-   procedure Set_Pipe_In
-     (S : in out Shell_State; Input_Fd : OS.FS.File_Descriptor)
+   procedure Set_Descriptor
+     (State : in out Shell_State;
+      IO    : Integer;
+      Fd    : OS.FS.File_Descriptor)
+
    is
+      Success : Boolean;
+      Current : Shell_Descriptor := State.Redirections (IO);
    begin
-      --  Store the current states and then pop it, allowing us to access
-      --  the previous states in order to modify the current one.  Once
-      --  all the modifications to the current states have been made
-      --  based on the previous states, we will pop the current states
-      --  back.
-      S.Redirections (-2) := S.Redirections (0);
-      S.Redirections (0) := (Input_Fd, null, False, True);
-      --  S.Redirections (-1) := S.Redirections (1);
-      --  Restore Stdout
-      --  S.Redirections (1) := Tmp2;
-
-      --  Set_Close_On_Exec (S.Redirections (-1).Fd);
-
-   end Set_Pipe_In;
-
-   ------------------
-   -- Set_Pipe_Out --
-   ------------------
-
-   procedure Set_Pipe_Out (S : in out Shell_State) is
-      Pipe   : aliased Pipe_Type;
-      Result : Integer;
-
-   begin
-
-      Result := Create_Pipe (Pipe'Access);
-
-      if Result /= 0 then
-         --  If we are not able to open the pipe, just exit from the current
-         --  shell script as we don't know what are the consequences of such
-         --  failure
-         Shell_Exit (S, 127);
+      if Current.Can_Be_Closed then
+         OS.FS.Close (Current.Fd);
+         if Current.Delete_On_Close then
+            Delete_File (Current.Filename.all, Success);
+            Free (Current.Filename);
+         end if;
       end if;
-
-      --  Save stdout
-      S.Redirections (-1) := S.Redirections (1);
-      S.Redirections (1)  := (Pipe.Output, null, False, True);
-
-      --  Keep the other side of the pipe
-      S.Redirections (-2) := (Pipe.Input, null, False, True);
-
-      OS.FS.Set_Close_On_Exec (Pipe.Output, True);
-      OS.FS.Set_Close_On_Exec (Pipe.Input, True);
-      --  Needed ?
-   end Set_Pipe_Out;
+      State.Redirections (IO) := (Fd, null, False, True);
+   end Set_Descriptor;
 
    ------------------------------
    -- Get_Current_Redirections --

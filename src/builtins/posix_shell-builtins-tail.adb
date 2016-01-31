@@ -37,16 +37,16 @@ package body Posix_Shell.Builtins.Tail is
    function Tail_Builtin
      (S : in out Shell_State;
       Args : String_List)
-      return Integer
+      return Eval_Result
    is
-      Buffer : String_Access := null;
-      Current_Arg : Integer := Args'First;
-      Args_Last : constant Integer := Args'Last;
+      Buffer        : String_Access := null;
+      Current_Arg   : Integer := Args'First;
+      Args_Last     : constant Integer := Args'Last;
       Use_Char_Mode : Boolean := False;
       --  tail can either count lines or characters. Default mode is line mode.
 
       Relative_To_End : Boolean := True;
-      Line_Number : Integer := 10;
+      Line_Number   : Integer := 10;
 
       Enable_Minus_N_Opt : Boolean := True;
 
@@ -90,13 +90,13 @@ package body Posix_Shell.Builtins.Tail is
                --  Check that we have an argument
                if Current_Arg > Args_Last then
                   Error (S, "tail: option -c requires an argument");
-                  return 1;
+                  return (RESULT_STD, 1);
                end if;
 
                --  Check that the argument is an integer
                if not Parse_Number (Args (Current_Arg).all) then
                   Error (S, "tail: invalid context");
-                  return 1;
+                  return (RESULT_STD, 1);
                end if;
 
             elsif Starts_With (CA, "-") then
@@ -108,7 +108,7 @@ package body Posix_Shell.Builtins.Tail is
                               Line_Number, Is_Valid);
                   if not Is_Valid or else not Enable_Minus_N_Opt then
                      Error (S, "tail: invalid context");
-                     return 1;
+                     return (RESULT_STD, 1);
                   end if;
 
                   --  Only one -number option is accepted
@@ -139,7 +139,7 @@ package body Posix_Shell.Builtins.Tail is
             Close (Fd);
             if Byte_Reads /= Integer (Length) then
                Put (S, 2, "tail: cannot read file");
-               return 1;
+               return (RESULT_STD, 1);
             end if;
          end;
       end if;
@@ -160,7 +160,7 @@ package body Posix_Shell.Builtins.Tail is
 
       end if;
       Free (Buffer);
-      return 0;
+      return (RESULT_STD, 0);
    end Tail_Builtin;
 
 end Posix_Shell.Builtins.Tail;

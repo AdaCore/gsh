@@ -26,9 +26,11 @@ with Posix_Shell.Variables; use Posix_Shell.Variables;
 package Posix_Shell.Commands is
 
    function Run
-     (S : in out Shell_State;
-      Cmd : String; Args : String_List; Env : String_List)
-      return Integer;
+     (S    : in out Shell_State;
+      Cmd  : String;
+      Args : String_List;
+      Env  : String_List)
+      return Eval_Result;
    --  Run the given command with the arguments provided, and
    --  return its exit status.
 

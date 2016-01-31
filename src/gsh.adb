@@ -118,6 +118,7 @@ begin
       loop
          if Is_Interactive then
             Set_Directory (Get_Var_Value (State, "PWD"));
+            Put_Line ("toto");
             declare
                Line : constant String := Readline ("$ ");
             begin
@@ -160,7 +161,7 @@ begin
                declare
                   Exit_Trap_Action : constant String_Access :=
                     Get_Trap_Action (State, 0);
-                  Trap_Status : Integer;
+                  Trap_Status : Eval_Result;
                   pragma Warnings (Off, Trap_Status);
 
                begin
@@ -171,18 +172,21 @@ begin
                      Trap_Status := Execute_Builtin (State,
                                                      "eval",
                                                      (1 => Exit_Trap_Action));
+                     case Trap_Status.Kind is
+                        when RESULT_STD =>
+                           Status := Get_Last_Exit_Status (State);
+                        when RESULT_EXIT =>
+                           Status := Get_Last_Exit_Status (State);
+                           exit;
+                        when others =>
+                           Put
+                             (State, 2,
+                              "return: can only `return' from a " &
+                                "function or sourced script" & ASCII.LF);
+                           Save_Last_Exit_Status (State, 1);
+                           Status := 1;
+                     end case;
                   end if;
-               exception
-                  when Shell_Exit_Exception =>
-                     Status := Get_Last_Exit_Status (State);
-                     exit;
-                  when Shell_Return_Exception =>
-                     Put
-                       (State, 2,
-                        "return: can only `return' from a " &
-                          "function or sourced script" & ASCII.LF);
-                     Save_Last_Exit_Status (State, 1);
-                     Status := 1;
                end;
             end if;
          end if;

@@ -446,18 +446,19 @@ package body Posix_Shell.Parser is
       return Node_Id
    is
 
-      use And_Or_Node_Id_Tables;
+      use Node_Id_Tables;
 
       Childs : Instance;
       Child_Index : Integer := 1;
-      Current : Node_Id := Null_Node;
+      Current     : Node_Id := Null_Node;
+      Code        : Node_Id := Null_Node;
       Result : Node_Id;
       Current_Kind : Token_Type;
    begin
       Init (Childs);
 
-      Current := Parse_Pipeline (B, T, C, Until_Token => Until_Token);
-      Set_Item (Childs, Child_Index, (Current, AND_LIST));
+      Code := Parse_Pipeline (B, T, C, Until_Token => Until_Token);
+      Set_Item (Childs, Child_Index, Code);
       Child_Index := Child_Index + 1;
 
       loop
@@ -471,10 +472,21 @@ package body Posix_Shell.Parser is
                if Current = 0 then
                   exit;
                end if;
+
                if Current_Kind = T_OR_IF then
-                  Set_Item (Childs, Child_Index, (Current, OR_LIST));
+                  for J in reverse 1 .. Child_Index - 1 loop
+                     exit when
+                       Get_False_Continuation (T, Childs.Table (J)) /= 0;
+                     Set_Node_Continuation (T, Childs.Table (J), 0, Current);
+                  end loop;
+                  Set_Item (Childs, Child_Index, Current);
                else
-                  Set_Item (Childs, Child_Index, (Current, AND_LIST));
+                  for J in reverse 1 .. Child_Index - 1 loop
+                     exit when
+                       Get_True_Continuation (T, Childs.Table (J)) /= 0;
+                     Set_Node_Continuation (T, Childs.Table (J), Current, 0);
+                  end loop;
+                  Set_Item (Childs, Child_Index, Current);
                end if;
                Child_Index := Child_Index + 1;
                pragma Assert (Current /= Null_Node);
@@ -484,10 +496,9 @@ package body Posix_Shell.Parser is
       end loop;
 
       if Last (Childs) = 1 then
-         Result := Childs.Table (1).N;
+         Result := Code;
       else
-         Result := Add_And_Or_List_Node
-           (T, And_Or_Node_Id_Array (Childs.Table (1 .. Last (Childs))));
+         Result := Add_Block_Node (T, Code);
       end if;
 
       Free (Childs);
@@ -913,6 +924,7 @@ package body Posix_Shell.Parser is
          when others =>
             Syntax_Error (Read_Token (B), "expect 'fi'");
       end case;
+
       return Add_If_Node (T, Cond, True_Code, False_Code);
    end Parse_If_Clause;
 
@@ -961,6 +973,7 @@ package body Posix_Shell.Parser is
          when T_DLESS | T_DLESSDASH =>
             --  This implem is not right need to fix at some point XXXX
 
+            --  Add_Pending_IO_Here (N, Filename, Target_FD);
             --  Parse_Redirect_List (B, C, N);
             Pending_IO_Heres_Last := Pending_IO_Heres_Last + 1;
             Pending_IO_Heres (Pending_IO_Heres_Last) :=
@@ -1041,18 +1054,22 @@ package body Posix_Shell.Parser is
       Until_Token : Token_Type := T_NULL)
       return Node_Id
    is
-      use Node_Id_Tables;
+      --  use Node_Id_Tables;
 
-      Childs      : Instance;
-      Child_Index : Integer := 1;
+      --  Childs      : Instance;
+      --  Child_Index : Integer := 1;
       Current     : Node_Id := Null_Node;
+      Prev        : Node_Id := Null_Node;
       Result      : Node_Id;
    begin
-      Init (Childs);
+      --  Init (Childs);
 
       Current := Parse_And_Or (B, Tree, Context, Until_Token => Until_Token);
-      Set_Item (Childs, Child_Index, Current);
-      Child_Index := Child_Index + 1;
+      Prev := Current;
+      Result := Current;
+
+      --  Set_Item (Childs, Child_Index, Current);
+      --  Child_Index := Child_Index + 1;
 
       loop
          case Lookahead (B) is
@@ -1067,8 +1084,10 @@ package body Posix_Shell.Parser is
                   exit;
                end if;
 
-               Set_Item (Childs, Child_Index, Current);
-               Child_Index := Child_Index + 1;
+               Set_Node_Continuation (Tree, Prev, Current, Current);
+               Prev := Current;
+               --  Set_Item (Childs, Child_Index, Current);
+               --  Child_Index := Child_Index + 1;
                pragma Assert (Current /= Null_Node);
             when T_EOF =>
                exit;
@@ -1087,14 +1106,14 @@ package body Posix_Shell.Parser is
          end case;
       end loop;
 
-      if Last (Childs) = 1 then
-         Result := Childs.Table (1);
-      else
-         Result := Add_List_Node
-           (Tree, Node_Id_Array (Childs.Table (1 .. Last (Childs))));
-      end if;
-
-      Free (Childs);
+      --  if Last (Childs) = 1 then
+      --           Result := Childs.Table (1);
+      --        else
+      --           Result := Add_List_Node
+      --             (Tree, Node_Id_Array (Childs.Table (1 .. Last (Childs))));
+      --        end if;
+      --
+      --        Free (Childs);
       return Result;
 
    end Parse_List;
@@ -1334,7 +1353,7 @@ package body Posix_Shell.Parser is
             Parse_Linebreak (B, T, C);
             declare
                Function_Tree : Shell_Tree := New_Tree
-                 (B.B, Protect => True);
+                 (B.B, Protect => True, Allow_Return => True);
                N : constant Node_Id := Parse_Compound_Command
                  (B, Function_Tree, C);
             begin
@@ -1418,42 +1437,47 @@ package body Posix_Shell.Parser is
       C : Parser_Context)
       return Node_Id
    is
-      use Node_Id_Tables;
-
-      Childs : Instance;
-      Child_Index : Integer := 1;
+      --  use Node_Id_Tables;
+      --  Childs : Instance;
+      --  Child_Index : Integer := 1;
       Current : Node_Id := Null_Node;
-      Result : Node_Id;
+      Prev    : Node_Id := Null_Node;
+      Result  : Node_Id;
    begin
-      Init (Childs);
+      --  Init (Childs);
 
       Current := Parse_And_Or (B, T, C);
-      Set_Item (Childs, Child_Index, Current);
-      Child_Index := Child_Index + 1;
+      Result := Current;
+      Prev := Current;
+
+      --  Set_Item (Childs, Child_Index, Current);
+      --  Child_Index := Child_Index + 1;
 
       loop
          case Lookahead (B) is
             when T_SEMI | T_AND | T_NEWLINE =>
                Parse_Separator (B, T, C);
-               Current := Parse_Term (B, T, C);
+               Current := Parse_And_Or (B, T, C);
                if Current = 0 then
                   exit;
                end if;
-               Set_Item (Childs, Child_Index, Current);
-               Child_Index := Child_Index + 1;
+               Set_Node_Continuation (T, Prev, Current, Current);
+               Prev := Current;
+               --  Set_Item (Childs, Child_Index, Current);
+               --  Child_Index := Child_Index + 1;
             when others =>
                exit;
          end case;
       end loop;
 
-      if Last (Childs) = 1 then
-         Result := Childs.Table (1);
-      else
-         Result := Add_List_Node
-           (T, Node_Id_Array (Childs.Table (1 .. Last (Childs))));
-      end if;
-
-      Free (Childs);
+      --        if Last (Childs) = 1 then
+      --           Result := Childs.Table (1);
+      --        else
+      --           Result := Add_List_Node
+      --             (T, Node_Id_Array (Childs.Table (1 .. Last (Childs))));
+      --        end if;
+      --
+      --        Free (Childs);
       return Result;
 
    end Parse_Term;
@@ -1474,6 +1498,7 @@ package body Posix_Shell.Parser is
       Cond := Parse_Compound_List (B, T, LOOP_COND_CONTEXT);
       Loop_Code := Parse_Do_Group (B, T, C);
       return Add_Until_Node (T, Cond, Loop_Code);
+
    end Parse_Until_Clause;
 
    ------------------------
@@ -1491,6 +1516,7 @@ package body Posix_Shell.Parser is
       Skip_Token (B);
       Cond := Parse_Compound_List (B, T, LOOP_COND_CONTEXT);
       Loop_Code := Parse_Do_Group (B, T, C);
+
       return Add_While_Node (T, Cond, Loop_Code);
    end Parse_While_Clause;
 

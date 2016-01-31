@@ -233,7 +233,7 @@ package body Posix_Shell.Builtins.Test is
    ------------------
 
    function Test_Builtin
-     (S : in out Shell_State; Args : String_List) return Integer
+     (S : in out Shell_State; Args : String_List) return Eval_Result
    is
       Current_Pos : Integer := Args'First;
       --  Position of the string currently parsed in Args.
@@ -649,10 +649,10 @@ package body Posix_Shell.Builtins.Test is
       --  special case describe in Posix. If test has 0 arguments then return
       --  false (non zero value).
       if Args'Length = 0 then
-         return 1;
+         return (RESULT_STD, 1);
       end if;
 
-      return Parse_Or_Expr;
+      return (RESULT_STD, Parse_Or_Expr);
    end Test_Builtin;
 
 end Posix_Shell.Builtins.Test;

@@ -30,31 +30,14 @@ package Posix_Shell.Tree is
    type Shell_Tree is private;
    type Shell_Tree_Access is access Shell_Tree;
 
-   type List_Kind is (OR_LIST, AND_LIST);
-
-   type And_Or_Node_Id is record
-      N    : Node_Id;
-      Kind : List_Kind;
-   end record;
-
-   Null_And_Or_Node : constant And_Or_Node_Id := (0, OR_LIST);
-
    package Node_Id_Tables is new GNAT.Dynamic_Tables
      (Node_Id,
-      Positive,
-      1,
-      128,
-      100);
-
-   package And_Or_Node_Id_Tables is new GNAT.Dynamic_Tables
-     (And_Or_Node_Id,
       Positive,
       1,
       16,
       100);
 
    type Node_Id_Array is array (Positive range <>) of Node_Id;
-   type And_Or_Node_Id_Array is array (Positive range <>) of And_Or_Node_Id;
 
    --------------------
    -- Tree modifiers --
@@ -63,40 +46,22 @@ package Posix_Shell.Tree is
    --  The following functions are dealing with the addition or modification of
    --  nodes in a tree.
 
-   function Add_List_Node
-     (Tree   : in out Shell_Tree;
-      Childs : Node_Id_Array)
+   function Add_Block_Node
+     (Tree    : in out Shell_Tree;
+      Code    : Node_Id)
       return Node_Id;
-   --  Create a node that represent a list of ; or newline separated statements
-   --  Childs is the list of nodes that goes into that sequence.
 
-   function Add_And_Or_List_Node
-     (Tree   : in out Shell_Tree;
-      Childs : And_Or_Node_Id_Array)
+   function Add_If_Node
+     (Tree          : in out Shell_Tree;
+      Cond          : Node_Id;
+      True_Code     : Node_Id;
+      False_Code    : Node_Id)
       return Node_Id;
-   --  Create a node that represent a list of statements separated by || or &&
 
    function Add_Pipe_Node
      (Tree          : in out Shell_Tree;
       Childs        : Node_Id_Array;
       Pipe_Negation : Boolean)
-      return Node_Id;
-
-   function Add_Until_Node
-     (Tree            : in out Shell_Tree;
-      Cond, Loop_Code : Node_Id)
-      return Node_Id;
-
-   function Add_While_Node
-     (Tree            : in out Shell_Tree;
-      Cond, Loop_Code : Node_Id)
-      return Node_Id;
-
-   function Add_If_Node
-     (Tree       : in out Shell_Tree;
-      Cond       : Node_Id;
-      True_Code  : Node_Id;
-      False_Code : Node_Id)
       return Node_Id;
 
    function Add_Case_Node
@@ -130,6 +95,16 @@ package Posix_Shell.Tree is
       Subshell_Code : Node_Id)
       return Node_Id;
 
+   function Add_Until_Node
+     (Tree            : in out Shell_Tree;
+      Cond, Loop_Code : Node_Id)
+      return Node_Id;
+
+   function Add_While_Node
+     (Tree            : in out Shell_Tree;
+      Cond, Loop_Code : Node_Id)
+      return Node_Id;
+
    function Add_Null_Node (Tree : in out Shell_Tree) return Node_Id;
 
    procedure Set_Cmd_Node
@@ -147,6 +122,22 @@ package Posix_Shell.Tree is
      (Tree      : Shell_Tree;
       N         : Node_Id;
       Operator  : Redirection);
+
+   procedure Set_Node_Continuation
+     (Tree          : Shell_Tree;
+      N             : Node_Id;
+      Cont_If_True  : Node_Id;
+      Cont_If_False : Node_Id);
+
+   function Get_True_Continuation
+     (Tree : Shell_Tree;
+      N    : Node_Id)
+      return Node_Id;
+
+   function Get_False_Continuation
+     (Tree : Shell_Tree;
+      N    : Node_Id)
+      return Node_Id;
 
    procedure Append_Arg
      (Tree   : in out Shell_Tree;
@@ -170,8 +161,9 @@ package Posix_Shell.Tree is
      (Tree   : in out Shell_Tree);
 
    function New_Tree
-     (B       : Buffer;
-      Protect : Boolean := False)
+     (B            : Buffer;
+      Protect      : Boolean := False;
+      Allow_Return : Boolean := False)
       return Shell_Tree;
    --  Create a new tree associated with buffer B. If Protect is set to True
    --  then Tree cannot be deallocatd (a call to Protect_Tree is done)
@@ -181,6 +173,8 @@ package Posix_Shell.Tree is
 
    procedure Protect_Tree_Buffer (T : in out Shell_Tree);
    --  Ensure that the tree buffer cannot be deallocated
+
+   procedure Allow_Return (T : in out Shell_Tree);
 
    function Token_List_Pool (T : Shell_Tree) return List_Pool;
    procedure Append
@@ -195,54 +189,48 @@ package Posix_Shell.Tree is
 private
 
    type Node_Kind is
-     (IF_NODE,
-      LIST_NODE,
-      AND_OR_LIST_NODE,
-      PIPE_NODE,
-      FOR_NODE,
-      CASE_NODE,
-      CASE_LIST_NODE,
-      UNTIL_NODE,
-      WHILE_NODE,
+     (ASSIGN_NODE,
+      BLOCK_NODE,
       BRACE_NODE,
-      SUBSHELL_NODE,
-      FUNCTION_NODE,
-      ASSIGN_NODE,
+      CASE_LIST_NODE,
+      CASE_NODE,
       CMD_NODE,
+      FOR_NODE,
+      FUNCTION_NODE,
+      IF_NODE,
+      NOP_NODE,
       NULL_CMD_NODE,
-      NOP_NODE);
-
-   type And_Or_Record is record
-      N    : Node_Access;
-      Kind : List_Kind;
-   end record;
+      PIPE_NODE,
+      SUBSHELL_NODE,
+      UNTIL_NODE,
+      WHILE_NODE);
 
    type Node_Id_Array_Access is access Node_Id_Array;
-   type And_Or_Node_Id_Array_Access is access And_Or_Node_Id_Array;
 
    function Get_Node (Tree : Shell_Tree; N : Node_Id) return Node;
 
-   type Node (Kind : Node_Kind := IF_NODE) is record
-      Redirections      : Redirection_Stack := Empty_Redirections;
-      Pos               : Text_Position := Null_Text_Position;
+   type Node (Kind : Node_Kind := PIPE_NODE) is record
+      Redirections       : Redirection_Stack := Empty_Redirections;
+      Pos                : Text_Position := Null_Text_Position;
+      Cont_If_True       : Node_Id := 0;
+      Cont_If_False      : Node_Id := 0;
+
       case Kind is
-         when IF_NODE =>
-            Cond               : Node_Id;
-            True_Code          : Node_Id;
-            False_Code         : Node_Id;
-         when LIST_NODE =>
-            List_Childs        : Node_Id_Array_Access;
-         when AND_OR_LIST_NODE =>
-            And_Or_List_Childs : And_Or_Node_Id_Array_Access;
+         when BLOCK_NODE =>
+            Code                : Node_Id;
          when BRACE_NODE =>
-            Brace_Code         : Node_Id;
+            Brace_Code          : Node_Id;
          when CASE_LIST_NODE =>
-            Pattern_List       : Token_List;
-            Match_Code         : Node_Id;
-            Next_Patterns      : Node_Id;
+            Pattern_List        : Token_List;
+            Match_Code          : Node_Id;
+            Next_Patterns       : Node_Id;
          when CASE_NODE =>
-            Case_Word          : Token;
-            First_Case         : Node_Id;
+            Case_Word           : Token;
+            First_Case          : Node_Id;
+         when IF_NODE =>
+            If_Condition        : Node_Id;
+            If_True_Code        : Node_Id;
+            If_False_Code       : Node_Id;
          when FOR_NODE =>
             Loop_Var            : Token;
             Loop_Var_Values     : Token_List;
@@ -251,25 +239,25 @@ private
          when NULL_CMD_NODE =>
             null;
          when PIPE_NODE =>
-            Pipe_Childs        : Node_Id_Array_Access;
-            Pipe_Negation      : Boolean;
+            Pipe_Childs         : Node_Id_Array_Access;
+            Pipe_Negation       : Boolean;
          when SUBSHELL_NODE =>
-            Subshell_Code      : Node_Id;
-         when UNTIL_NODE =>
-            Until_Cond         : Node_Id;
-            Until_Code         : Node_Id;
-         when WHILE_NODE =>
-            While_Cond         : Node_Id;
-            While_Code         : Node_Id;
+            Subshell_Code       : Node_Id;
          when FUNCTION_NODE =>
-            Function_Name      : Token;
-            Function_Code      : Shell_Tree_Access;
+            Function_Name       : Token;
+            Function_Code       : Shell_Tree_Access;
          when CMD_NODE =>
-            Cmd                : Token;
-            Arguments          : Token_List;
-            Cmd_Assign_List    : Token_List;
+            Cmd                 : Token;
+            Arguments           : Token_List;
+            Cmd_Assign_List     : Token_List;
          when ASSIGN_NODE =>
             Assign_List         : Token_List;
+         when UNTIL_NODE =>
+            Until_Cond          : Node_Id;
+            Until_Code          : Node_Id;
+         when WHILE_NODE =>
+            While_Cond          : Node_Id;
+            While_Code          : Node_Id;
          when others =>
             null;
       end case;
@@ -279,7 +267,7 @@ private
      (Node,
       Positive,
       1,
-      4,
+      16,
       100);
 
    use Node_Tables;
@@ -292,6 +280,7 @@ private
       Buffer         : Posix_Shell.Buffers.Buffer;
       Protect_Tree   : Boolean := False;
       Protect_Buffer : Boolean := False;
+      Allow_Return   : Boolean := False;
    end record;
 
 end Posix_Shell.Tree;

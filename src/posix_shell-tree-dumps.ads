@@ -23,8 +23,10 @@
 package Posix_Shell.Tree.Dumps is
 
    procedure Dump
-     (T : Shell_Tree;
-      N      : Node);
+     (T         : Shell_Tree;
+      N         : Node;
+      Tree_Name : String := "root");
+
    procedure Dump (T : Shell_Tree);
 
 end Posix_Shell.Tree.Dumps;
