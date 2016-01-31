@@ -7,12 +7,12 @@ EXEEXT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo ".exe"; fi))
 LUA_PLAT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo "mingw"; else if test `uname` = 'Darwin'; then echo "macosx"; else echo "linux"; fi; fi))
 
 # Main build target
-all: src/posix_shell-lua_bindings.adb
+all: src/sh-lua_bindings.adb
 	@echo "building gsh"
 	gprbuild -p -P posix_shell -XBUILD=prod
 	gprbuild -p -P posix_shell -XBUILD=dev 
 
-src/posix_shell-lua_bindings.adb: unit_test_gen
+src/sh-lua_bindings.adb: unit_test_gen
 	@echo "generated unit testing bindings"
 	python ./unit_test_gen > $@
 

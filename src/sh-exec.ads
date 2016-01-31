@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,22 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+with Sh.States; use Sh.States;
 
----------
--- GSH --
----------
+package Sh.Exec is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   procedure Shell_Exit (S : in out Shell_State; Code : Integer);
+   pragma No_Return (Shell_Exit);
+   --  Causes the shell to exit with the given error code.
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   Shell_Exit_Exception : exception;
+   --  An exception signaling that we need to exit the current shell.
+   --  At the time when this exception is raised, the exit status has
+   --  already been saved.
+
+   Shell_Return_Exception : exception;
+   --  An exception signaling that we need to return from the current
+   --  shell.  At the time this exception is raised, the exit status
+   --  has already been saved.
+
+end Sh.Exec;

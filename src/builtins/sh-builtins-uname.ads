@@ -2,9 +2,9 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
+--                       Sh.Builtins.Uname                         --
 --                                                                          --
---                                 B o d y                                  --
+--                                 S p e c                                  --
 --                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
@@ -24,24 +24,16 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+package Sh.Builtins.Uname is
 
----------
--- GSH --
----------
+   function Uname_Builtin
+     (S : in out Shell_State; Args : String_List) return Eval_Result;
+   --  Implement the "uname" builtin.
+   --  Deviation from Standard (to match Cygwin behaviour):
+   --    * added options:
+   --          -o (op system),
+   --          -p (processor),
+   --          -i (hardware platform)
+   --    * -a option is equivalent to -mnrsvo (instead of -mnrsv)
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
-
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+end Sh.Builtins.Uname;

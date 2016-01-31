@@ -2,7 +2,7 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
+--                       Sh.Builtins.Booleans                      --
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
@@ -24,24 +24,34 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+package body Sh.Builtins.Booleans is
 
----------
--- GSH --
----------
+   ------------------
+   -- True_Builtin --
+   ------------------
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   function True_Builtin
+     (S : in out Shell_State; Args : String_List) return Eval_Result
+   is
+      pragma Unreferenced (Args);
+      pragma Unreferenced (S);
+   begin
+      return (RESULT_STD, 0);
+   end True_Builtin;
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   -------------------
+   -- False_Builtin --
+   -------------------
+
+   function False_Builtin
+     (S : in out Shell_State;
+      Args : String_List)
+      return Eval_Result
+   is
+      pragma Unreferenced (Args);
+      pragma Unreferenced (S);
+   begin
+      return (RESULT_STD, 1);
+   end False_Builtin;
+
+end Sh.Builtins.Booleans;

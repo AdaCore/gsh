@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,21 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+with GNAT.Strings; use GNAT.Strings;
 
----------
--- GSH --
----------
+with Sh.States; use Sh.States;
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+package Sh.Functions is
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   function Execute_Function
+     (State : in out Shell_State;
+      Name  : String;
+      Args  : String_List)
+     return Eval_Result;
+   --  Execute the given function with the provide arguments, and
+   --  return the function exit status.
+   --
+   --  The behavior is unspecified if the function has not been
+   --  previously defined.
+
+end Sh.Functions;

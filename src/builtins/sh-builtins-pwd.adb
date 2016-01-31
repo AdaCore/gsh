@@ -2,7 +2,7 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
+--                       Sh.Builtins.Pwd                           --
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
@@ -24,24 +24,23 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+with Sh.States.Output; use Sh.States.Output;
 
----------
--- GSH --
----------
+package body Sh.Builtins.Pwd is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   -----------------
+   -- Pwd_Builtin --
+   -----------------
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   function Pwd_Builtin
+     (S    : in out Shell_State;
+      Args : String_List)
+      return Eval_Result
+   is
+      pragma Unreferenced (Args);
+   begin
+      Put (S, 1, Get_Current_Dir (S, True) & ASCII.LF);
+      return (RESULT_STD, 0);
+   end Pwd_Builtin;
+
+end Sh.Builtins.Pwd;

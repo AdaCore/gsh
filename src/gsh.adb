@@ -25,18 +25,18 @@ with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Directories; use Ada.Directories;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 with GNAT.Ctrl_C;
-with Posix_Shell.Lexer; use Posix_Shell.Lexer;
-with Posix_Shell.Parser; use Posix_Shell.Parser;
-with Posix_Shell.Tree; use Posix_Shell.Tree;
-with Posix_Shell.Tree.Evals; use Posix_Shell.Tree.Evals;
-with Posix_Shell.States; use Posix_Shell.States;
-with Posix_Shell.States.Output; use Posix_Shell.States.Output;
-with Posix_Shell.Exec; use Posix_Shell.Exec;
-with Posix_Shell.Opts; use Posix_Shell.Opts;
-with Posix_Shell.Builtins; use Posix_Shell.Builtins;
-with Posix_Shell.Utils; use Posix_Shell.Utils;
-with Posix_Shell; use Posix_Shell;
-with Posix_Shell.Tree.Dumps; use Posix_Shell.Tree.Dumps;
+with Sh.Lexer; use Sh.Lexer;
+with Sh.Parser; use Sh.Parser;
+with Sh.Tree; use Sh.Tree;
+with Sh.Tree.Evals; use Sh.Tree.Evals;
+with Sh.States; use Sh.States;
+with Sh.States.Output; use Sh.States.Output;
+with Sh.Exec; use Sh.Exec;
+with Sh.Opts; use Sh.Opts;
+with Sh.Builtins; use Sh.Builtins;
+with Sh.Utils; use Sh.Utils;
+with Sh; use Sh;
+with Sh.Tree.Dumps; use Sh.Tree.Dumps;
 
 ---------
 -- GSH --

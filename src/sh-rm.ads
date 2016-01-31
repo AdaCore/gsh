@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,12 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+with Interfaces.C; use Interfaces.C;
 
----------
--- GSH --
----------
+package Sh.Rm is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   function Delete_File (Filename : String) return long;
+   --  Delete file Filename and return 0 on success and a Windows error code
+   --  otherwise
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+end Sh.Rm;

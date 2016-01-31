@@ -4,14 +4,14 @@ ADA_MANAGED = 1
 LUA_MANAGED = 2
 
 TYPE_LIST = {
-    'Posix_Shell.Lexer.Token_Buffer': {
+    'Sh.Lexer.Token_Buffer': {
         'kind': ADA_MANAGED},
-    'Posix_Shell.Lexer.Token': {
+    'Sh.Lexer.Token': {
         'kind': LUA_MANAGED,
-        'image': 'Posix_Shell.Lexer.Image'},
-    'Posix_Shell.Token_Type': {
+        'image': 'Sh.Lexer.Image'},
+    'Sh.Token_Type': {
         'kind': LUA_MANAGED,
-        'image': 'Posix_Shell.Lexer.Image',
+        'image': 'Sh.Lexer.Image',
         'constants': ['T_EOF', 'T_WORD']},
     'OS.FS.Dir.Dir_Entry': {
         'kind': LUA_MANAGED,
@@ -24,34 +24,34 @@ TYPE_LIST = {
 }
 
 FUNCTION_LIST = {
-    'Posix_Shell.Lexer.New_Buffer_From_File':
+    'Sh.Lexer.New_Buffer_From_File':
         {'args': ['String'],
-         'return': 'Posix_Shell.Lexer.Token_Buffer'},
-    'Posix_Shell.Lexer.New_Buffer':
+         'return': 'Sh.Lexer.Token_Buffer'},
+    'Sh.Lexer.New_Buffer':
         {'args': ['String'],
-         'return': 'Posix_Shell.Lexer.Token_Buffer'},
-    'Posix_Shell.Lexer.Get_Token_Type':
-        {'args': ['Posix_Shell.Lexer.Token'],
-         'return': 'Posix_Shell.Token_Type'},
-    'Posix_Shell.Lexer.Get_Token_String':
-        {'args': ['Posix_Shell.Lexer.Token'],
+         'return': 'Sh.Lexer.Token_Buffer'},
+    'Sh.Lexer.Get_Token_Type':
+        {'args': ['Sh.Lexer.Token'],
+         'return': 'Sh.Token_Type'},
+    'Sh.Lexer.Get_Token_String':
+        {'args': ['Sh.Lexer.Token'],
          'return': 'String'},
-    'Posix_Shell.Lexer.Read_Token':
-        {'args': ['Posix_Shell.Lexer.Token_Buffer'],
-         'return': 'Posix_Shell.Lexer.Token'},
-    'Posix_Shell.Lexer.Read_Word_Token':
-        {'args': ['Posix_Shell.Lexer.Token_Buffer'],
-         'return': 'Posix_Shell.Lexer.Token'},
-    'Posix_Shell.Lexer.Image':
-        {'args': ['Posix_Shell.Lexer.Token'],
+    'Sh.Lexer.Read_Token':
+        {'args': ['Sh.Lexer.Token_Buffer'],
+         'return': 'Sh.Lexer.Token'},
+    'Sh.Lexer.Read_Word_Token':
+        {'args': ['Sh.Lexer.Token_Buffer'],
+         'return': 'Sh.Lexer.Token'},
+    'Sh.Lexer.Image':
+        {'args': ['Sh.Lexer.Token'],
          'return': 'String'},
-    'Posix_Shell.Lexer.Token_Type_Image':
-        {'args': ['Posix_Shell.Token_Type'],
+    'Sh.Lexer.Token_Type_Image':
+        {'args': ['Sh.Token_Type'],
          'return': 'String',
-         'ada_name': 'Posix_Shell.Lexer.Image'},
-    'Posix_Shell.Lexer.Read_Command_Token':
-        {'args': ['Posix_Shell.Lexer.Token_Buffer'],
-         'return': 'Posix_Shell.Lexer.Token'},
+         'ada_name': 'Sh.Lexer.Image'},
+    'Sh.Lexer.Read_Command_Token':
+        {'args': ['Sh.Lexer.Token_Buffer'],
+         'return': 'Sh.Lexer.Token'},
     'OS.FS.Stat.File_Information':
         {'args': ['String'],
          'return': 'OS.FS.Stat.File_Attributes'},
@@ -94,7 +94,7 @@ if __name__ == '__main__':
         print 'with %s;' % package
     print
 
-    print 'package body Posix_Shell.Lua_Bindings is'
+    print 'package body Sh.Lua_Bindings is'
     print
 
     for ada_type in TYPE_LIST:
@@ -188,4 +188,4 @@ if __name__ == '__main__':
 
     print '   end Initialize;'
 
-    print 'end Posix_Shell.Lua_Bindings;'
+    print 'end Sh.Lua_Bindings;'

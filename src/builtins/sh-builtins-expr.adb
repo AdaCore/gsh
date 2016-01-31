@@ -2,7 +2,7 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
+--                       Sh.Builtins.Expr                          --
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
@@ -24,24 +24,37 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+with Sh.Subst.Arith;      use Sh.Subst.Arith;
+with Sh.Traces;           use Sh.Traces;
+with Sh.States.Output; use Sh.States.Output;
 
----------
--- GSH --
----------
+package body Sh.Builtins.Expr is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   -------------------
+   --  Expr_Builtin --
+   -------------------
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   function Expr_Builtin
+     (S : in out Shell_State; Args : String_List) return Eval_Result
+   is
+   begin
+      pragma Debug (Log ("expr", "start"));
+
+      declare
+         Result : constant String := Eval_Expr (S, Args);
+      begin
+         Put (S, 1, Result & ASCII.LF);
+         if Result = "0" or else Result = "" then
+            return (RESULT_STD, 1);
+         else
+            return (RESULT_STD, 0);
+         end if;
+      end;
+
+   exception
+      when Expr_Error =>
+         Put (S, 2, "invalid expression" & ASCII.LF);
+         return (RESULT_STD, 2);
+   end Expr_Builtin;
+
+end Sh.Builtins.Expr;

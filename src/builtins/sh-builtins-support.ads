@@ -2,9 +2,9 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
+--                       Sh.Builtins.Support                       --
 --                                                                          --
---                                 B o d y                                  --
+--                                 S p e c                                  --
 --                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
@@ -24,24 +24,21 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+package Sh.Builtins.Support is
 
----------
--- GSH --
----------
+   procedure Recursive_Make_Dir (Dir : String);
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   function Change_Dir
+     (S : in out Shell_State;
+      Dir_Name : String;
+      Verbose : Boolean := False)
+     return Integer;
+   --  Change the directory to Dir_Name and return 0 if successful.
+   --  This function also maintains the PWD and OLDPWD variables.
+   --  If Verbose is True and the directory change was successful,
+   --  then print on standard output the name of the new directory.
+   --
+   --  This function does nothing and returns zero if Dir_Name is
+   --  the empty string.
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+end Sh.Builtins.Support;

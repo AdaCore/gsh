@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,16 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+package body Sh.Exec is
 
----------
--- GSH --
----------
+   ----------------
+   -- Shell_Exit --
+   ----------------
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   procedure Shell_Exit (S : in out Shell_State; Code : Integer) is
+   begin
+      Save_Last_Exit_Status (S, Code);
+      raise Shell_Exit_Exception;
+   end Shell_Exit;
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+end Sh.Exec;

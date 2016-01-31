@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,39 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+package Sh.String_Utils is
 
----------
--- GSH --
----------
+   function Starts_With (S : String; Sub : String) return Boolean;
+   --  return True if S starts with Sub, False otherwise.
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   function Last_Lines
+     (S : String; Size : Natural) return String;
+   --  return the last Size lines of S
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   function From_Line
+     (S : String; LineNo : Natural) return String;
+   --  return the substring starting at line LineNo ending at end of S
+
+   function To_Line
+     (S : String; LineNo : Natural) return String;
+   --  return the substrubg till line LIneNo of S
+
+   function Is_Valid_Variable_Name (Name : String) return Boolean;
+   --  Return  True if Name is, from a syntactic point of view, a valid
+   --  variable name, False otherwise.
+
+   --  function Get_Var_Value (Name : String) return String_Access;
+   --  If Name is a defined variable name, then return a pointer
+   --  to its current value.  Return null otherwise.
+   --
+   --  The pointer returned should be deallocated after use.
+
+   function To_String (I : Integer) return String;
+   --  Convert an Integer to a string without leading spaces
+
+   function Is_Natural (S : String) return Boolean;
+
+   function Strip_CR (Str : String) return String;
+   --  This function removes all CR from a given string STR
+
+end Sh.String_Utils;

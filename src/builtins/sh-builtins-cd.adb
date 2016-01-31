@@ -2,7 +2,7 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
+--                       Sh.Builtins.Cd                            --
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
@@ -24,24 +24,34 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+with Sh.Builtins.Support; use Sh.Builtins.Support;
 
----------
--- GSH --
----------
+package body Sh.Builtins.Cd is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   ------------------------
+   -- Change_Dir_Builtin --
+   ------------------------
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   function Change_Dir_Builtin
+     (S : in out Shell_State; Args : String_List) return Eval_Result
+   is
+      Status : Integer;
+   begin
+      --  If there was no argument provided, then cd to the HOME directory.
+      --  If HOME directory is not provided, then the behavior is
+      --  implementation-defined, and we simply do nothing.
+      if Args'Length =  0 then
+         Status := Change_Dir (S, Get_Var_Value (S, "HOME"));
+      elsif Args (Args'First).all = "-" then
+         --  "-" is a special case: It should be equivalent to
+         --  ``cd "$OLDPWD" && pwd''
+         Status := Change_Dir
+           (S, Get_Var_Value (S, "OLDPWD"), Verbose => True);
+      else
+
+         Status := Change_Dir (S, Args (Args'First).all);
+      end if;
+      return (RESULT_STD, Status);
+   end Change_Dir_Builtin;
+
+end Sh.Builtins.Cd;

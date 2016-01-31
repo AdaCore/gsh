@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,36 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+with Sh.States; use Sh.States;
 
----------
--- GSH --
----------
+package Sh.Tree.Evals is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   procedure Eval
+     (State : in out Shell_State;
+      Tree  : Shell_Tree);
+   --  Eval script represented by Tree in the State context
+   --
+   --  @param State shell state
+   --  @param Tree ast of a script shell
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   function Eval
+     (State : in out Shell_State;
+      Tree  : Shell_Tree)
+      return Eval_Result;
+   --  Eval script represented by Tree in the State context
+   --
+   --  @param State shell state
+   --  @param Tree ast of a script shell
+
+   function Eval
+     (State : in out Shell_State;
+      Tree  : Shell_Tree)
+      return String;
+   --  Eval script represented by Tree in the State context and return its
+   --  output
+   --
+   --  @param State shell state
+   --  @param Tree ast of a script shell
+   --  @return the standard output of the evaluated script
+
+end Sh.Tree.Evals;

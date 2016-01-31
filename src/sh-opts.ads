@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,36 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Sh.States; use Sh.States;
 with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
 
----------
--- GSH --
----------
+package Sh.Opts is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   Dump_Node_Table : Boolean := False;
+   --  If true, then dump after having parsed the script, but before
+   --  evaluating it.
+   --
+   --  Set to True with the '-n' switch.
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   Do_Script_Evaluation : Boolean := True;
+   --  If true, then the script will only be parsed, and the evaluation
+   --  phase will not be performed.
+   --
+   --  Set to False with the '-n' switch.
+
+   procedure Process_Command_Line
+     (State : in out Shell_State;
+      B : out Buffer_Access;
+      Status : out Integer;
+      Is_Interactive : out Boolean);
+   --  Process all the switches and arguments on the command line.
+   --  This also verifies that a non-empty script filename is provided.
+   --  If an error is detected, then Status is set to an integer different
+   --  from 0 and a message is printed in the standard error.
+   --  When the returned value of Is_Interactive is True then reading on stdin
+   --  is delegated to the main function in gsh.adb. Otherwise the script to
+   --  execute is returned in the buffer B.
+   --  Note also that this function is in charge of reading the gsh config file
+   --  when necessary.
+
+end Sh.Opts;

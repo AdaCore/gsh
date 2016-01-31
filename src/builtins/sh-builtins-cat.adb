@@ -2,7 +2,7 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
+--                       Sh.Builtins.Cat                           --
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
@@ -24,24 +24,61 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+with Sh.String_Utils;     use Sh.String_Utils;
+with Sh.States.Output; use Sh.States.Output;
 
----------
--- GSH --
----------
+package body Sh.Builtins.Cat is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   -----------------
+   -- Cat_Builtin --
+   -----------------
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   function Cat_Builtin
+     (S : in out Shell_State;
+      Args : String_List)
+      return Eval_Result
+   is
+      Fd     : File_Descriptor;
+      Buffer : aliased String (1 .. 8192);
+      R      : Integer;
+   begin
+
+      --  If no argument is given to cat then we assume that stdin should be
+      --  dump.
+      if Args'Length = 0 then
+         Put (S, 1, Read (S, 0));
+         return (RESULT_STD, 0);
+      end if;
+
+      for J in Args'Range loop
+         --  '-' means that we need to dump stdin otherwise the argument is
+         --  interpreted as a filename.
+         if Args (J).all = "-" then
+            Put (S, 1, Read (S, 0));
+         else
+            if GNAT.OS_Lib.Is_Directory (Args (J).all) then
+               Put (S, 2, "cat: " & Args (J).all &
+                      ": Is a directory" & ASCII.LF);
+            else
+               Fd := Open_Read (Resolve_Path (S, Args (J).all), Binary);
+               if Fd < 0 then
+                  Put (S, 2, "cat: " & Args (J).all &
+                         ": No such file or directory" & ASCII.LF);
+               else
+                  loop
+                     R := Read (Fd, Buffer'Address, Buffer'Last);
+                     if R > 0 then
+                        Put (S, 1, Strip_CR (Buffer (1 .. R)));
+                     end if;
+                     exit when R /= Buffer'Last;
+                  end loop;
+                  Close (Fd);
+               end if;
+            end if;
+         end if;
+      end loop;
+
+      return (RESULT_STD, 0);
+   end Cat_Builtin;
+
+end Sh.Builtins.Cat;

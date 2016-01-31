@@ -20,8 +20,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Lua_Bindings;
-with Posix_Shell.Utils; use Posix_Shell.Utils;
+with Sh.Lua_Bindings;
+with Sh.Utils; use Sh.Utils;
 with Lua; use Lua;
 with Ada.Command_Line; use Ada.Command_Line;
 with Ada.Text_IO; use Ada.Text_IO;
@@ -35,7 +35,7 @@ function GSH_Unit return Integer is
    S : constant Lua_State := New_State;
 begin
    Open_Libs (S);
-   Posix_Shell.Lua_Bindings.Initialize (S);
+   Sh.Lua_Bindings.Initialize (S);
 
    if Argument_Count = 0 then
       loop

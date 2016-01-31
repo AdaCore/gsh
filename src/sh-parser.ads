@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,23 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Sh.Tree; use Sh.Tree;
 with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
 
----------
--- GSH --
----------
+package Sh.Parser is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   function Parse_String
+     (S : String)
+      return Shell_Tree;
+   --  Same as above except that source is a string.
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   function Parse_File (Filename : String) return Shell_Tree;
+   --  Same as above except that source is the content of file Filename.
+
+   function Parse_Buffer
+     (B           : in out Token_Buffer;
+      Until_Token : Token_Type := T_NULL)
+      return Shell_Tree;
+   --  Same as above except that the source is directly a buffer.
+
+end Sh.Parser;

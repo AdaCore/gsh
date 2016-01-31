@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,30 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+with Interfaces.C.Strings; use Interfaces.C.Strings;
+with GNAT.OS_Lib;
 
----------
--- GSH --
----------
+package body Sh.Rm is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   -----------------
+   -- Delete_File --
+   -----------------
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   function Delete_File (Filename : String) return long is
+
+      function Delete_File_Internal
+        (Path : chars_ptr)
+         return long;
+      pragma Import (C, Delete_File_Internal, "__gsh_unlink");
+
+      Norm_Path : constant String := GNAT.OS_Lib.Normalize_Pathname
+        (Filename, Resolve_Links => False);
+      Name_Ptr  : chars_ptr := New_String (Norm_Path);
+      Result : long;
+   begin
+      Result := Delete_File_Internal (Name_Ptr);
+      Free (Name_Ptr);
+      return Result;
+   end Delete_File;
+
+end Sh.Rm;

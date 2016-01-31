@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,23 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+package body Sh.Traces is
 
----------
--- GSH --
----------
+   ---------
+   -- Log --
+   ---------
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   procedure Log (Logger : String; Msg : String) is
+      Final : constant String := Logger & ":" & Msg & ASCII.LF;
+      use OS.FS;
+   begin
+      if Enable_Traces then
+         if Logger_Handler = OS.FS.Invalid_FD then
+            Logger_Handler := OS.FS.Open ("/tmp/gsh.out", Append_Mode);
+         end if;
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+         OS.FS.Write (Logger_Handler, Final);
+      end if;
+   end Log;
+
+end Sh.Traces;

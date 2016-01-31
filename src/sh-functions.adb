@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                                   GSH                                    --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,24 +20,37 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
-with Ada.Command_Line; use Ada.Command_Line;
-with Sh; use Sh;
+with Sh.Tree.Evals; use Sh.Tree.Evals;
+with Sh.Tree; use Sh.Tree;
 
----------
--- GSH --
----------
+package body Sh.Functions is
 
-function GSH_Lexer return Integer is
-   Status        : constant Integer := 0;
-   Script_Buffer : Token_Buffer := New_Buffer_From_File (Argument (1));
-   T             : Token;
+   ----------------------
+   -- Execute_Function --
+   ----------------------
 
-begin
-   Debug_Lexer := True;
-   loop
-      T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
-   end loop;
-   return Status;
-end GSH_Lexer;
+   function Execute_Function
+     (State : in out Shell_State;
+      Name  : String;
+      Args  : String_List)
+     return Eval_Result
+   is
+      Function_Tree : constant Shell_Tree :=
+        Get_Function (State, Name);
+      Saved_Pos_Params : constant Pos_Params_State :=
+        Get_Positional_Parameters (State);
+      Result : Eval_Result;
+
+   begin
+      Set_Positional_Parameters (State, Args, False);
+
+      Result := Eval (State, Function_Tree);
+      Restore_Positional_Parameters (State, Saved_Pos_Params);
+
+      if Result.Kind = RESULT_RETURN then
+         Result := (RESULT_STD, Result.Status);
+      end if;
+      return Result;
+   end Execute_Function;
+
+end Sh.Functions;
