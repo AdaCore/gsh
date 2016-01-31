@@ -23,7 +23,7 @@
 with Dyn_String_Lists;
 
 with GNAT.OS_Lib;            use GNAT.OS_Lib;
-with Posix_Shell.Variables;  use Posix_Shell.Variables;
+with Posix_Shell.States;  use Posix_Shell.States;
 with Posix_Shell.Tree;       use Posix_Shell.Tree;
 with Posix_Shell.List_Pools; use Posix_Shell.List_Pools;
 

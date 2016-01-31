@@ -20,10 +20,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Variables; use Posix_Shell.Variables;
+with Posix_Shell.States; use Posix_Shell.States;
 with Posix_Shell.Lexer;     use Posix_Shell.Lexer;
 
-package Posix_Shell.Variables.Output is
+package Posix_Shell.States.Output is
 
    function Apply_Redirections
      (State        : in out Shell_State;
@@ -108,4 +108,4 @@ package Posix_Shell.Variables.Output is
    procedure Warning (S : Shell_State; Msg : String);
    --  Print a warning message on standard error.
 
-end Posix_Shell.Variables.Output;
+end Posix_Shell.States.Output;

@@ -28,7 +28,7 @@ with Interfaces.C;                 use Interfaces.C;
 with GNAT.Directory_Operations;
 
 with Posix_Shell.Rm;               use Posix_Shell.Rm;
-with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
+with Posix_Shell.States.Output; use Posix_Shell.States.Output;
 with OS.FS;                        use OS.FS;
 with OS.FS.Stat;                   use OS.FS.Stat;
 with OS.FS.Dir;

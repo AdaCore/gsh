@@ -2,7 +2,7 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                           Posix_Shell.Variables                          --
+--                           Posix_Shell.States                          --
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
@@ -31,7 +31,7 @@ with Ada.Strings.Maps.Constants; use Ada.Strings.Maps.Constants;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Posix_Shell.String_Utils; use Posix_Shell.String_Utils;
 
-package body Posix_Shell.Variables is
+package body Posix_Shell.States is
 
    function Portable_Getpid return Interfaces.C.long;
    pragma Import (C, Portable_Getpid, "getpid");
@@ -1095,4 +1095,4 @@ package body Posix_Shell.Variables is
       S.Loop_Scope_Level := N;
    end Set_Loop_Scope_Level;
 
-end Posix_Shell.Variables;
+end Posix_Shell.States;

@@ -20,7 +20,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Variables; use Posix_Shell.Variables;
+with Posix_Shell.States; use Posix_Shell.States;
 
 package Posix_Shell.Exec is
 

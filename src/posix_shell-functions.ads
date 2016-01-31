@@ -22,7 +22,7 @@
 
 with GNAT.Strings; use GNAT.Strings;
 
-with Posix_Shell.Variables; use Posix_Shell.Variables;
+with Posix_Shell.States; use Posix_Shell.States;
 
 package Posix_Shell.Functions is
 

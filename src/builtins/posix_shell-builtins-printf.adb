@@ -25,7 +25,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
+with Posix_Shell.States.Output; use Posix_Shell.States.Output;
 
 package body Posix_Shell.Builtins.Printf is
 

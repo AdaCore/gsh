@@ -29,7 +29,7 @@ pragma Warnings (On);
 with GNAT.Task_Lock;
 with OS.FS;
 
-package body Posix_Shell.Variables.Output is
+package body Posix_Shell.States.Output is
 
    -------------------------
    -- Get_File_Descriptor --
@@ -416,4 +416,4 @@ package body Posix_Shell.Variables.Output is
       Put (S, 2, "[warning] " & Msg & ASCII.LF);
    end Warning;
 
-end Posix_Shell.Variables.Output;
+end Posix_Shell.States.Output;

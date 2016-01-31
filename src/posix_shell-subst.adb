@@ -38,7 +38,7 @@ with Posix_Shell.Subst.Arith;       use Posix_Shell.Subst.Arith;
 with Posix_Shell.String_Utils;      use Posix_Shell.String_Utils;
 with Posix_Shell.Traces;            use Posix_Shell.Traces;
 with Posix_Shell.Tree.Evals;        use Posix_Shell.Tree.Evals;
-with Posix_Shell.Variables.Output;  use Posix_Shell.Variables.Output;
+with Posix_Shell.States.Output;  use Posix_Shell.States.Output;
 
 package body Posix_Shell.Subst is
 

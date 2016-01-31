@@ -24,7 +24,7 @@ with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Command_Line; use Ada.Command_Line;
 with Ada.Directories; use Ada.Directories;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
-with Posix_Shell.Variables; use Posix_Shell.Variables;
+with Posix_Shell.States; use Posix_Shell.States;
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;
 with Posix_Shell; use Posix_Shell;
 

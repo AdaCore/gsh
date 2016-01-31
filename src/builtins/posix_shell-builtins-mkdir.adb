@@ -26,7 +26,7 @@
 
 with GNAT.Directory_Operations;
 
-with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
+with Posix_Shell.States.Output; use Posix_Shell.States.Output;
 with Posix_Shell.Builtins.Support; use Posix_Shell.Builtins.Support;
 
 package body Posix_Shell.Builtins.Mkdir is

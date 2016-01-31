@@ -24,7 +24,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Variables.Output; use Posix_Shell.Variables.Output;
+with Posix_Shell.States.Output; use Posix_Shell.States.Output;
 with Posix_Shell.Commands; use Posix_Shell.Commands;
 with Posix_Shell.Subst; use Posix_Shell.Subst;
 with Posix_Shell.Builtins; use Posix_Shell.Builtins;

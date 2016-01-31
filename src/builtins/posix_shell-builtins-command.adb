@@ -26,7 +26,7 @@
 
 with Posix_Shell.Commands;              use Posix_Shell.Commands;
 with Posix_Shell.Utils;                 use Posix_Shell.Utils;
-with Posix_Shell.Variables.Output;      use Posix_Shell.Variables.Output;
+with Posix_Shell.States.Output;      use Posix_Shell.States.Output;
 
 package body Posix_Shell.Builtins.Command is
 

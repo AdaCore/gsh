@@ -27,7 +27,7 @@
 with Posix_Shell.Parser;                use Posix_Shell.Parser;
 with Posix_Shell.Tree.Evals;            use Posix_Shell.Tree.Evals;
 with Posix_Shell.Tree;                  use Posix_Shell.Tree;
-with Posix_Shell.Variables.Output;      use Posix_Shell.Variables.Output;
+with Posix_Shell.States.Output;      use Posix_Shell.States.Output;
 with OS;
 
 package body Posix_Shell.Builtins.Source is

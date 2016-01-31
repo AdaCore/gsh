@@ -2,7 +2,7 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                           Posix_Shell.Variables                          --
+--                           Posix_Shell.States                          --
 --                                                                          --
 --                                 S p e c                                  --
 --                                                                          --
@@ -31,7 +31,7 @@ with Ada.Strings.Hash;
 with Posix_Shell.Tree; use Posix_Shell.Tree;
 with OS.FS;
 
-package Posix_Shell.Variables is
+package Posix_Shell.States is
 
    type Shell_State is private;
    --  Due to the approach taken in the implementation to use threads instead
@@ -258,4 +258,4 @@ private
 
    pragma Inline (Normalize_Path);
    pragma Inline (Resolve_Path);
-end Posix_Shell.Variables;
+end Posix_Shell.States;

@@ -20,7 +20,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Posix_Shell.Variables; use Posix_Shell.Variables;
+with Posix_Shell.States; use Posix_Shell.States;
 with Posix_Shell.Lexer; use Posix_Shell.Lexer;
 
 package Posix_Shell.Opts is
