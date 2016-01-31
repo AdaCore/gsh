@@ -24,7 +24,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.States.Output; use Sh.States.Output;
+with Sh.States.IO; use Sh.States.IO;
 with Sh.Commands; use Sh.Commands;
 with Sh.Subst; use Sh.Subst;
 with Sh.Builtins; use Sh.Builtins;

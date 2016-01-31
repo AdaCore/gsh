@@ -26,7 +26,7 @@
 
 with GNAT.Directory_Operations;
 
-with Sh.States.Output; use Sh.States.Output;
+with Sh.States.IO; use Sh.States.IO;
 with Sh.Builtins.Support; use Sh.Builtins.Support;
 
 package body Sh.Builtins.Mkdir is

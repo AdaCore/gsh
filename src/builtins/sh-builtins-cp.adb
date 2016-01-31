@@ -28,7 +28,7 @@ with Interfaces.C;                 use Interfaces.C;
 with GNAT.Directory_Operations;
 
 with Sh.Rm;               use Sh.Rm;
-with Sh.States.Output; use Sh.States.Output;
+with Sh.States.IO; use Sh.States.IO;
 with OS.FS;                        use OS.FS;
 with OS.FS.Stat;                   use OS.FS.Stat;
 with OS.FS.Dir;

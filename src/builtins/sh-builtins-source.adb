@@ -27,7 +27,7 @@
 with Sh.Parser;                use Sh.Parser;
 with Sh.Tree.Evals;            use Sh.Tree.Evals;
 with Sh.Tree;                  use Sh.Tree;
-with Sh.States.Output;      use Sh.States.Output;
+with Sh.States.IO;      use Sh.States.IO;
 with OS;
 
 package body Sh.Builtins.Source is

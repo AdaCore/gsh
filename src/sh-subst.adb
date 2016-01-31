@@ -38,7 +38,7 @@ with Sh.Subst.Arith;       use Sh.Subst.Arith;
 with Sh.String_Utils;      use Sh.String_Utils;
 with Sh.Traces;            use Sh.Traces;
 with Sh.Tree.Evals;        use Sh.Tree.Evals;
-with Sh.States.Output;  use Sh.States.Output;
+with Sh.States.IO;  use Sh.States.IO;
 
 package body Sh.Subst is
 

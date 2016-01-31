@@ -26,7 +26,7 @@
 
 with Sh.Subst.Arith;      use Sh.Subst.Arith;
 with Sh.Traces;           use Sh.Traces;
-with Sh.States.Output; use Sh.States.Output;
+with Sh.States.IO; use Sh.States.IO;
 
 package body Sh.Builtins.Expr is
 

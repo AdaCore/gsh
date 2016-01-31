@@ -24,7 +24,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.States.Output;      use Sh.States.Output;
+with Sh.States.IO;      use Sh.States.IO;
 
 package body Sh.Builtins.Wc is
 

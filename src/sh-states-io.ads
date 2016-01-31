@@ -23,7 +23,7 @@
 with Sh.States; use Sh.States;
 with Sh.Lexer;     use Sh.Lexer;
 
-package Sh.States.Output is
+package Sh.States.IO is
 
    function Apply_Redirections
      (State        : in out Shell_State;
@@ -108,4 +108,4 @@ package Sh.States.Output is
    procedure Warning (S : Shell_State; Msg : String);
    --  Print a warning message on standard error.
 
-end Sh.States.Output;
+end Sh.States.IO;

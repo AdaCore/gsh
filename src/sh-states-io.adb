@@ -29,7 +29,7 @@ pragma Warnings (On);
 with GNAT.Task_Lock;
 with OS.FS;
 
-package body Sh.States.Output is
+package body Sh.States.IO is
 
    -------------------------
    -- Get_File_Descriptor --
@@ -416,4 +416,4 @@ package body Sh.States.Output is
       Put (S, 2, "[warning] " & Msg & ASCII.LF);
    end Warning;
 
-end Sh.States.Output;
+end Sh.States.IO;

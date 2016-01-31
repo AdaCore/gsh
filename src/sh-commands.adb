@@ -21,7 +21,7 @@
 ------------------------------------------------------------------------------
 
 with Sh.Builtins; use Sh.Builtins;
-with Sh.States.Output; use Sh.States.Output;
+with Sh.States.IO; use Sh.States.IO;
 with Sh.Functions; use Sh.Functions;
 with Sh.Utils; use Sh.Utils;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
