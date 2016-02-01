@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2015, AdaCore                   --
+--                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -107,10 +107,12 @@ package OS.FS is
    --
    --  @param FD the file descriptor to be closed
 
-   procedure Delete_File (Filename : String);
+   procedure Delete_File (Filename : String; Ignore_Errors : Boolean := False);
    --  Delete a file
    --
    --  @param Filename path to the file to be deleted
+   --  @param Ignore_Errors
+   --      if True no exception is raised in case the file cannot be deleted
    --  @raise OS_Error in case the file cannot be deleted
 
    function Dup

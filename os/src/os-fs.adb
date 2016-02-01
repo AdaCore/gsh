@@ -95,7 +95,10 @@ package body OS.FS is
    -- Delete_File --
    -----------------
 
-   procedure Delete_File (Filename : String) is
+   procedure Delete_File
+     (Filename      : String;
+      Ignore_Errors : Boolean := False)
+   is
 
       function Delete_File_Internal
         (Path : System.Address)
@@ -110,7 +113,7 @@ package body OS.FS is
    begin
 
       Result := Delete_File_Internal (Abs_Path (Abs_Path'First)'Address);
-      if Result /= 0 then
+      if Result /= 0 and not Ignore_Errors then
          raise OS_Error with "cannot delete file";
       end if;
    end Delete_File;
