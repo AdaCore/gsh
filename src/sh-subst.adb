@@ -30,17 +30,20 @@ with Ada.Exceptions;                use Ada.Exceptions;
 
 with Sh.Annotated_Strings; use Sh.Annotated_Strings;
 with Sh.Buffers;           use Sh.Buffers;
-with Sh.Exec;              use Sh.Exec;
-with GNU;                           use GNU;
+with GNU;                  use GNU;
 with Sh.Lexer;             use Sh.Lexer;
 with Sh.Parser;            use Sh.Parser;
 with Sh.Subst.Arith;       use Sh.Subst.Arith;
 with Sh.String_Utils;      use Sh.String_Utils;
 with Sh.Traces;            use Sh.Traces;
 with Sh.Tree.Evals;        use Sh.Tree.Evals;
-with Sh.States.IO;  use Sh.States.IO;
+with Sh.States.IO;         use Sh.States.IO;
 
 package body Sh.Subst is
+
+   procedure Shell_Exit (S : in out Shell_State; Code : Integer);
+   pragma No_Return (Shell_Exit);
+   --  Causes the shell to exit with the given error code.
 
    function Split_String
      (SS        : in out Shell_State;
@@ -1566,6 +1569,16 @@ package body Sh.Subst is
          end if;
       end if;
    end Filename_Expansion;
+
+   ----------------
+   -- Shell_Exit --
+   ----------------
+
+   procedure Shell_Exit (S : in out Shell_State; Code : Integer) is
+   begin
+      Save_Last_Exit_Status (S, Code);
+      raise Shell_Exit_Exception;
+   end Shell_Exit;
 
    -------------------------------
    -- Simple_Filename_Expansion --

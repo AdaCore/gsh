@@ -113,6 +113,12 @@ package Sh is
    Shell_Non_Implemented : exception;
    Buffer_Read_Error : exception;
 
+   Shell_Exit_Exception : exception;
+   --  An exception signaling that we need to exit the current shell.
+   --  At the time when this exception is raised, the exit status has
+   --  already been saved. The exception mechanism is used only during shell
+   --  substitution.
+
    Null_String_List : GNAT.OS_Lib.String_List (1 .. 0);
 
    Null_String_List_Access : GNAT.OS_Lib.String_List_Access :=

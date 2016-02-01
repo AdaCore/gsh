@@ -36,8 +36,6 @@ with GNAT.Regpat; use GNAT.Regpat;
 with GNU; use GNU;
 with OS.FS;
 with OS;
-with Sh.Exec; use Sh.Exec;
---  with Ada.Text_IO;
 
 package body Sh.Tree.Evals is
 
