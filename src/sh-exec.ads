@@ -33,9 +33,4 @@ package Sh.Exec is
    --  At the time when this exception is raised, the exit status has
    --  already been saved.
 
-   Shell_Return_Exception : exception;
-   --  An exception signaling that we need to return from the current
-   --  shell.  At the time this exception is raised, the exit status
-   --  has already been saved.
-
 end Sh.Exec;

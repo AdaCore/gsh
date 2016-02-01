@@ -31,7 +31,6 @@ with Sh.Tree; use Sh.Tree;
 with Sh.Tree.Evals; use Sh.Tree.Evals;
 with Sh.States; use Sh.States;
 with Sh.States.IO; use Sh.States.IO;
-with Sh.Exec; use Sh.Exec;
 with Sh.Opts; use Sh.Opts;
 with Sh.Builtins; use Sh.Builtins;
 with Sh.Utils; use Sh.Utils;
@@ -69,6 +68,7 @@ begin
       Current_Dir    : constant String := Get_Current_Dir (State, True);
       Is_Interactive : Boolean;
       Should_Exit    : Boolean := False;
+      Result         : Eval_Result;
 
    begin
       --  Reset PWD and OLDPWD in order to avoid inheriting the values
@@ -137,24 +137,19 @@ begin
          --  If -n was passed skip evaluation of the script.
          if Do_Script_Evaluation then
 
-            begin
-               Eval (State, T);
-               Status := Get_Last_Exit_Status (State);
-
-            exception
-               when Shell_Exit_Exception =>
-                  Status := Get_Last_Exit_Status (State);
+            Result := Eval (State, T);
+            case Result.Kind is
+               when RESULT_STD =>
+                  Status := Result.Status;
+               when RESULT_EXIT =>
+                  Status := Result.Status;
                   Should_Exit := True;
-
-               when Shell_Return_Exception =>
-                  Put
-                    (State, 2,
-                     "return: can only `return' from a " &
-                       "function or sourced script" & ASCII.LF);
+               when RESULT_CONTINUE | RESULT_BREAK | RESULT_RETURN =>
+                  Error (State,
+                         "invalid context for return, continue or break");
                   Save_Last_Exit_Status (State, 1);
                   Status := 1;
-
-            end;
+            end case;
 
             --  Do we have a trap registered ?
             if not Is_Interactive or else Should_Exit then
