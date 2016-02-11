@@ -1,6 +1,5 @@
 with "lua/lua.gpr";
 with "os/os.gpr";
-with "gnu/gnu.gpr";
 
 project Posix_Shell is
 
@@ -30,7 +29,7 @@ project Posix_Shell is
       when "prod" => null;
    end case;
 
-   for Main use ("gsh_lexer.adb", "gsh.adb", "builtin.adb", "gsh_unit.adb", "gsh_dump_tree.adb");
+   for Main use ("strmatch.adb", "gsh_lexer.adb", "gsh.adb", "builtin.adb", "gsh_unit.adb", "gsh_dump_tree.adb");
 
    case OS is
       when "Windows_NT" =>

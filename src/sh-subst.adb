@@ -30,7 +30,6 @@ with Ada.Exceptions;                use Ada.Exceptions;
 
 with Sh.Annotated_Strings; use Sh.Annotated_Strings;
 with Sh.Buffers;           use Sh.Buffers;
-with GNU;                  use GNU;
 with Sh.Lexer;             use Sh.Lexer;
 with Sh.Parser;            use Sh.Parser;
 with Sh.Subst.Arith;       use Sh.Subst.Arith;
@@ -38,6 +37,7 @@ with Sh.String_Utils;      use Sh.String_Utils;
 with Sh.Traces;            use Sh.Traces;
 with Sh.Tree.Evals;        use Sh.Tree.Evals;
 with Sh.States.IO;         use Sh.States.IO;
+with Sh.Re;
 
 package body Sh.Subst is
 
@@ -55,7 +55,6 @@ package body Sh.Subst is
      (SS              : in out Shell_State;
       S               : String;
       Characters_Read : out Integer;
-      Case_Pattern    : Boolean := False;
       IOHere          : Boolean := False;
       Is_Splitable    : Boolean := True;
       Is_Param_Subst  : Boolean := False;
@@ -603,7 +602,7 @@ package body Sh.Subst is
       for I in S'Range loop
          exit when Smallest and then Found;
 
-         if Fnmatch (Pattern, S (Start_Index .. I)) then
+         if Sh.Re.Match (S (Start_Index .. I), Pattern) then
             Found := True;
             Start_Index := I + 1;
          end if;
@@ -633,7 +632,7 @@ package body Sh.Subst is
       for I in reverse S'Range loop
          exit when Smallest and then Found;
 
-         if Fnmatch (Pattern, S (I .. End_Index)) then
+         if Sh.Re.Match (S (I .. End_Index), Pattern) then
             Found := True;
             End_Index := I - 1;
          end if;
@@ -655,7 +654,6 @@ package body Sh.Subst is
      (SS              : in out Shell_State;
       S               : String;
       Characters_Read : out Integer;
-      Case_Pattern    : Boolean := False;
       IOHere          : Boolean := False;
       Is_Splitable    : Boolean := True;
       Is_Param_Subst  : Boolean := False;
@@ -1271,19 +1269,9 @@ package body Sh.Subst is
               CC = '$' or else
               CC = '\'
             then
-               if not Case_Pattern then
-                  Append (Buffer, UNSPLITABLE_BEGIN);
-                  Append (Buffer, CC);
-                  Append (Buffer, UNSPLITABLE_END);
-               else
-                  case CC is
-                     when '[' | ']' | '*' | '?' =>
-                        Append (Buffer, '\');
-                        Append (Buffer, CC);
-                     when others =>
-                        Append (Buffer, CC);
-                  end case;
-               end if;
+               Append (Buffer, UNSPLITABLE_BEGIN);
+               Append (Buffer, CC);
+               Append (Buffer, UNSPLITABLE_END);
             else
                Append (Buffer, '\');
                Index := Index - 1;
@@ -1400,13 +1388,8 @@ package body Sh.Subst is
                elsif Current_El.Kind = E_CHAR then
 
                   if Unsplitable_Level > 0 then
-                     case Current_El.Char is
-                        when '*' | '?' | '[' | ']' =>
-                           Result_String (Result_Index) := '\';
-                           Result_Index := Result_Index + 1;
-                        when others =>
-                           null;
-                     end case;
+                     Result_String (Result_Index) := '\';
+                     Result_Index := Result_Index + 1;
                   end if;
                   Result_String (Result_Index) := Current_El.Char;
                   Result_Index := Result_Index + 1;

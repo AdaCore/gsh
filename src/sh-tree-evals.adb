@@ -29,11 +29,12 @@ with Sh.Commands; use Sh.Commands;
 with Sh.Subst; use Sh.Subst;
 with Sh.Builtins; use Sh.Builtins;
 with Sh.String_Utils; use Sh.String_Utils;
+with Sh.Re;
 
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 with GNAT.Task_Lock;
 with GNAT.Regpat; use GNAT.Regpat;
-with GNU; use GNU;
+
 with OS.FS;
 with OS;
 
@@ -528,7 +529,7 @@ package body Sh.Tree.Evals is
                      Case_Pattern      => True,
                      Has_Command_Subst => Has_Command_Subst);
                begin
-                  if Fnmatch (Str, Case_Value) then
+                  if Sh.Re.Match (Case_Value, Str) then
                      if Current_Case.Match_Code /= Null_Node then
                         Result := Eval (State, Tree, Current_Case.Match_Code);
                      else
