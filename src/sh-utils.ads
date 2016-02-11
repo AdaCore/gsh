@@ -49,16 +49,6 @@ package Sh.Utils is
    --  Performs the shell equivalent of a not: If Value is zero, then
    --  return 1. Else, return 0.
 
-   function Current_Working_Directory (S : Shell_State) return String;
-   --  Similar to GNAT.Directory_Operations.Get_Current_Dir except that
-   --  the path returned always follows the UNIX convention of using
-   --  forward slashes. Also, the directory name does not have a directory
-   --  separator at the end of the string.
-   --
-   --  The reason for always following the UNIX convention is to facilitate
-   --  the cygwin/mingwin interaction. We also remove the ending directory
-   --  separator because this is what shells will typically do.
-
    function Locate_Exec
      (S : Shell_State; Exec_Name : String)
       return String_Access;
