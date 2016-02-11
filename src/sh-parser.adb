@@ -26,6 +26,7 @@
 
 with Sh.List_Pools; use Sh.List_Pools;
 with Sh.Traces; use Sh.Traces;
+with Sh.Buffers; use Sh.Buffers;
 
 package body Sh.Parser is
 
@@ -385,6 +386,12 @@ package body Sh.Parser is
    --  fname            : NAME                            /* Apply rule 8 */
    --                   ;
 
+   procedure Log_Parser (B : Token_Buffer; Msg : String);
+   --  Wrapper around Log function that adds current buffer state
+   --
+   --  @param B the token buffer
+   --  @param Msg message to be displayed
+
    function Is_Redirection_Op
      (T           : Token_Type;
       Include_NIO : Boolean := False)
@@ -417,6 +424,16 @@ package body Sh.Parser is
         or else (Include_NIO and then T = T_IO_NUMBER);
    end Is_Redirection_Op;
 
+   ----------------
+   -- Log_Parser --
+   ----------------
+
+   procedure Log_Parser (B : Token_Buffer; Msg : String)
+   is
+   begin
+      Log (LOG_PARSER, Msg & " (" &  Image (Current (B.B)) & ")");
+   end Log_Parser;
+
    -----------
    -- Parse --
    -----------
@@ -428,6 +445,7 @@ package body Sh.Parser is
       return Node_Id
    is
    begin
+      pragma Debug (Log_Parser (B, "parse"));
       while Lookahead (B) = T_NEWLINE loop
          Skip_Token (B);
       end loop;
@@ -455,6 +473,7 @@ package body Sh.Parser is
       Result : Node_Id;
       Current_Kind : Token_Type;
    begin
+      pragma Debug (Log_Parser (B, "parse and/or list"));
       Init (Childs);
 
       Code := Parse_Pipeline (B, T, C, Until_Token => Until_Token);
@@ -518,6 +537,7 @@ package body Sh.Parser is
       pragma Unreferenced (C);
       Brace_Code : Node_Id := Null_Node;
    begin
+      pragma Debug (Log_Parser (B, "parse brace group"));
       pragma Assert (Lookahead_Command (B) = T_LBRACE);
       Skip_Token (B);
       Brace_Code := Parse_Compound_List (B, T, BRACEGROUP_CONTEXT);
@@ -555,6 +575,7 @@ package body Sh.Parser is
       Case_Value : Token;
       Case_List_Code : Node_Id := Null_Node;
    begin
+      pragma Debug (Log_Parser (B, "parse case group"));
       pragma Assert (Lookahead_Command (B) = T_CASE);
       Skip_Token (B);
       Case_Value := Read_Word_Token (B);
@@ -581,6 +602,7 @@ package body Sh.Parser is
       Case_Code      : Node_Id;
       Next_Case_Code : Node_Id;
    begin
+      pragma Debug (Log_Parser (B, "parse case element"));
       if Lookahead_Command (B) = T_ESAC or else
         Lookahead_Command (B) = T_EOF
       then
@@ -662,6 +684,7 @@ package body Sh.Parser is
       end Context_Syntax_Error;
 
    begin
+      pragma Debug (Log_Parser (B, "parse command"));
       case Lookahead_Command (B) is
          when T_UNTIL | T_WHILE | T_IF | T_CASE | T_FOR | T_LPAR | T_LBRACE =>
             Result := Parse_Compound_Command (B, T, C);
@@ -722,6 +745,7 @@ package body Sh.Parser is
    is
       Result : Node_Id := 0;
    begin
+      pragma Debug (Log_Parser (B, "parse compound command"));
       case Lookahead_Command (B) is
          when T_UNTIL  => Result := Parse_Until_Clause (B, T, C);
          when T_WHILE  => Result := Parse_While_Clause (B, T, C);
@@ -753,6 +777,7 @@ package body Sh.Parser is
    is
       N : Node_Id;
    begin
+      pragma Debug (Log_Parser (B, "parse compound list"));
       Parse_Linebreak (B, T, C);
       N := Parse_Term (B, T, C);
 
@@ -778,6 +803,7 @@ package body Sh.Parser is
       pragma Unreferenced (C);
       Result : Node_Id;
    begin
+      pragma Debug (Log_Parser (B, "parse do group"));
       Expect_Token (B, T_DO, "expect token 'do'");
       Result := Parse_Compound_List (B, T, DO_GROUP_CONTEXT);
       Expect_Token (B, T_DONE);
@@ -796,6 +822,7 @@ package body Sh.Parser is
    is
       Result : Node_Id;
    begin
+      pragma Debug (Log_Parser (B, "parse else/elif group"));
       --  Parse_Else_Part is only called by Parse_If_Clause when next token is
       --  'else' or 'elif'
       pragma Assert (Lookahead_Command (B) = T_ELSE or else
@@ -843,6 +870,7 @@ package body Sh.Parser is
       Loop_Code          : Node_Id := Null_Node;
       Default_Value_List : Boolean := False;
    begin
+      pragma Debug (Log_Parser (B, "parse for group"));
       pragma Assert (Get_Token_Type (Current) = T_FOR);
 
       --  Get the loop variable name
@@ -894,7 +922,7 @@ package body Sh.Parser is
       pragma Unreferenced (C);
       Cond, True_Code, False_Code : Node_Id := Null_Node;
    begin
-
+      pragma Debug (Log_Parser (B, "parse if"));
       pragma Assert
         ((Lookahead_Command (B) = T_IF and not Elif_Mode) or else
            (Lookahead_Command (B) = T_ELIF and Elif_Mode));
@@ -1311,7 +1339,7 @@ package body Sh.Parser is
       CurT       : Token_Type;
       Is_Pos_Set : Boolean := False;
    begin
-      pragma Debug (Log ("parse_simple_command", ""));
+      pragma Debug (Log (LOG_PARSER, "parse_simple_command"));
       pragma Assert (Lookahead_Command (B) = T_ASSIGNEMENT or else
                      Lookahead_Command (B) = T_WORD or else
                      Is_Redirection_Op (Lookahead_Command (B), True));
@@ -1319,7 +1347,7 @@ package body Sh.Parser is
       --  cmd_prefix
 
       CurT := Lookahead_Command (B);
-      pragma Debug (Log ("parse_simple_command", CurT'Img));
+
       while CurT = T_ASSIGNEMENT or else Is_Redirection_Op (CurT, True) loop
          if CurT = T_ASSIGNEMENT then
             Cur := Read_Command_Token (B);
@@ -1327,7 +1355,7 @@ package body Sh.Parser is
                Set_Node_Pos (T, Cmd_Id, Get_Token_Pos (Cur));
                Is_Pos_Set := True;
             end if;
-            pragma Debug (Log ("append_assignment", Get_Token_String (Cur)));
+
             Append_Assignement (T, Cmd_Id, Cur);
          else
             Parse_IO_Redirect (B, T, C, Cmd_Id);
@@ -1337,7 +1365,7 @@ package body Sh.Parser is
 
       if Lookahead (B) = T_WORD then
          Cur := Read_Token (B);
-         pragma Debug (Log ("parse_cmd", Get_Token_String (Cur)));
+
          if not Is_Pos_Set then
             Set_Node_Pos (T, Cmd_Id, Get_Token_Pos (Cur));
             Is_Pos_Set := True;
@@ -1374,7 +1402,7 @@ package body Sh.Parser is
             while CurT = T_WORD or else Is_Redirection_Op (CurT, True) loop
 
                if CurT = T_WORD then
-                  pragma Debug (Log ("append_arg", ""));
+                  pragma Debug (Log (LOG_PARSER, "append_arg"));
                   Append_Arg (T, Cmd_Id, Read_Word_Token (B));
                else
                   Parse_IO_Redirect (B, T, C, Cmd_Id);

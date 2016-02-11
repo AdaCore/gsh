@@ -24,9 +24,24 @@ with OS.FS;
 
 package Sh.Traces is
 
-   Enable_Traces  : Boolean := True;
-   Logger_Handler : OS.FS.File_Descriptor := OS.FS.Invalid_FD;
+   type Trace_Channel is
+     (LOG_LEXER,
+      LOG_PARSER,
+      LOG_SUBST);
+   --  List of available logging channels
 
-   procedure Log (Logger : String; Msg : String);
+   Channel_Status : array (Trace_Channel'Range) of Boolean :=
+     (others => False);
+   --  Table that maintain channel status. If True messages on the channel are
+   --  enabled.
+
+   Logger_Handler : OS.FS.File_Descriptor := OS.FS.Invalid_FD;
+   --  Target of log messages. Default is to use stderr
+
+   procedure Log (Channel : Trace_Channel; Msg : String);
+   --  Emit log message on a given channel
+   --
+   --  @param Channel logging channel on which the message is sent
+   --  @param Msg message content
 
 end Sh.Traces;

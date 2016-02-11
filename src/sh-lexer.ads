@@ -29,8 +29,6 @@ with Sh.Buffers; use Sh.Buffers;
 
 package Sh.Lexer is
 
-   Debug_Lexer : Boolean := False;
-
    type Token is private;
    --  T is the type of the token. If T = T_WORD then S contains the word.
    --  Lineno and Columnno are the position of the token in the file.

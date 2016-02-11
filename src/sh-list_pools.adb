@@ -20,8 +20,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Traces; use Sh.Traces;
-
 package body Sh.List_Pools is
 
    function New_Element
@@ -39,7 +37,6 @@ package body Sh.List_Pools is
    is
       L : constant Token_List := New_Element (Pool, Item);
    begin
-      pragma Debug (Log ("append", Image (Item)));
       if Source = Null_List then
          Source := L;
          Pool.Table (Source).Last := Source;
@@ -116,7 +113,6 @@ package body Sh.List_Pools is
       return Token_List
    is
    begin
-      pragma Debug (Log ("new_element", Image (Item)));
       if Pool.Table (1).Next = Null_List then
          Append (Pool, (Item, 0, 0));
          return Last (Pool);
@@ -165,7 +161,6 @@ package body Sh.List_Pools is
       L : constant Token_List := New_Element (Pool, Item);
 
    begin
-      pragma Debug (Log ("prepend", Image (Item)));
       if Source /= Null_List then
          Pool.Table (L).Next := Source;
          Pool.Table (L).Last := Pool.Table (Source).Last;

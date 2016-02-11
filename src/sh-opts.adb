@@ -86,11 +86,14 @@ package body Sh.Opts is
 
             if Arg = "-n" then
                Do_Script_Evaluation := False;
-               --  Dump_Node_Table := True;
-            elsif Arg = "--debug-lexer" then
-               Debug_Lexer := True;
-            elsif Arg = "--enable-traces" then
-               Enable_Traces := True;
+            elsif Arg = "--enable-trace" or else Arg = "-t" then
+               declare
+                  Traces_Str : constant String :=
+                    "log_" & Argument (Arg_Number);
+               begin
+                  Arg_Number := Arg_Number + 1;
+                  Channel_Status (Trace_Channel'Value (Traces_Str)) := True;
+               end;
             elsif Arg = "-x" then
                Set_Xtrace (State, True);
             elsif Arg = "-e" then

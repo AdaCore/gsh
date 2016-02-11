@@ -25,7 +25,6 @@
 ------------------------------------------------------------------------------
 
 with Sh.Subst.Arith;      use Sh.Subst.Arith;
-with Sh.Traces;           use Sh.Traces;
 with Sh.States.IO; use Sh.States.IO;
 
 package body Sh.Builtins.Expr is
@@ -38,7 +37,6 @@ package body Sh.Builtins.Expr is
      (S : in out Shell_State; Args : String_List) return Eval_Result
    is
    begin
-      pragma Debug (Log ("expr", "start"));
 
       declare
          Result : constant String := Eval_Expr (S, Args);

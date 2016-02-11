@@ -28,7 +28,6 @@ with GNAT.Regpat;                  use GNAT.Regpat;
 
 with Sh.Subst.Arith;      use Sh.Subst.Arith;
 with Sh.String_Utils;     use Sh.String_Utils;
-with Sh.Traces;           use Sh.Traces;
 with Sh.Utils;            use Sh.Utils;
 
 with Sh.States.IO; use Sh.States.IO;
@@ -423,7 +422,6 @@ package body Sh.Subst.Arith is
       Opened_Par  : Natural := 0;
    begin
 
-      pragma Debug (Log ("expr", "start"));
       loop
          exit when Index > Args'Last + 1;
 

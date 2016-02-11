@@ -27,6 +27,7 @@
 with Sh.Lexer; use Sh.Lexer;
 with Ada.Command_Line; use Ada.Command_Line;
 with Sh; use Sh;
+with Sh.Traces;
 
 ---------
 -- GSH --
@@ -38,7 +39,8 @@ function GSH_Lexer return Integer is
    T             : Token;
 
 begin
-   Debug_Lexer := True;
+   Sh.Traces.Channel_Status (Sh.Traces.LOG_LEXER) := True;
+
    loop
       T := Read_Token (Script_Buffer);
       exit when Get_Token_Type (T) = T_EOF;

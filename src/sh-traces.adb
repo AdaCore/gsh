@@ -20,22 +20,28 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with GNAT.Formatted_String; use GNAT.Formatted_String;
+
 package body Sh.Traces is
 
    ---------
    -- Log --
    ---------
 
-   procedure Log (Logger : String; Msg : String) is
-      Final : constant String := Logger & ":" & Msg & ASCII.LF;
+   procedure Log (Channel : Trace_Channel; Msg : String) is
+      Format_Str : Formatted_String := +"[%-16s] %s";
+      Channel_Img : constant String := Channel'Img;
       use OS.FS;
    begin
-      if Enable_Traces then
-         if Logger_Handler = OS.FS.Invalid_FD then
-            Logger_Handler := OS.FS.Open ("/tmp/gsh.out", Append_Mode);
-         end if;
 
-         OS.FS.Write (Logger_Handler, Final);
+      if Channel_Status (Channel) then
+         if Logger_Handler = OS.FS.Invalid_FD then
+            Logger_Handler := OS.FS.Standerr;
+         end if;
+         Format_Str := Format_Str & Channel'Img (5 .. Channel_Img'Last) & Msg;
+
+         OS.FS.Write (Logger_Handler, -Format_Str);
+         OS.FS.Write (Logger_Handler, "" & ASCII.LF);
       end if;
    end Log;
 

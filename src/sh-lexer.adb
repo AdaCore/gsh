@@ -26,8 +26,8 @@
 
 with Ada.Exceptions; use Ada.Exceptions;
 with Sh.String_Utils; use Sh.String_Utils;
-with Ada.Text_IO;
 with Ada.Unchecked_Deallocation;
+with Sh.Traces; use Sh.Traces;
 
 package body Sh.Lexer is
 
@@ -235,6 +235,7 @@ package body Sh.Lexer is
       B.Next_Token := T;
       B.Valid_Cache := True;
       Seek (B.B, B.Previous_Token_Pos);
+      pragma Debug (Log (LOG_LEXER, "pushback"));
    end Pushback;
 
    ------------------------
@@ -246,11 +247,7 @@ package body Sh.Lexer is
       Result : constant Token := Read_Command_Token_Aux (T);
 
    begin
-      if Debug_Lexer then
-         Ada.Text_IO.Put_Line
-           (Ada.Text_IO.Standard_Error,
-            "ctoken:" & Image (Result));
-      end if;
+      pragma Debug (Log (LOG_LEXER, "cmd token: " & Image (Result)));
       return Result;
    end Read_Command_Token;
 
@@ -490,11 +487,7 @@ package body Sh.Lexer is
          Result := Read_Token_Aux (B);
       end if;
 
-      if Debug_Lexer then
-         Ada.Text_IO.Put_Line
-              (Ada.Text_IO.Standard_Error,
-               "token:" & Image (Result));
-      end if;
+      pragma Debug (Log (LOG_LEXER, "token:" & Image (Result)));
       return Result;
    end Read_Token;
 

@@ -746,7 +746,7 @@ package body Sh.Subst is
                T : Shell_Tree;
                Str : constant String := Command (1 .. Command_Last);
             begin
-               pragma Debug (Log ("command subst", Str));
+               pragma Debug (Log (LOG_SUBST, Str));
 
                T := Parse_String (Str);
                Append (Buffer, Strip (Eval (SS, T)));
@@ -780,7 +780,7 @@ package body Sh.Subst is
             Append (Buffer, Strip (Eval (SS, T)));
             Free_Node (T);
             Index := Index + Offset (Buf.Previous_Token_Pos) - 1;
-            pragma Debug (Log ("command subst",
+            pragma Debug (Log (LOG_SUBST,
                                "'" & S (Index .. S'Last) & "'"));
          end;
 
@@ -961,7 +961,7 @@ package body Sh.Subst is
 
                Index := Index + 1;
             end loop;
-            pragma Debug (Log ("read_parameter", S (Param_First .. Index)));
+            pragma Debug (Log (LOG_SUBST, S (Param_First .. Index)));
             return S (Param_First .. Index);
          end if;
       end Read_Parameter;
@@ -1103,7 +1103,7 @@ package body Sh.Subst is
          Param_First := Index;
          CC := S (Param_First);
 
-         pragma Debug (Log ("paremeter_subst", Is_Brace_Expansion'Img));
+         pragma Debug (Log (LOG_SUBST, Is_Brace_Expansion'Img));
 
          if Is_Brace_Expansion then
 
@@ -1282,7 +1282,6 @@ package body Sh.Subst is
       CC : Character;
    begin
       Has_Command_Subst := False;
-      pragma Debug (Log ("eval_string_aux_begin", S));
       while Index <= S'Last loop
          CC := S (Index);
 
@@ -1319,7 +1318,6 @@ package body Sh.Subst is
          Index := Index + 1;
       end loop;
 
-      pragma Debug (Log ("eval_string_aux", Image (Buffer)));
       Characters_Read := Index - S'First;
       return Buffer;
    end Eval_String_Aux;
@@ -1340,7 +1338,6 @@ package body Sh.Subst is
       Cursor : Token_List := S;
    begin
       while Cursor /= Null_List loop
-         pragma Debug (Log ("eval_string_list", "cursor: " & Cursor'Img));
          declare
             Elem_Eval : constant Dyn_String_List :=
               Eval_String (SS, Get_Token_String (Get_Element (Pool, Cursor)));
