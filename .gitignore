@@ -5,6 +5,8 @@ testsuite/out/*
 testsuite/tmp/*
 testsuite/tmp.xml
 obj/*
+os/obj/*
+os/lib/*
 gnutools/bin/sh.exe
 gnutools/bin/gsh.exe
 *.pyc
