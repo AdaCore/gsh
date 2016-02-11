@@ -21,7 +21,6 @@
 ------------------------------------------------------------------------------
 
 with GNAT.Strings;
-with Interfaces.C; use Interfaces.C;
 
 package OS.FS is
 
@@ -115,6 +114,12 @@ package OS.FS is
    --      if True no exception is raised in case the file cannot be deleted
    --  @raise OS_Error in case the file cannot be deleted
 
+   function Delete_File (Filename : String) return Integer;
+   --  Delete a file
+   --
+   --  @param Filename path to the file to be deleted
+   --  @return An integer status. 0 indicates success and other values errors
+
    function Dup
      (FD            : File_Descriptor;
       Close_On_Exec : Boolean := True)
@@ -183,7 +188,7 @@ package OS.FS is
       Target              : String;
       Fail_If_Exists      : Boolean;
       Preserve_Attributes : Boolean)
-      return unsigned_long;
+      return Integer;
    --  Copy file Source to Target. Return 0 if the operation is successfull
    --  and a system specific error code otherwise. If Fail_If_Exits is True
    --  then the operation fails if the target file exists, otherwise the file

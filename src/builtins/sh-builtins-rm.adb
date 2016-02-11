@@ -24,10 +24,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces.C; use Interfaces.C;
 with GNAT.Directory_Operations;
-
-with Sh.Rm; use Sh.Rm;
 with Sh.States.IO; use Sh.States.IO;
 with OS.FS.Dir;
 with OS.FS.Stat;
@@ -56,10 +53,10 @@ package body Sh.Builtins.Rm is
          Search      : OS.FS.Dir.Dir_Handle;
          Dir_Ent     : OS.FS.Dir.Dir_Entry;
 
-         Status      : long;
+         Status      : Integer;
       begin
          if OS.FS.Stat.Is_Regular_File (Filename_Info) then
-            Status := Delete_File (Filename);
+            Status := OS.FS.Delete_File (Filename);
             if Status /= 0 then
                Error (S, "rm: cannot remove `" &
                         Filename & "': windows error " & Status'Img);
@@ -94,7 +91,7 @@ package body Sh.Builtins.Rm is
                      --  Recurse ignoring '.' and '..' entries
                      Rm_Tree (File_Name, FI);
                   else
-                     Status := Delete_File (File_Name);
+                     Status := OS.FS.Delete_File (File_Name);
                      if Status /= 0 then
                         Error (S, "rm: cannot remove `" &
                                  File_Name & "': windows error " & Status'Img);
@@ -108,7 +105,7 @@ package body Sh.Builtins.Rm is
             end loop;
             OS.FS.Dir.Close (Search);
 
-            Status := Delete_File (Filename);
+            Status := OS.FS.Delete_File (Filename);
             if Status /= 0 then
                Error (S, "rm: cannot remove `" &
                         Filename & "': windows error " & Status'Img);

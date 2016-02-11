@@ -25,6 +25,7 @@ with System;
 with GNAT.Task_Lock;
 with GNAT.OS_Lib;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
+with Interfaces.C; use Interfaces.C;
 
 package body OS.FS is
 
@@ -66,7 +67,7 @@ package body OS.FS is
                        Target              : String;
                        Fail_If_Exists      : Boolean;
                        Preserve_Attributes : Boolean)
-                       return unsigned_long
+                       return Integer
    is
       pragma Warnings (Off);
       function Internal
@@ -88,7 +89,7 @@ package body OS.FS is
                           Preserve_Attributes);
       Free (Source_Ptr);
       Free (Target_Ptr);
-      return Result;
+      return Integer (Result);
    end Copy_File;
 
    -----------------
@@ -99,7 +100,21 @@ package body OS.FS is
      (Filename      : String;
       Ignore_Errors : Boolean := False)
    is
+      Result : constant Integer := Delete_File (Filename);
 
+   begin
+
+      if Result /= 0 and not Ignore_Errors then
+         raise OS_Error with "cannot delete file";
+      end if;
+   end Delete_File;
+
+   -----------------
+   -- Delete_File --
+   -----------------
+
+   function Delete_File (Filename : String) return Integer
+   is
       function Delete_File_Internal
         (Path : System.Address)
          return long;
@@ -109,13 +124,11 @@ package body OS.FS is
         (GNAT.OS_Lib.Normalize_Pathname
            (Filename,
             Resolve_Links => False));
-      Result : long;
-   begin
+      Result   : long;
 
+   begin
       Result := Delete_File_Internal (Abs_Path (Abs_Path'First)'Address);
-      if Result /= 0 and not Ignore_Errors then
-         raise OS_Error with "cannot delete file";
-      end if;
+      return Integer (Result);
    end Delete_File;
 
    ---------

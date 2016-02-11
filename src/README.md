@@ -10,7 +10,6 @@ Sources Overview
 * [`SH.List_Pools`](sh-list_pools.ads): List structure used in SH.Tree
 * [`SH.Opts`](sh-opts.ads): GSH command line arguments parsing
 * [`SH.Parser`](sh-parser.ads): Shell parser
-* [`SH.Rm`](sh-rm.ads): Delete file function (should be replaced by OS.FS)
 * [`SH.States`](sh-states.ads): Shell state
 * [`SH.States.IO`](sh-states-io.ads): Shell I/O
 * [`SH.String_Utils`](sh-string_utils.ads): Some string manipulation functions

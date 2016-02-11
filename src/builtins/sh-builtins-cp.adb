@@ -24,13 +24,11 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces.C;                 use Interfaces.C;
 with GNAT.Directory_Operations;
 
-with Sh.Rm;               use Sh.Rm;
 with Sh.States.IO; use Sh.States.IO;
-with OS.FS;                        use OS.FS;
-with OS.FS.Stat;                   use OS.FS.Stat;
+with OS.FS; use OS.FS;
+with OS.FS.Stat; use OS.FS.Stat;
 with OS.FS.Dir;
 
 package body Sh.Builtins.Cp is
@@ -93,11 +91,11 @@ package body Sh.Builtins.Cp is
          procedure Simple_Copy (Source_Path : String;
                                 Target_Path : String)
          is
-            Status  : long := 0;
-            Success : unsigned_long;
+            Status  : Integer := 0;
+            Success : Integer;
          begin
             if GNAT.OS_Lib.Is_Regular_File (Target_Path) then
-               Status := Sh.Rm.Delete_File (Target_Path);
+               Status := OS.FS.Delete_File (Target_Path);
             end if;
 
             if Status /= 0 then
