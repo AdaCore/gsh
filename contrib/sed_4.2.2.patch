@@ -1,0 +1,85 @@
+diff -r -c sed-4.2.2/lib/msvc-inval.c patched/lib/msvc-inval.c
+*** sed-4.2.2/lib/msvc-inval.c	2016-02-15 16:11:20.209906200 +0100
+--- patched/lib/msvc-inval.c	2016-02-15 16:24:00.984320300 +0100
+***************
+*** 30,36 ****
+  
+  # if MSVC_INVALID_PARAMETER_HANDLING == DEFAULT_HANDLING
+  
+! static void cdecl
+  gl_msvc_invalid_parameter_handler (const wchar_t *expression,
+                                     const wchar_t *function,
+                                     const wchar_t *file,
+--- 30,36 ----
+  
+  # if MSVC_INVALID_PARAMETER_HANDLING == DEFAULT_HANDLING
+  
+! static void __cdecl
+  gl_msvc_invalid_parameter_handler (const wchar_t *expression,
+                                     const wchar_t *function,
+                                     const wchar_t *file,
+***************
+*** 47,53 ****
+  
+  #  if defined _MSC_VER
+  
+! static void cdecl
+  gl_msvc_invalid_parameter_handler (const wchar_t *expression,
+                                     const wchar_t *function,
+                                     const wchar_t *file,
+--- 47,53 ----
+  
+  #  if defined _MSC_VER
+  
+! static void __cdecl
+  gl_msvc_invalid_parameter_handler (const wchar_t *expression,
+                                     const wchar_t *function,
+                                     const wchar_t *file,
+***************
+*** 96,102 ****
+      }
+  }
+  
+! static void cdecl
+  gl_msvc_invalid_parameter_handler (const wchar_t *expression,
+                                     const wchar_t *function,
+                                     const wchar_t *file,
+--- 96,102 ----
+      }
+  }
+  
+! static void __cdecl
+  gl_msvc_invalid_parameter_handler (const wchar_t *expression,
+                                     const wchar_t *function,
+                                     const wchar_t *file,
+diff -r -c sed-4.2.2/sed/sed.c patched/sed/sed.c
+*** sed-4.2.2/sed/sed.c	2016-02-15 16:11:20.459906200 +0100
+--- patched/sed/sed.c	2016-02-15 16:23:13.044867200 +0100
+***************
+*** 191,202 ****
+    int opt;
+    int return_code;
+    const char *cols = getenv("COLS");
+  
+    program_name = argv[0];
+    initialize_main (&argc, &argv);
+  #if HAVE_SETLOCALE
+    /* Set locale according to user's wishes.  */
+!   setlocale (LC_ALL, "");
+  #endif
+    initialize_mbcs ();
+  
+--- 191,203 ----
+    int opt;
+    int return_code;
+    const char *cols = getenv("COLS");
++   const char *lc_all = getenv("LC_ALL");
+  
+    program_name = argv[0];
+    initialize_main (&argc, &argv);
+  #if HAVE_SETLOCALE
+    /* Set locale according to user's wishes.  */
+!   setlocale (LC_ALL, lc_all);
+  #endif
+    initialize_mbcs ();
+  
