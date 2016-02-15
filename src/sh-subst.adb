@@ -171,16 +171,16 @@ package body Sh.Subst is
                null;
             when NULL_WORD_FIELD =>
                --  We have a null word so create an empty field
-               Append (Result_List, new String'(""));
+               Append (Result_List, "");
             when QUOTED_WORD_FIELD =>
-               Append (Result_List, new String'(Buffer (1 .. Buffer_Last)));
+               Append (Result_List, Buffer (1 .. Buffer_Last));
             when WORD_FIELD =>
                if Is_File_Expansion_Enabled (SS) then
                   Append (Result_List,
                           Filename_Expansion (SS, Buffer (1 .. Buffer_Last)));
                else
                   Append (Result_List,
-                          new String'(Buffer (1 .. Buffer_Last)));
+                          Buffer (1 .. Buffer_Last));
                end if;
 
          end case;
@@ -384,9 +384,8 @@ package body Sh.Subst is
                Internal_Index := Internal_Index - 1;
 
                Append (Args_List,
-                       new String'(
-                         Str (Internal_Word_Start ..
-                             Internal_Index)));
+                       Str (Internal_Word_Start ..
+                             Internal_Index));
 
             when '0' .. '9' =>
 
@@ -415,9 +414,7 @@ package body Sh.Subst is
                Previous_Was_Number := True;
 
                Append (Args_List,
-                       new String'(
-                         Str (Internal_Word_Start ..
-                             Internal_Index)));
+                       Str (Internal_Word_Start .. Internal_Index));
 
             when '-' =>
                Internal_Word_Start := Internal_Index;
@@ -474,9 +471,7 @@ package body Sh.Subst is
                end if;
 
                Append (Args_List,
-                       new String'(
-                         Str (Internal_Word_Start ..
-                             Internal_Index)));
+                       Str (Internal_Word_Start .. Internal_Index));
             when '+' =>
 
                Internal_Word_Start := Internal_Index;
@@ -534,9 +529,7 @@ package body Sh.Subst is
                end if;
 
                Append (Args_List,
-                       new String'(
-                         Str (Internal_Word_Start ..
-                             Internal_Index)));
+                       Str (Internal_Word_Start .. Internal_Index));
 
             when '>' | '<' | '!' | '='  =>
                Internal_Word_Start := Internal_Index;
@@ -556,18 +549,14 @@ package body Sh.Subst is
                Previous_Was_Number := False;
 
                Append (Args_List,
-                       new String'(
-                         Str (Internal_Word_Start ..
-                             Internal_Index)));
+                       Str (Internal_Word_Start .. Internal_Index));
 
             when '*' | '/' | '%' | '(' | ')' =>
                Internal_Word_Start := Internal_Index;
                Previous_Was_Number := False;
 
                Append (Args_List,
-                       new String'(
-                         Str (Internal_Word_Start ..
-                             Internal_Index)));
+                       Str (Internal_Word_Start .. Internal_Index));
 
             when ' ' =>
                null;
@@ -1281,6 +1270,7 @@ package body Sh.Subst is
 
       CC : Character;
    begin
+      pragma Debug (Sh.Traces.Log (LOG_SUBST, "subst: " & S));
       Has_Command_Subst := False;
       while Index <= S'Last loop
          CC := S (Index);
@@ -1365,7 +1355,7 @@ package body Sh.Subst is
    is
       Characters_Read   : Integer := 0;
       Result            : constant Annotated_String := Eval_String_Aux
-        (SS, S, Characters_Read, Case_Pattern, IOHere,
+        (SS, S, Characters_Read, IOHere,
          Has_Command_Subst => Has_Command_Subst);
       --  we create a buffer or twice the size as some characters might be
       --  excaped in case construct context
@@ -1607,9 +1597,9 @@ package body Sh.Subst is
               (not Only_Dirs or else Kind (D_Entry) = Directory)
             then
                if Only_Dirs then
-                  Append (Result, new String'(Prefix.all & Item & "/"));
+                  Append (Result, Prefix.all & Item & "/");
                else
-                  Append (Result, new String'(Prefix.all & Item));
+                  Append (Result, Prefix.all & Item);
                end if;
             end if;
          end;
