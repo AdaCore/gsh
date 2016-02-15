@@ -20,6 +20,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Sh.Traces; use Sh.Traces;
+
 package body Sh.Re is
 
    -----------
@@ -171,6 +173,10 @@ package body Sh.Re is
          end if;
       end Bracket_Match;
    begin
+
+      pragma Debug (Sh.Traces.Log (LOG_RE,
+                    "test if " & Str & " match " & Pattern));
+
       --  Handle special cases in which Pattern is an empty string
       if Pattern'Length = 0 then
          if Str'Length = 0 then
@@ -245,14 +251,17 @@ package body Sh.Re is
                --  the '*'. (0, 1, ...). The recursion is not infinite as next
                --  character in the pattern will consume a character from Str
                --  (i.e next character in Pattern is not a '*').
-               for Index in S_I - 1 .. Str'Last loop
-                  if Match
-                    (Str (Index .. Str'Last),
-                     Pattern (P_I .. Pattern'Last))
-                  then
-                     return True;
-                  end if;
-               end loop;
+
+               if S_I - 1 >= Str'First then
+                  for Index in S_I - 1 .. Str'Last loop
+                     if Match
+                       (Str (Index .. Str'Last),
+                        Pattern (P_I .. Pattern'Last))
+                     then
+                        return True;
+                     end if;
+                  end loop;
+               end if;
 
                return False;
 
