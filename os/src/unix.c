@@ -4,7 +4,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *                      Copyright (C) 2011-2015, AdaCore                    *
+ *                      Copyright (C) 2011-2016, AdaCore                    *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -35,6 +35,7 @@
 #include <regex.h>
 #include <fnmatch.h>
 #include <sys/fcntl.h>
+#include <spawn.h>
 
 #if defined(__APPLE__)
 #include <copyfile.h>
@@ -97,18 +98,18 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[],
 
   if (pstdin != 0)
     {
-      posix_spawn_file_actions_adddup2(&action, pstdin, 0);
-      posix_spawn_file_actions_addclose(&action, pstdin);
+      posix_spawn_file_actions_adddup2(&actions, pstdin, 0);
+      posix_spawn_file_actions_addclose(&actions, pstdin);
     }
   if (pstdout != 1)
     {
-      posix_spawn_file_actions_adddup2(&action, pstdout, 1);
-      posix_spawn_file_actions_addclose(&action, pstdout);
+      posix_spawn_file_actions_adddup2(&actions, pstdout, 1);
+      posix_spawn_file_actions_addclose(&actions, pstdout);
     }
   if (pstderr != 2)
     {
-      posix_spawn_file_actions_adddup2(&action, pstderr, 2);
-      posix_spawn_file_actions_addclose(&action, pstderr);
+      posix_spawn_file_actions_adddup2(&actions, pstderr, 2);
+      posix_spawn_file_actions_addclose(&actions, pstderr);
     }
 
   cursor = args;
@@ -135,7 +136,7 @@ __gsh_open(char *path, int kind)
 
   if (kind > READ_MODE)
     {
-      mode = O_WRONLY | O_CREAT | O_BINARY | O_CLOEXEC;
+      mode = O_WRONLY | O_CREAT | O_CLOEXEC;
       if (kind == APPEND_MODE)
 	{
 	  mode = mode | O_APPEND;
@@ -145,7 +146,7 @@ __gsh_open(char *path, int kind)
   else
     {
       perm = S_IRUSR | S_IRGRP | S_IROTH;
-      mode = O_RDONLY | O_BINARY | O_CLOEXEC;
+      mode = O_RDONLY | O_CLOEXEC;
     }
 
   fd = open64 (path, mode, perm);
@@ -274,6 +275,12 @@ __gsh_copy_file(char *source,
     result = copyfile(source, target, NULL, flags);
 #endif
   return result;
+}
+
+int
+__gsh_is_console (int fd)
+{
+    return isatty (fd);
 }
 
 #endif
