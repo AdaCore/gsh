@@ -146,4 +146,9 @@ package Sh is
    Continue_Exception : exception;
    Break_Exception : exception;
 
+   --  The following declaration ensure that automatic expansion of arguments
+   --  done by GNAT is disabled. Note that on compiler older than 2016-02-17
+   --  the declaration has no effect.
+   Do_Args_Expansion : Integer := 0;
+   pragma Export (C, Do_Args_Expansion, "__gnat_do_argv_expansion");
 end Sh;
