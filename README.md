@@ -18,6 +18,8 @@ and doesn't emulate that system call (as it's done on Cygwin).
 This allows better compiling performance (the build times can be up to 3 or
 4 times faster than builds performed by projects such as Cygwin).
 
+![XKCD on shell escaping](http://imgs.xkcd.com/comics/backslashes.png "Understanding shell escaping!")
+
 Build & Installation
 --------------------
 
@@ -48,3 +50,4 @@ with the GNU General Public License version 3:
   [GNUWin](http://gnuwin32.sourceforge.net/)
 * [`os/src/ddk`](os/src/ddk) contains the DDK part of the
   [mingw-w64](http://mingw-w64.org/doku.php) project
+
