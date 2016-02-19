@@ -30,7 +30,7 @@ with Sh.Subst; use Sh.Subst;
 with Sh.Builtins; use Sh.Builtins;
 with Sh.String_Utils; use Sh.String_Utils;
 with Sh.Re;
-
+with Sh.Traces; use Sh.Traces;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 with GNAT.Task_Lock;
 with GNAT.Regpat; use GNAT.Regpat;
@@ -225,7 +225,7 @@ package body Sh.Tree.Evals is
       return Eval_Result
    is
       Current_Node : Node_Id := N;
-      Result       : Eval_Result;
+      Result       : Eval_Result := (RESULT_STD, 0);
    begin
       while Current_Node /= 0 loop
          Result := Eval (S, T, T.Node_Table.Table (Current_Node));
@@ -637,6 +637,7 @@ package body Sh.Tree.Evals is
               not Is_Empty (Pool, N.Cmd_Assign_List);
             Exit_Status : Integer;
          begin
+            pragma Debug (Log (LOG_EVAL, "cmd: " & Cmd));
             Set_Var_Value (S, "LINENO", Line (N.Pos));
 
             if Has_Assigns and then
@@ -692,6 +693,7 @@ package body Sh.Tree.Evals is
          Error (S, "can only return from a function or a source script");
       end if;
 
+      pragma Debug (Log (LOG_EVAL, "status: " & Result.Kind'Img));
       return Result;
    exception
       when Shell_Exit_Exception =>
