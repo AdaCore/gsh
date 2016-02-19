@@ -218,9 +218,11 @@ package body Sh.Builtins is
       Args : String_List)
       return Eval_Result
    is
-      Str : Ada.Strings.Unbounded.Unbounded_String;
-      T : Shell_Tree;
       use Ada.Strings.Unbounded;
+      Str    : Unbounded_String;
+      T      : Shell_Tree;
+      Result : Eval_Result;
+
    begin
       Str := To_Unbounded_String (Args (Args'First).all);
       for I in Args'First + 1 .. Args'Last loop
@@ -228,9 +230,9 @@ package body Sh.Builtins is
       end loop;
 
       T := Parse_String (To_String (Str));
-      Eval (S, T);
+      Result := Eval (S, T);
       Free_Node (T);
-      return (RESULT_STD, Get_Last_Exit_Status (S));
+      return Result;
    exception
       when Shell_Syntax_Error =>
          return (RESULT_STD, 1);
