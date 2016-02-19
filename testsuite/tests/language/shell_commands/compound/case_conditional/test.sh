@@ -121,3 +121,7 @@ case \x in
 \x)	echo "ok 11" ;;
 *)	   echo "bad 11";;
 esac
+
+case "'" in
+   \'*\') echo FAILED;;
+esac 

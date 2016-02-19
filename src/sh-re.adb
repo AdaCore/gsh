@@ -188,13 +188,13 @@ package body Sh.Re is
 
       while P_I <= Pattern'Last loop
          Next_Pattern_Char;
-         Next_Str_Char;
 
          case P_C is
             when '?' =>
                --  A '?' is a pattern that shall match any character. The only
                --  case when match fails is when there is no more character to
                --  read from Str.
+               Next_Str_Char;
                if S_C = ASCII.NUL then
                   return False;
                end if;
@@ -212,18 +212,19 @@ package body Sh.Re is
                end if;
 
                Next_Pattern_Char;
+               Next_Str_Char;
 
                if S_C /= P_C then
                   return False;
                end if;
 
             when '[' =>
+               Next_Str_Char;
                if not Bracket_Match then
                   return False;
                end if;
 
             when '*' =>
-
                --  Collapse multiple successive '?' and '*'. For successive '*'
                --  there is nothing to do. For '?' only a character on Str is
                --  needed.
@@ -252,20 +253,19 @@ package body Sh.Re is
                --  character in the pattern will consume a character from Str
                --  (i.e next character in Pattern is not a '*').
 
-               if S_I - 1 >= Str'First then
-                  for Index in S_I - 1 .. Str'Last loop
-                     if Match
-                       (Str (Index .. Str'Last),
-                        Pattern (P_I .. Pattern'Last))
-                     then
-                        return True;
-                     end if;
-                  end loop;
-               end if;
+               for Index in S_I .. Str'Last loop
+                  if Match
+                    (Str (Index .. Str'Last),
+                     Pattern (P_I .. Pattern'Last))
+                  then
+                     return True;
+                  end if;
+               end loop;
 
                return False;
 
             when others =>
+               Next_Str_Char;
                if S_C /= P_C then
                   return False;
                end if;
