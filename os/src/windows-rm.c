@@ -4,7 +4,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *                      Copyright (C) 2011-2015, AdaCore                    *
+ *                      Copyright (C) 2011-2016, AdaCore                    *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -68,7 +68,10 @@ __declspec(dllimport) int WINAPI WideCharToMultiByte
 #include "stdio.h"
 
 WCHAR digit_image[] = L"0123456789ABCDEF";
-WCHAR trash_dir[] = L"\\tmp\\trash\\";
+
+/* trash_dir will be append to the result of GetVolumePath which contains
+   a trailing backslash thus trash_dir should not start with a backslash.  */
+WCHAR trash_dir[] = L"tmp\\trash\\";
 
 /* Define some utility functions to manipulate the UNICODE_STRING representing
    paths.  */
