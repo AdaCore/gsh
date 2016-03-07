@@ -27,7 +27,10 @@ package Sh.Traces is
    type Trace_Channel is
      (LOG_LEXER,
       LOG_PARSER,
-      LOG_SUBST);
+      LOG_SUBST,
+      LOG_RE,
+      LOG_EVAL,
+      LOG_BUILTIN);
    --  List of available logging channels
 
    Channel_Status : array (Trace_Channel'Range) of Boolean :=
