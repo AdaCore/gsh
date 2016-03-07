@@ -4,7 +4,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *                      Copyright (C) 2011-2015, AdaCore                    *
+ *                      Copyright (C) 2011-2016, AdaCore                    *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -83,6 +83,15 @@ __gsh_open (char *path, int kind)
 
   S2WSC (wpath, path, 32768);
   fd = _topen (wpath, mode, perm);
+
+  /* Even if file is opened in append mode, file position should be set to the
+     end of file manually. Indeed if the current process does not do any write
+     and pass the file descriptor to a child process, then the child process
+     will start writing at the beginning of the file.  */
+  if (kind == APPEND_MODE)
+  {
+    _lseek (fd, 0, SEEK_END);
+  }
   return fd < 0 ? -1 : fd;
 }
 
