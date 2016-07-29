@@ -2,5 +2,5 @@
 host=review.eu.adacore.com
 port=29418
 project=posixshell
-defaultbranch=master
+defaultbranch=stable
 defaultremote=origin
