@@ -44,13 +44,13 @@ __declspec(dllimport) BOOL WINAPI GetVolumePathNameW(
     LPWSTR lpszVolumePathName,
     unsigned long cchBufferLength);
 
-extern int CurrentCodePage;
 __declspec(dllimport) int WINAPI WideCharToMultiByte
   (int CodePage, ULONG dwFlags, LPCWCH lpWideCharStr,
   int cchWideChar, LPSTR lpMultiByteStr,
   int cbMultiByte, LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar);
+#define CP_UTF8 65001
 #define WS2SC(str,wstr,len, wlen) \
-   WideCharToMultiByte (CurrentCodePage,0,wstr,wlen,str,len,NULL,NULL)
+   WideCharToMultiByte (CP_UTF8,0,wstr,wlen,str,len,NULL,NULL)
 
 #else /* _W64 */
 

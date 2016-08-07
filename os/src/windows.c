@@ -43,9 +43,8 @@
 #include <sys/stat.h>
 #include "gsh.h"
 
-extern UINT CurrentCodePage;
 #define S2WSC(wstr,str,len) \
-   MultiByteToWideChar (CurrentCodePage, 0, str, -1, wstr, len)
+   MultiByteToWideChar (CP_UTF8, 0, str, -1, wstr, len)
 
 static DWORD windows_bid = 0;
 
