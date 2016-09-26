@@ -263,7 +263,9 @@ package body Sh.Tokens.Lexer is
       begin
          loop
             exit when Index > S'Last;
-            if S (Index) = '\' and then S (Index + 1) = ASCII.LF then
+            if Index < S'Last and then S (Index) = '\' and then
+              S (Index + 1) = ASCII.LF
+            then
                Index := Index + 1;
             else
                Result_Last := Result_Last + 1;
@@ -655,6 +657,7 @@ package body Sh.Tokens.Lexer is
          --  serve as a token separator.
 
          CC := Get_Char (B);
+
          if CC /= ASCII.LF then
             --  This also refer implicitely to Section 2.3 Rule 11
             Has_Token := True;
@@ -897,6 +900,7 @@ package body Sh.Tokens.Lexer is
                     ASCII.HT =>
                   Unget_Char (B);
                   return Return_Token;
+
                when '>' | '<' =>
                   Unget_Char (B);
                   if Is_Natural
