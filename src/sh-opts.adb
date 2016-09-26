@@ -146,6 +146,8 @@ package body Sh.Opts is
          if Arg_Number <= Argument_Count then
             Set_Script_Name (State, Argument (Arg_Number));
             Arg_Number := Arg_Number + 1;
+         else
+            Set_Script_Name (State, "-gsh");
          end if;
       elsif Read_From_Stdin then
          if not Is_Interactive then
