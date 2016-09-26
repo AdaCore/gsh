@@ -39,13 +39,15 @@ package body Sh.Commands is
    is
       Fd           : File_Descriptor;
       Buffer       : aliased String (1 .. 256);
-      Buffer_Last  : Natural := 0;
+      Buffer_Last  : Integer := 0;
       Result       : String_List (1 .. 32);
       Result_Last  : Natural := 0;
    begin
       Fd := Open_Read (Filename.all, Binary);
       --  Here we read only 256 characters. That should be sufficient
+
       Buffer_Last := Read (Fd, Buffer'Address, 256);
+
       Close (Fd);
 
       if Buffer_Last >= 2 and then Buffer (1 .. 2) = "#!" then
