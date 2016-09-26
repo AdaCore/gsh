@@ -9,8 +9,8 @@ LUA_PLAT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo "mingw"; els
 # Main build target
 all: src/sh-lua_bindings.adb
 	@echo "building gsh"
-	gprbuild -p -P posix_shell -XBUILD=prod
-	gprbuild -p -P posix_shell -XBUILD=dev 
+	gprbuild -j0 -p -P posix_shell -XBUILD=prod
+	gprbuild -j0 -p -P posix_shell -XBUILD=dev
 
 src/sh-lua_bindings.adb: unit_test_gen
 	@echo "generated unit testing bindings"
