@@ -21,7 +21,7 @@
 ------------------------------------------------------------------------------
 
 with GNAT.Dynamic_Tables;
-with Sh.Lexer; use Sh.Lexer;
+with Sh.Tokens; use Sh.Tokens;
 
 package Sh.List_Pools is
 

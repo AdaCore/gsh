@@ -595,4 +595,46 @@ package body Sh.Tree is
       Tree.Toplevel_Node := N;
    end Set_Tree_Toplevel;
 
+   ---------------------------
+   -- Push_Pending_Here_Doc --
+   ---------------------------
+
+   procedure Push_Pending_Here_Doc
+     (Tree        : in out Shell_Tree;
+      Target_Node : Node_Id;
+      Target_Fd   : Integer)
+   is
+   begin
+      Tree.Pending_Redirections_Last := Tree.Pending_Redirections_Last + 1;
+      Tree.Pending_Redirections (Tree.Pending_Redirections_Last) :=
+        (Target_Node, Target_Fd);
+   end Push_Pending_Here_Doc;
+
+   --------------------------
+   -- Pop_Pending_Here_Doc --
+   --------------------------
+
+   procedure Pop_Pending_Here_Doc
+     (Tree        : in out Shell_Tree;
+      Target_Node : out Node_Id;
+      Target_Fd   : out Integer)
+   is
+      Tmp : constant Pending_Here_Doc := Tree.Pending_Redirections
+        (Tree.Pending_Redirections_Last);
+   begin
+      Target_Node := Tmp.Target_Node;
+      Target_Fd := Tmp.Target_Fd;
+      Tree.Pending_Redirections_Last := Tree.Pending_Redirections_Last - 1;
+   end Pop_Pending_Here_Doc;
+
+   --------------------------
+   -- Has_Pending_Here_Doc --
+   --------------------------
+
+   function Has_Pending_Here_Doc (Tree : Shell_Tree) return Boolean
+   is
+   begin
+      return Tree.Pending_Redirections_Last > 0;
+   end Has_Pending_Here_Doc;
+
 end Sh.Tree;

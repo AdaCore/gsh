@@ -47,6 +47,8 @@ package Sh is
 
    type Token_Type is
      (T_NULL,
+      T_HERE_DOC,
+      T_HERE_DOC_PLAIN,
       T_WORD,         -- word token
       T_EOF,          -- end of file token
       T_ASSIGNEMENT,  -- variable assignement token
@@ -98,7 +100,7 @@ package Sh is
       T_UNTIL,        -- 'until'
       T_FOR,          -- 'for'
       T_LBRACE,       -- '}'
-      T_RBRACE       -- '{'
+      T_RBRACE        -- '{'
       );   -- number preceding a redirection operator
 
    subtype Input_Redirection_Ops is Token_Type range T_LESS .. T_LESSGREAT;

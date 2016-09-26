@@ -21,7 +21,7 @@
 ------------------------------------------------------------------------------
 
 with Sh.States; use Sh.States;
-with Sh.Lexer;     use Sh.Lexer;
+with Sh.Tokens; use Sh.Tokens;
 
 package Sh.States.IO is
 

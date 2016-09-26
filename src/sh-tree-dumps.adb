@@ -62,7 +62,7 @@ package body Sh.Tree.Dumps is
 
    function To_Yaml (T : Token) return String
    is
-      Str             : constant String := Get_Token_String (T);
+      Str             : constant String := Tokens.As_String (T);
       Quoted_Str      : String (1 .. 2 * Str'Last + 2);
       Quoted_Str_Last : Natural := 0;
    begin
@@ -157,7 +157,7 @@ package body Sh.Tree.Dumps is
          N := T.Node_Table.Table (J);
          if N.Kind = FUNCTION_NODE then
             Dump_Tree (N.Function_Code.all,
-                       Get_Token_String (N.Function_Name));
+                       Tokens.As_String (N.Function_Name));
          end if;
       end loop;
       Dump_Tree (T);
@@ -271,7 +271,7 @@ package body Sh.Tree.Dumps is
    procedure Dump_Function (N : Node) is
    begin
       Put_Line ("        name: " & To_Yaml (N.Function_Name));
-      Put_Line ("        code: *" & Get_Token_String (N.Function_Name));
+      Put_Line ("        code: *" & Tokens.As_String (N.Function_Name));
    end Dump_Function;
 
    -------------------

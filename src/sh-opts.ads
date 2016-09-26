@@ -21,7 +21,8 @@
 ------------------------------------------------------------------------------
 
 with Sh.States; use Sh.States;
-with Sh.Lexer; use Sh.Lexer;
+with Sh.Tokens; use Sh.Tokens;
+with Sh.Tokens.Lexer; use Sh.Tokens.Lexer;
 
 package Sh.Opts is
 

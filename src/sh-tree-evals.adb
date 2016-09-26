@@ -34,7 +34,7 @@ with Sh.Traces; use Sh.Traces;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 with GNAT.Task_Lock;
 with GNAT.Regpat; use GNAT.Regpat;
-
+with Ada.Exceptions; use Ada.Exceptions;
 with OS.FS;
 with OS;
 
@@ -418,7 +418,7 @@ package body Sh.Tree.Evals is
 
          declare
             Assign : constant String :=
-              Get_Token_String (Get_Element (Pool, Tmp));
+              Tokens.As_String (Get_Element (Pool, Tmp));
             Has_Command_Subst : Boolean;
          begin
             for I in Assign'First .. Assign'Last loop
@@ -492,7 +492,7 @@ package body Sh.Tree.Evals is
 
       --  Evaluation of the expression on which the case is applied
       Case_Value        : constant String :=
-        Eval_String_Unsplit (State, Get_Token_String (N.Case_Word),
+        Eval_String_Unsplit (State, Tokens.As_String (N.Case_Word),
                              Has_Command_Subst => Has_Command_Subst);
 
       --  Node corresponding to the current pattern to test
@@ -525,7 +525,7 @@ package body Sh.Tree.Evals is
                declare
                   Str : constant String := Eval_String_Unsplit
                     (State,
-                     Get_Token_String (Get_Element (Pool, Cursor)),
+                     Tokens.As_String (Get_Element (Pool, Cursor)),
                      Case_Pattern      => True,
                      Has_Command_Subst => Has_Command_Subst);
                begin
@@ -620,7 +620,7 @@ package body Sh.Tree.Evals is
 
       declare
          Result_String : String_List :=
-           Eval_String (S, Get_Token_String (N.Cmd)) &
+           Eval_String (S, Tokens.As_String (N.Cmd)) &
            Eval_String_List (S, T, N.Arguments);
       begin
          if Result_String'Length = 0 then
@@ -715,43 +715,47 @@ package body Sh.Tree.Evals is
    function Eval_For (S : in out Shell_State; T : Shell_Tree; N : Node)
                       return Eval_Result
    is
-      Loop_Var        : constant String := Get_Token_String (N.Loop_Var);
+      Loop_Var        : constant String := Tokens.As_String (N.Loop_Var);
       Loop_Var_Values : String_List :=
         (if not N.Loop_Default_Values then
             Eval_String_List (S, T, N.Loop_Var_Values) else
               Eval_String (S, """$@"""));
       Descriptors     : constant Shell_Descriptors := Get_Descriptors (S);
       My_Nested_Level : constant Natural := Get_Loop_Scope_Level (S) + 1;
-      Result          : Eval_Result;
+      Result          : Eval_Result := (RESULT_STD, 0);
    begin
       if not Apply_Redirections (S, N.Redirections) then
          Save_Last_Exit_Status (S, 1);
          return (RESULT_STD, 1);
       end if;
-      Set_Loop_Scope_Level (S, My_Nested_Level);
-      for I in Loop_Var_Values'Range loop
-            Set_Var_Value (S, Loop_Var, Loop_Var_Values (I).all);
-            Result := Eval (S, T, N.Loop_Code);
-            if Result.Kind = RESULT_CONTINUE then
-               if Result.Level = My_Nested_Level then
-                  Result := (RESULT_STD, Get_Last_Exit_Status (S));
-               else
+      if Loop_Var_Values'Length > 0 then
+         Set_Loop_Scope_Level (S, My_Nested_Level);
+         for I in Loop_Var_Values'Range loop
+               Set_Var_Value (S, Loop_Var, Loop_Var_Values (I).all);
+               Result := Eval (S, T, N.Loop_Code);
+               if Result.Kind = RESULT_CONTINUE then
+                  if Result.Level = My_Nested_Level then
+                     Result := (RESULT_STD, Get_Last_Exit_Status (S));
+                  else
+                     exit;
+                  end if;
+               end if;
+
+               if Result.Kind = RESULT_BREAK then
+                  if Result.Level = My_Nested_Level then
+                     Result := (RESULT_STD, Get_Last_Exit_Status (S));
+                  end if;
                   exit;
                end if;
-            end if;
+         end loop;
 
-            if Result.Kind = RESULT_BREAK then
-               if Result.Level = My_Nested_Level then
-                  Result := (RESULT_STD, Get_Last_Exit_Status (S));
-               end if;
-               exit;
-            end if;
-      end loop;
-
-      for Index in Loop_Var_Values'Range loop
-         Free (Loop_Var_Values (Index));
-      end loop;
-      Set_Loop_Scope_Level (S, My_Nested_Level - 1);
+         for Index in Loop_Var_Values'Range loop
+            Free (Loop_Var_Values (Index));
+         end loop;
+         Set_Loop_Scope_Level (S, My_Nested_Level - 1);
+      else
+         Save_Last_Exit_Status (S, 0);
+      end if;
       Restore_Descriptors (S, Descriptors);
       return Result;
    end Eval_For;
@@ -767,7 +771,7 @@ package body Sh.Tree.Evals is
    is
    begin
       Register_Function
-        (State, Get_Token_String (N.Function_Name), N.Function_Code.all);
+        (State, Tokens.As_String (N.Function_Name), N.Function_Code.all);
       Save_Last_Exit_Status (State, 0);
       return (RESULT_STD, 0);
    end Eval_Function;
@@ -871,7 +875,8 @@ package body Sh.Tree.Evals is
          begin
             Eval (Task_State, Tree, Task_Code);
          exception
-            when others =>
+            when E : others =>
+               Error (Task_State, Exception_Message (E));
                Error (Task_State, "crash in pipe command");
          end;
 

@@ -21,7 +21,7 @@
 ------------------------------------------------------------------------------
 
 with Sh.Tree; use Sh.Tree;
-with Sh.Lexer; use Sh.Lexer;
+with Sh.Tokens.Lexer; use Sh.Tokens.Lexer;
 
 package Sh.Parser is
 

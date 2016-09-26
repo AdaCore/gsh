@@ -30,7 +30,8 @@ with Ada.Exceptions;                use Ada.Exceptions;
 
 with Sh.Annotated_Strings; use Sh.Annotated_Strings;
 with Sh.Buffers;           use Sh.Buffers;
-with Sh.Lexer;             use Sh.Lexer;
+with Sh.Tokens;            use Sh.Tokens;
+with Sh.Tokens.Lexer;      use Sh.Tokens.Lexer;
 with Sh.Parser;            use Sh.Parser;
 with Sh.Subst.Arith;       use Sh.Subst.Arith;
 with Sh.String_Utils;      use Sh.String_Utils;
@@ -768,7 +769,10 @@ package body Sh.Subst is
             T := Parse_Buffer (Buf, Until_Token => T_RPAR);
             Append (Buffer, Strip (Eval (SS, T)));
             Free_Node (T);
-            Index := Index + Offset (Buf.Previous_Token_Pos) - 1;
+            --  Buffer will point to the next token which is the closing
+            --  parenthesis. As the parenthesis is consumed by the callee we
+            --  should go back by 1.
+            Index := Index + Offset (Current (Get_Buffer (Buf))) - 1;
             pragma Debug (Log (LOG_SUBST,
                                "'" & S (Index .. S'Last) & "'"));
          end;
@@ -1293,7 +1297,11 @@ package body Sh.Subst is
                Eval_Backquoted_Command_Subst (False);
 
             when '$' =>
-               Eval_Dollar_Subst (Is_Splitable);
+               if Index = S'Last then
+                  Append (Buffer, CC);
+               else
+                  Eval_Dollar_Subst (Is_Splitable);
+               end if;
 
             when '\' =>
                Eval_Escape_Sequence (IOHere);
@@ -1330,7 +1338,7 @@ package body Sh.Subst is
       while Cursor /= Null_List loop
          declare
             Elem_Eval : constant Dyn_String_List :=
-              Eval_String (SS, Get_Token_String (Get_Element (Pool, Cursor)));
+              Eval_String (SS, Tokens.As_String (Get_Element (Pool, Cursor)));
          begin
             Append (Result, Elem_Eval);
          end;

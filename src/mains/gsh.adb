@@ -25,7 +25,8 @@ with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Directories; use Ada.Directories;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 with GNAT.Ctrl_C;
-with Sh.Lexer; use Sh.Lexer;
+with Sh.Tokens.Lexer; use Sh.Tokens.Lexer;
+with Sh.Tokens; use Sh.Tokens;
 with Sh.Parser; use Sh.Parser;
 with Sh.Tree; use Sh.Tree;
 with Sh.Tree.Evals; use Sh.Tree.Evals;
@@ -200,7 +201,13 @@ begin
    exception
       when E : Shell_Syntax_Error | Shell_Non_Implemented |
            Shell_Lexer_Error =>
-         Put_Line (Exception_Message (E));
+         Put_Line (Standard_Error, Exception_Message (E));
+         return 127;
+      when E : others =>
+         Put_Line (Standard_Error,
+              "crash at line: " & Get_Var_Value (State, "LINENO") & " of "
+              & Get_Var_Value (State, "0"));
+         Put_Line (Standard_Error, Exception_Message (E));
          return 127;
    end;
 

@@ -22,7 +22,7 @@
 
 with Sh.Buffers; use Sh.Buffers;
 with Sh.List_Pools; use Sh.List_Pools;
-with Sh.Lexer; use Sh.Lexer;
+with Sh.Tokens; use Sh.Tokens;
 with GNAT.Dynamic_Tables;
 
 package Sh.Tree is
@@ -186,6 +186,21 @@ package Sh.Tree is
    type Node is private;
    type Node_Access is access Node;
 
+   procedure Push_Pending_Here_Doc
+     (Tree        : in out Shell_Tree;
+      Target_Node : Node_Id;
+      Target_Fd   : Integer);
+   --  Add pending here document
+
+   procedure Pop_Pending_Here_Doc
+     (Tree        : in out Shell_Tree;
+      Target_Node : out Node_Id;
+      Target_Fd   : out Integer);
+   --  Pop next pending here document
+
+   function Has_Pending_Here_Doc (Tree : Shell_Tree) return Boolean;
+   --  Return True if there are some pending here documents
+
 private
 
    type Node_Kind is
@@ -272,6 +287,13 @@ private
 
    use Node_Tables;
 
+   type Pending_Here_Doc is record
+      Target_Node : Node_Id;
+      Target_Fd   : Integer;
+   end record;
+
+   type Pending_Here_Docs is array (1 .. 16) of Pending_Here_Doc;
+
    type Shell_Tree is record
       Node_Table     : Instance;
       Next_Node      : Node_Id := 1;
@@ -281,6 +303,10 @@ private
       Protect_Tree   : Boolean := False;
       Protect_Buffer : Boolean := False;
       Allow_Return   : Boolean := False;
+
+      --  Used during parsing only
+      Pending_Redirections : Pending_Here_Docs := (others => (0, 0));
+      Pending_Redirections_Last : Natural := 0;
    end record;
 
 end Sh.Tree;

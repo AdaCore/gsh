@@ -2,10 +2,6 @@
 --                                                                          --
 --                                  G S H                                   --
 --                                                                          --
---                            Sh.Lexer                             --
---                                                                          --
---                                 B o d y                                  --
---                                                                          --
 --                                                                          --
 --                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
@@ -24,12 +20,15 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Unchecked_Deallocation;
 with Ada.Exceptions; use Ada.Exceptions;
 with Sh.String_Utils; use Sh.String_Utils;
-with Ada.Unchecked_Deallocation;
 with Sh.Traces; use Sh.Traces;
 
-package body Sh.Lexer is
+package body Sh.Tokens.Lexer is
+
+   procedure Lexer_Error (B : in out Token_Buffer; Msg : String);
+   --  Report an error.
 
    function Get_Char (B : in out Token_Buffer) return Character;
    pragma Inline (Get_Char);
@@ -43,6 +42,12 @@ package body Sh.Lexer is
    pragma Inline (Pushback);
    --  Cancel effect of last Read_Token call.
 
+   function Read_IOHere
+     (B      : in out Token_Buffer;
+      Marker : Token)
+      return Token;
+   --  Read IO Here content
+
    function Read_Token_Aux
      (B      : in out Token_Buffer;
       IOHere : Boolean := False)
@@ -50,37 +55,21 @@ package body Sh.Lexer is
 
    function Read_Command_Token_Aux (Tk : Token) return Token;
 
-   procedure Lexer_Error (B : in out Token_Buffer; Msg : String);
-   --  Report an error.
-
    procedure Deallocate (B : in out Buffer_Access) is
       procedure Internal_Free is
         new Ada.Unchecked_Deallocation
           (Token_Buffer,
            Buffer_Access);
    begin
-      Deallocate (B.B);
-      B.B := Null_Buffer;
+      Deallocate (B.Content);
+      B.Content := Null_Buffer;
       Internal_Free (B);
    end Deallocate;
 
    procedure Deallocate (B : in out Token_Buffer) is
    begin
-      Deallocate (B.B);
+      Deallocate (B.Content);
    end Deallocate;
-
-   -------------
-   -- Element --
-   -------------
-
-   function Element
-     (RS    : Redirection_Stack;
-      Index : Positive)
-      return Redirection
-   is
-   begin
-      return RS.Ops (Index);
-   end Element;
 
    ------------------
    -- Expect_Token --
@@ -102,52 +91,26 @@ package body Sh.Lexer is
       end if;
    end Expect_Token;
 
+   ----------------
+   -- Get_Buffer --
+   ----------------
+
+   function Get_Buffer (B : Token_Buffer) return Buffer
+   is
+   begin
+      return B.Content;
+   end Get_Buffer;
+
    --------------
    -- Get_Char --
    --------------
 
    function Get_Char (B : in out Token_Buffer) return Character is
-      Tmp : constant Character := Current (B.B);
+      Tmp : constant Character := Current (B.Content);
    begin
-      Forward (B.B);
+      Forward (B.Content);
       return Tmp;
    end Get_Char;
-
-   --------------------
-   -- Get_Token_Type --
-   --------------------
-
-   function Get_Token_Type (T : Token) return Token_Type is
-   begin
-      return T.Kind;
-   end Get_Token_Type;
-
-   ----------------------
-   -- Get_Token_String --
-   ----------------------
-
-   function Get_Token_String (T : Token) return String is
-   begin
-      return Slice (T.Content, T.First, T.Last);
-   end Get_Token_String;
-
-   -------------------
-   -- Get_Token_Pos --
-   -------------------
-
-   function Get_Token_Pos (T : Token) return Text_Position is
-   begin
-      return T.First;
-   end Get_Token_Pos;
-
-   ------------
-   -- Length --
-   ------------
-
-   function Length (RS : Redirection_Stack) return Natural is
-   begin
-      return RS.Top;
-   end Length;
 
    ------------------
    -- Lexer_Error --
@@ -156,7 +119,7 @@ package body Sh.Lexer is
    procedure Lexer_Error (B : in out Token_Buffer; Msg : String) is
    begin
       Raise_Exception
-        (Shell_Lexer_Error'Identity, Image (Current (B.B), Msg));
+        (Shell_Lexer_Error'Identity, Image (Current (B.Content), Msg));
    end Lexer_Error;
 
    ---------------
@@ -190,9 +153,9 @@ package body Sh.Lexer is
    function New_Buffer (Str : String) return Token_Buffer is
       Result : Token_Buffer;
    begin
-      Result.B := New_Buffer (Str);
-      Result.Previous_Token_Pos := Current (Result.B);
-      Result.Next_Token_Pos := Current (Result.B);
+      Result.Content := New_Buffer (Str);
+      Result.Pushback_Loc := Current (Result.Content);
+      Result.Cache_Loc := Current (Result.Content);
       Result.Valid_Cache := False;
       return Result;
    end New_Buffer;
@@ -204,26 +167,13 @@ package body Sh.Lexer is
    function New_Buffer_From_File (Filename : String) return Token_Buffer is
       Result : Token_Buffer;
    begin
-      Result.B := New_Buffer_From_File (Filename);
-      Result.Previous_Token_Pos := Current (Result.B);
-      Result.Next_Token_Pos := Current (Result.B);
+      Result.Content := New_Buffer_From_File (Filename);
+      Result.Pushback_Loc := Current (Result.Content);
+      Result.Cache_Loc := Current (Result.Content);
       Result.Valid_Cache := False;
+      Result.Next_Is_Marker := False;
       return Result;
    end New_Buffer_From_File;
-
-   ----------
-   -- Push --
-   ----------
-
-   procedure Push
-     (RS : in out Redirection_Stack;
-      R  : Redirection)
-   is
-   begin
-      --  ??? missing overflow check ?
-      RS.Top := RS.Top + 1;
-      RS.Ops (RS.Top) := R;
-   end Push;
 
    --------------
    -- Pushback --
@@ -231,10 +181,11 @@ package body Sh.Lexer is
 
    procedure Pushback (B : in out Token_Buffer; T : Token) is
    begin
-      B.Next_Token_Pos := Current (B.B);
-      B.Next_Token := T;
+
+      B.Cache_Loc := Current (B.Content);
+      B.Cache_Token := T;
       B.Valid_Cache := True;
-      Seek (B.B, B.Previous_Token_Pos);
+      Seek (B.Content, B.Pushback_Loc);
       pragma Debug (Log (LOG_LEXER, "pushback"));
    end Pushback;
 
@@ -377,27 +328,26 @@ package body Sh.Lexer is
 
    function Read_IOHere
      (B      : in out Token_Buffer;
-      Marker : Token;
-      Eval   : out Boolean)
+      Marker : Token)
       return Token
    is
       CC               : Character;
-      Raw_Marker       : constant String := Get_Token_String (Marker);
+      Raw_Marker       : constant String := Tokens.As_String (Marker);
       Real_Marker      : String (1 .. Raw_Marker'Length);
       Real_Marker_Last : Integer := 0;
       Token_Start      : Text_Position;
       In_Single_Quote  : Boolean := False;
       In_Double_Quote  : Boolean := False;
       Index            : Integer := Raw_Marker'First;
+      Here_Doc_Kind    : Token_Type := T_HERE_DOC;
    begin
-      Eval := True;
       --  Check if we should consider parameter expansion in the IO Here
       --  document.
       loop
          case Raw_Marker (Index) is
             when '\' =>
                if not In_Single_Quote then
-                  Eval := False;
+                  Here_Doc_Kind := T_HERE_DOC_PLAIN;
                   if not In_Double_Quote or else
                     Raw_Marker (Index) = '"' or else
                     Raw_Marker (Index) = '`' or else
@@ -410,14 +360,14 @@ package body Sh.Lexer is
                Real_Marker_Last := Real_Marker_Last + 1;
                Real_Marker (Real_Marker_Last) := Raw_Marker (Index);
             when ''' =>
-               Eval := False;
+               Here_Doc_Kind := T_HERE_DOC_PLAIN;
                if In_Single_Quote then
                   In_Single_Quote := False;
                elsif not In_Double_Quote then
                   In_Single_Quote := True;
                end if;
             when '"' =>
-               Eval := False;
+               Here_Doc_Kind := T_HERE_DOC_PLAIN;
                if In_Double_Quote then
                   In_Double_Quote := False;
                elsif not In_Single_Quote then
@@ -432,24 +382,24 @@ package body Sh.Lexer is
       end loop;
 
       --  First skip everything until new line
-      while Get_Char (B) /= ASCII.LF loop
-         null;
-      end loop;
+      --  while Get_Char (B) /= ASCII.LF loop
+      --   null;
+      --  end loop;
 
-      Token_Start := Current (B.B);
+      Token_Start := Current (B.Content);
 
       CC := ASCII.LF;
 
       loop
          case CC is
             when ASCII.LF =>
-               if Current (B.B, Real_Marker_Last + 1) =
+               if Current (B.Content, Real_Marker_Last + 1) =
                  Real_Marker (1 .. Real_Marker_Last) & ASCII.LF
 
                then
                   declare
-                     T : constant Token := (T_WORD, Token_Start,
-                                            Previous (B.B), B.B);
+                     T : constant Token := (Here_Doc_Kind, Token_Start,
+                                            Previous (B.Content), B.Content);
                   begin
                      CC := Get_Char (B);
 
@@ -463,7 +413,8 @@ package body Sh.Lexer is
 
             when ASCII.EOT =>
                Unget_Char (B);
-               return (T_WORD, Token_Start, Previous (B.B), B.B);
+               return (Here_Doc_Kind, Token_Start, Previous (B.Content),
+                       B.Content);
 
             when others =>
                null;
@@ -480,9 +431,9 @@ package body Sh.Lexer is
       Result : Token;
    begin
       if B.Valid_Cache then
-         Seek (B.B, B.Next_Token_Pos);
+         Seek (B.Content, B.Cache_Loc);
          B.Valid_Cache := False;
-         Result := B.Next_Token;
+         Result := B.Cache_Token;
       else
          Result := Read_Token_Aux (B);
       end if;
@@ -720,7 +671,7 @@ package body Sh.Lexer is
             end if;
             --  Add_To_Token (CC);
          elsif not Has_Token then
-            Token_Start := Current (B.B);
+            Token_Start := Current (B.Content);
          end if;
       end Read_Escape_Sequence;
 
@@ -868,7 +819,7 @@ package body Sh.Lexer is
       -----------------------
 
       procedure Read_Single_Quote is
-         Start_Pos : constant Text_Position := Current (B.B);
+         Start_Pos : constant Text_Position := Current (B.Content);
 
       begin
          Has_Token := True;
@@ -896,14 +847,45 @@ package body Sh.Lexer is
 
       function Return_Token (T : Token_Type := T_WORD) return Token
       is
+         Result : constant Token := (T,
+                                     Token_Start,
+                                     Previous (B.Content),
+                                     B.Content);
       begin
-         return (T, Token_Start, Previous (B.B), B.B);
+         if B.Next_Is_Marker then
+            B.Next_Is_Marker := False;
+            B.Pending_Here_Docs := B.Pending_Here_Docs + 1;
+            B.Here_Doc_Stack (B.Pending_Here_Docs) := Result;
+         end if;
+
+         if T in T_DLESS .. T_DLESSDASH then
+            B.Next_Is_Marker := True;
+         end if;
+
+         return Result;
       end Return_Token;
 
    begin
       --  Save current state of the buffer in case pushback is called afterward
-      B.Previous_Token_Pos := Current (B.B);
-      Token_Start := Current (B.B);
+      B.Pushback_Loc := Current (B.Content);
+      Token_Start := Current (B.Content);
+
+      --  Check for pending here documents
+      if B.Next_Is_Here_Docs then
+         declare
+            T : Token;
+         begin
+            T := Read_IOHere (B,
+                              B.Here_Doc_Stack (B.Here_Doc_Next));
+            B.Here_Doc_Next := B.Here_Doc_Next + 1;
+            B.Pending_Here_Docs := B.Pending_Here_Docs - 1;
+            if B.Pending_Here_Docs = 0 then
+               B.Here_Doc_Next := 1;
+            end if;
+            B.Next_Is_Here_Docs := False;
+            return T;
+         end;
+      end if;
 
       loop
          CC := Get_Char (B);
@@ -918,7 +900,9 @@ package body Sh.Lexer is
                when '>' | '<' =>
                   Unget_Char (B);
                   if Is_Natural
-                    (Slice (B.B, Token_Start, Previous (B.B)))
+                    (Slice (B.Content,
+                            Token_Start,
+                            Previous (B.Content)))
                   then
                      return Return_Token (T_IO_NUMBER);
                   else
@@ -1025,10 +1009,14 @@ package body Sh.Lexer is
                      return Return_Token (T_LESS);
                end case;
             when ASCII.LF =>
+               if B.Pending_Here_Docs > 0 then
+                  B.Next_Is_Here_Docs := True;
+               end if;
+
                return Return_Token (T_NEWLINE);
             when ' ' | ASCII.HT =>
                --  discard <blank> character
-               Token_Start := Current (B.B);
+               Token_Start := Current (B.Content);
             when '\' =>
                Read_Escape_Sequence (False, False);
             when '"' =>
@@ -1061,7 +1049,7 @@ package body Sh.Lexer is
                      end loop;
                   end;
                   Unget_Char (B);
-                  Token_Start := Current (B.B);
+                  Token_Start := Current (B.Content);
                else
                   --  [Section 2.3 Rule 11]
                   --  The current character is used as the start of a new word.
@@ -1100,94 +1088,13 @@ package body Sh.Lexer is
       null;
    end Skip_Token;
 
-   ------------------
-   -- Syntax_Error --
-   ------------------
-
-   procedure Syntax_Error (T : Token; Msg : String) is
-   begin
-      if T.Kind = T_WORD then
-         Raise_Exception
-           (Shell_Syntax_Error'Identity,
-            Image (T.First) & ":"
-            & Msg & " (got '"
-            & Image (T.Kind) & "',"
-            & Slice (T.Content, T.First, T.Last) & ")");
-      else
-         Raise_Exception
-           (Shell_Syntax_Error'Identity,
-            Image (T.First) & ":"
-            & Msg & " (got '"
-            & Image (T.Kind) & "')");
-      end if;
-
-   end Syntax_Error;
-
-   function Image (T : Token) return String is
-   begin
-      if T.Kind = T_WORD then
-         return Image (T.First) & ":" & Image (T.Kind)
-           & "(" & Slice (T.Content, T.First, T.Last) & ")";
-      else
-         return Image (T.First) & ":" & Image (T.Kind);
-      end if;
-   end Image;
-
-   -----------
-   -- Image --
-   -----------
-
-   function Image (T : Token_Type) return String is
-   begin
-      case T is
-         when T_WORD        => return "word";
-         when T_EOF         => return "end of file";
-         when T_ASSIGNEMENT => return "assignement";
-         when T_DSEMI       => return ";;";
-         when T_AND_IF      => return "&&";
-         when T_AND         => return "&";
-         when T_OR_IF       => return "||";
-         when T_PIPE        => return "|";
-         when T_DGREAT      => return ">>";
-         when T_CLOBBER     => return ">|";
-         when T_GREATAND    => return ">&";
-         when T_DLESSDASH   => return "<<-";
-         when T_LESS        => return "<";
-         when T_GREAT       => return ">";
-         when T_DLESS       => return "<<";
-         when T_LESSAND     => return "<&";
-         when T_LESSGREAT   => return "<>";
-         when T_NEWLINE     => return "<LF>";
-         when T_LPAR        => return "(";
-         when T_SEMI        => return ";";
-         when T_RPAR        => return ")";
-         when T_IF          => return "if";
-         when T_THEN        => return "then";
-         when T_ELSE        => return "else";
-         when T_ELIF        => return "elif";
-         when T_FI          => return "fi";
-         when T_DO          => return "do";
-         when T_DONE        => return "done";
-         when T_BANG        => return "!";
-         when T_IN          => return "in";
-         when T_CASE        => return "case";
-         when T_ESAC        => return "esac";
-         when T_WHILE       => return "while";
-         when T_UNTIL       => return "until";
-         when T_FOR         => return "for";
-         when T_LBRACE      => return "{";
-         when T_RBRACE      => return "}";
-         when others        => return T'Img;
-      end case;
-   end Image;
-
    ----------------
    -- Unget_Char --
    ----------------
 
    procedure Unget_Char (B : in out Token_Buffer) is
    begin
-      Rewind (B.B);
+      Rewind (B.Content);
    end Unget_Char;
 
-end Sh.Lexer;
+end Sh.Tokens.Lexer;

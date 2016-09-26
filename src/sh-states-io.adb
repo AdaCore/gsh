@@ -159,7 +159,7 @@ package body Sh.States.IO is
       is
          Eval_Result : constant String := Resolve_Path
            (State,
-            Eval_String_Unsplit (State, Get_Token_String (A),
+            Eval_String_Unsplit (State, Tokens.As_String (A),
               Has_Command_Subst => Has_Command_Subst));
       begin
          if On_Windows and then Eval_Result = "/dev/null" then
@@ -194,19 +194,19 @@ package body Sh.States.IO is
             case C.Kind is
                when OPEN_READ =>
                   --  Handling of <
-                  Open_FD (FD   => C.Open_Target,
+                  Open_FD (FD   => C.Target_Fd,
                            Path => Resolve_Filename (C.Filename),
                            Mode => OS.FS.Read_Mode);
 
                when OPEN_WRITE =>
                   --  Handling of >
-                  Open_FD (FD   => C.Open_Target,
+                  Open_FD (FD   => C.Target_Fd,
                            Path => Resolve_Filename (C.Filename),
                            Mode => OS.FS.Write_Mode);
 
                when OPEN_APPEND =>
                   --  Handling of >>
-                  Open_FD (FD   => C.Open_Target,
+                  Open_FD (FD   => C.Target_Fd,
                            Path => Resolve_Filename (C.Filename),
                            Mode => OS.FS.Append_Mode);
 
@@ -215,7 +215,7 @@ package body Sh.States.IO is
                   declare
                      FD_Str : constant String :=
                        Eval_String_Unsplit
-                         (State, Get_Token_String (C.Source),
+                         (State, Tokens.As_String (C.Source),
                           Has_Command_Subst => Has_Command_Subst);
                      Source_FD : Integer := 0;
                      Is_Valid  : Boolean := False;
@@ -225,10 +225,10 @@ package body Sh.States.IO is
                      if Is_Valid and then
                        New_States (Source_FD).Fd /= OS.FS.Invalid_FD
                      then
-                        New_States (C.Dup_Target).Fd :=
+                        New_States (C.Target_Fd).Fd :=
                           OS.FS.Dup (New_States (Source_FD).Fd,
                                      Close_On_Exec => True);
-                        New_States (C.Dup_Target).Can_Be_Closed := True;
+                        New_States (C.Target_Fd).Can_Be_Closed := True;
                      else
                         Has_Errors := True;
                         exit;
@@ -245,10 +245,10 @@ package body Sh.States.IO is
                        (if C.Expand
                         then Eval_String_Unsplit
                           (State,
-                           Get_Token_String (C.Content),
+                           Tokens.As_String (C.Content),
                            IOHere => True,
                            Has_Command_Subst => Has_Command_Subst)
-                        else Get_Token_String (C.Content));
+                        else Tokens.As_String (C.Content));
                   begin
                      --  currently we are creating a temporary file on disk
                      --  it would be better to use shared memory here.
@@ -257,7 +257,7 @@ package body Sh.States.IO is
                        (Fd, Result_String'Address, Result_String'Length);
                      Close (Fd);
 
-                     Open_FD (FD              => C.Doc_Target,
+                     Open_FD (FD              => C.Target_Fd,
                               Path            => Name,
                               Mode            => OS.FS.Read_Mode,
                               Delete_On_Close => True);

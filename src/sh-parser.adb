@@ -27,6 +27,7 @@
 with Sh.List_Pools; use Sh.List_Pools;
 with Sh.Traces; use Sh.Traces;
 with Sh.Buffers; use Sh.Buffers;
+with Sh.Tokens; use Sh.Tokens;
 
 package body Sh.Parser is
 
@@ -40,18 +41,6 @@ package body Sh.Parser is
       LOOP_COND_CONTEXT,
       DO_GROUP_CONTEXT,
       BRACEGROUP_CONTEXT);
-
-   pragma Warnings (Off);
-   type IO_Here_Context is record
-      N         : Node_Id;
-      Marker    : Token;
-      Target_Fd : Integer;
-   end record;
-   pragma Warnings (On);
-
-   type IO_Here_Context_Array is array (1 .. 8) of IO_Here_Context;
-   Pending_IO_Heres      : IO_Here_Context_Array;
-   Pending_IO_Heres_Last : Natural := 0;
 
    function Parse
      (B           : in out Token_Buffer;
@@ -431,7 +420,7 @@ package body Sh.Parser is
    procedure Log_Parser (B : Token_Buffer; Msg : String)
    is
    begin
-      Log (LOG_PARSER, Msg & " (" &  Image (Current (B.B)) & ")");
+      Log (LOG_PARSER, Msg & " (" &  Image (Current (Get_Buffer (B))) & ")");
    end Log_Parser;
 
    -----------
@@ -554,7 +543,7 @@ package body Sh.Parser is
       Until_Token : Token_Type := T_NULL)
       return Shell_Tree
    is
-      T : Shell_Tree := New_Tree (B.B);
+      T : Shell_Tree := New_Tree (Get_Buffer (B));
       N : Node_Id := 0;
    begin
       N := Parse (B, T, Until_Token => Until_Token);
@@ -847,7 +836,7 @@ package body Sh.Parser is
       T : Shell_Tree;
    begin
       B := New_Buffer_From_File (Filename);
-      T := New_Tree (B.B);
+      T := New_Tree (Get_Buffer (B));
       N := Parse (B, T);
       --  XXX deallocate buffer and tree
       Set_Tree_Toplevel (T, N);
@@ -871,7 +860,7 @@ package body Sh.Parser is
       Default_Value_List : Boolean := False;
    begin
       pragma Debug (Log_Parser (B, "parse for group"));
-      pragma Assert (Get_Token_Type (Current) = T_FOR);
+      pragma Assert (Tokens.Kind (Current) = T_FOR);
 
       --  Get the loop variable name
       Variable_Name := Read_Word_Token (B);
@@ -1003,9 +992,11 @@ package body Sh.Parser is
 
             --  Add_Pending_IO_Here (N, Filename, Target_FD);
             --  Parse_Redirect_List (B, C, N);
-            Pending_IO_Heres_Last := Pending_IO_Heres_Last + 1;
-            Pending_IO_Heres (Pending_IO_Heres_Last) :=
-              (N, Filename, Target_FD);
+            Tree.Push_Pending_Here_Doc (T, N, Target_FD);
+
+            --  Pending_IO_Heres_Last := Pending_IO_Heres_Last + 1;
+            --  Pending_IO_Heres (Pending_IO_Heres_Last) :=
+            --   (N, Filename, Target_FD);
             --  Set_Node_Redirection
             --  (N, Target_FD, Read_IOHere (B, Filename), 0, IOHERE);
             --  After IOHere reading invalidate any cache
@@ -1029,7 +1020,7 @@ package body Sh.Parser is
       IO_Number : Integer := -1;
    begin
       if Lookahead (B) = T_IO_NUMBER then
-         IO_Number := Integer'Value (Get_Token_String (Read_Token (B)));
+         IO_Number := Integer'Value (Tokens.As_String (Read_Token (B)));
       end if;
 
       Parse_IO_File (B, T, C, N, IO_Number);
@@ -1047,23 +1038,32 @@ package body Sh.Parser is
       pragma Unreferenced (C);
    begin
       if Lookahead (B) = T_NEWLINE then
-         for Index in 1 .. Pending_IO_Heres_Last loop
+         Skip_Token (B);
+         while Has_Pending_Here_Doc (T) loop
             declare
-               Eval : Boolean;
-               IOHere_Token : constant Token :=
-                 Read_IOHere (B, Pending_IO_Heres (Index).Marker, Eval);
+               IOHere_Token : constant Token := Read_Token (B);
+               Target_Node  : Node_Id;
+               Target_Fd    : Integer;
             begin
+               if not (Tokens.Kind (IOHere_Token) in
+                         T_HERE_DOC .. T_HERE_DOC_PLAIN)
+               then
+                  raise Program_Error;
+               end if;
+               Pop_Pending_Here_Doc (T, Target_Node, Target_Fd);
+
                Set_Node_Redirection
                  (T,
-                  Pending_IO_Heres (Index).N,
+                  Target_Node,
                   (IOHERE,
-                   Pending_IO_Heres (Index).Target_Fd,
+                   Target_Fd,
                    IOHere_Token,
-                   Eval));
-               B.Valid_Cache := False;
+                   Tokens.Kind (IOHere_Token) = T_HERE_DOC));
+               --  B.Valid_Cache := False;
             end;
+            --  ??? check that this is a newline
+            Skip_Token (B);
          end loop;
-         Pending_IO_Heres_Last := 0;
       end if;
 
       while Lookahead (B) =  T_NEWLINE loop
@@ -1082,22 +1082,13 @@ package body Sh.Parser is
       Until_Token : Token_Type := T_NULL)
       return Node_Id
    is
-      --  use Node_Id_Tables;
-
-      --  Childs      : Instance;
-      --  Child_Index : Integer := 1;
       Current     : Node_Id := Null_Node;
       Prev        : Node_Id := Null_Node;
       Result      : Node_Id;
    begin
-      --  Init (Childs);
-
       Current := Parse_And_Or (B, Tree, Context, Until_Token => Until_Token);
       Prev := Current;
       Result := Current;
-
-      --  Set_Item (Childs, Child_Index, Current);
-      --  Child_Index := Child_Index + 1;
 
       loop
          case Lookahead (B) is
@@ -1114,8 +1105,6 @@ package body Sh.Parser is
 
                Set_Node_Continuation (Tree, Prev, Current, Current);
                Prev := Current;
-               --  Set_Item (Childs, Child_Index, Current);
-               --  Child_Index := Child_Index + 1;
                pragma Assert (Current /= Null_Node);
             when T_EOF =>
                exit;
@@ -1134,14 +1123,6 @@ package body Sh.Parser is
          end case;
       end loop;
 
-      --  if Last (Childs) = 1 then
-      --           Result := Childs.Table (1);
-      --        else
-      --           Result := Add_List_Node
-      --             (Tree, Node_Id_Array (Childs.Table (1 .. Last (Childs))));
-      --        end if;
-      --
-      --        Free (Childs);
       return Result;
 
    end Parse_List;
@@ -1222,21 +1203,6 @@ package body Sh.Parser is
 
       Free (Childs);
       return Result;
-
---        --  Left := Parse_Command (B, T, C);
---        case Lookahead (B) is
---           when T_PIPE =>
---              Skip_Token (B);
---              Parse_Linebreak (B, T, C);
---              Right := Parse_Pipe_Sequence (B, T, C, False);
---              return Add_Pipe_Node (T, Left, Right, Pipe_Negation);
---           when others =>
---              if Pipe_Negation then
---                 return Add_Pipe_Node (T, Left, 0, Pipe_Negation);
---              else
---                 return Left;
---              end if;
---        end case;
    end Parse_Pipe_Sequence;
 
    --------------------
@@ -1381,7 +1347,7 @@ package body Sh.Parser is
             Parse_Linebreak (B, T, C);
             declare
                Function_Tree : Shell_Tree := New_Tree
-                 (B.B, Protect => True, Allow_Return => True);
+                 (Get_Buffer (B), Protect => True, Allow_Return => True);
                N : constant Node_Id := Parse_Compound_Command
                  (B, Function_Tree, C);
             begin
@@ -1428,7 +1394,7 @@ package body Sh.Parser is
       N : Node_Id := 0;
    begin
       B := New_Buffer (S);
-      T := New_Tree (B.B);
+      T := New_Tree (Get_Buffer (B));
       N := Parse (B, T);
       Set_Tree_Toplevel (T, N);
       return T;
@@ -1465,21 +1431,13 @@ package body Sh.Parser is
       C : Parser_Context)
       return Node_Id
    is
-      --  use Node_Id_Tables;
-      --  Childs : Instance;
-      --  Child_Index : Integer := 1;
       Current : Node_Id := Null_Node;
       Prev    : Node_Id := Null_Node;
       Result  : Node_Id;
    begin
-      --  Init (Childs);
-
       Current := Parse_And_Or (B, T, C);
       Result := Current;
       Prev := Current;
-
-      --  Set_Item (Childs, Child_Index, Current);
-      --  Child_Index := Child_Index + 1;
 
       loop
          case Lookahead (B) is
@@ -1491,23 +1449,12 @@ package body Sh.Parser is
                end if;
                Set_Node_Continuation (T, Prev, Current, Current);
                Prev := Current;
-               --  Set_Item (Childs, Child_Index, Current);
-               --  Child_Index := Child_Index + 1;
             when others =>
                exit;
          end case;
       end loop;
 
-      --        if Last (Childs) = 1 then
-      --           Result := Childs.Table (1);
-      --        else
-      --           Result := Add_List_Node
-      --             (T, Node_Id_Array (Childs.Table (1 .. Last (Childs))));
-      --        end if;
-      --
-      --        Free (Childs);
       return Result;
-
    end Parse_Term;
 
    ------------------------

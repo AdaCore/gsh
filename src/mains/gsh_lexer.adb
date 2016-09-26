@@ -24,7 +24,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Sh.Lexer; use Sh.Lexer;
+with Sh.Tokens.Lexer; use Sh.Tokens.Lexer;
+with Sh.Tokens; use Sh.Tokens;
 with Ada.Command_Line; use Ada.Command_Line;
 with Sh; use Sh;
 with Sh.Traces;
@@ -43,7 +44,7 @@ begin
 
    loop
       T := Read_Token (Script_Buffer);
-      exit when Get_Token_Type (T) = T_EOF;
+      exit when Kind (T) = T_EOF;
    end loop;
    return Status;
 end GSH_Lexer;
