@@ -151,6 +151,9 @@ package OS.FS is
       Close_On_Exec : Boolean);
    --  Mark a file to be closed on execution or not
    --
+   --  Note that if FD correspond to a terminal or is an invalid file
+   --  then erros are ignored.
+   --
    --  @param FD The file for which the status should be changed
    --  @param Close_On_Exec if True file will not inherited by child processes
    --      otherwise it will

@@ -444,12 +444,18 @@ package body OS.FS is
 
       Status : Integer;
    begin
+      --  Do nothing if FD is invalid
+      if FD < 0 then
+         return;
+      end if;
+
       Status := C_Set_Close_On_Exec (FD, Boolean'Pos (Close_On_Exec));
       if Status /= 0 then
          --  On Windows at least we cannot set close_on_exec on console file
          --  file descriptor. So in that case ignore the error.
          if not Is_Console (FD) then
-            raise OS_Error with "cannot set close_on_exec flag";
+            raise OS_Error
+              with "cannot set close_on_exec flag on " & FD'Img;
          end if;
       end if;
    end Set_Close_On_Exec;
