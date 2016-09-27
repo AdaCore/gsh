@@ -39,6 +39,8 @@ with Sh.Traces;            use Sh.Traces;
 with Sh.Tree.Evals;        use Sh.Tree.Evals;
 with Sh.States.IO;         use Sh.States.IO;
 with Sh.Re;
+with OS.FS.Dir;
+with OS.FS.Stat;
 
 package body Sh.Subst is
 
@@ -1432,7 +1434,6 @@ package body Sh.Subst is
       end Result;
 
    begin
-
       --  Detect pattern presence
       for I in D'Range loop
          case D (I) is
@@ -1574,21 +1575,19 @@ package body Sh.Subst is
       Result  : Dyn_String_List;
       --  Dynamic String that will contains the result of expansion
 
-      S       : Search_Type;
-      D_Entry : Directory_Entry_Type;
-
+      D       : OS.FS.Dir.Dir_Handle;
+      D_Entry : OS.FS.Dir.Dir_Entry;
       Prefix  : String_Access := new String'("");
    begin
-
       --  Initiate seach. Return a null string_list in case the pattern is not
       --  valid
       begin
          if Dir = "" then
             Prefix := new String'("");
-            Start_Search (S, Resolve_Path (SS, "."), Pattern);
+            D := OS.FS.Dir.Open (Normalize_Path (SS, "."));
          else
             Prefix := new String'(Format_Pathname (Dir, UNIX));
-            Start_Search (S, Resolve_Path (SS, Dir), Pattern);
+            D := OS.FS.Dir.Open (Normalize_Path (SS, Dir));
          end if;
       exception
          when Name_Error =>
@@ -1596,18 +1595,26 @@ package body Sh.Subst is
             return Null_String_List;
       end;
 
-      while More_Entries (S) loop
-         Get_Next_Entry (S, D_Entry);
+      loop
+         D_Entry := OS.FS.Dir.Read (D);
+         exit when OS.FS.Dir.Is_Null (D_Entry);
+         --  Get_Next_Entry (S, D_Entry);
          declare
-            Item : constant String := Simple_Name (D_Entry);
+            Item : constant String := OS.FS.Dir.Name (D_Entry);
          begin
-            if Item (Item'First) /= '.' and then
-              (not Only_Dirs or else Kind (D_Entry) = Directory)
-            then
-               if Only_Dirs then
-                  Append (Result, Prefix.all & Item & "/");
-               else
-                  Append (Result, Prefix.all & Item);
+
+            if Sh.Re.Match (Item, Pattern) then
+               if Item (Item'First) /= '.' and then
+                 (not Only_Dirs or else
+                  OS.FS.Stat.Is_Directory
+                    (OS.FS.Dir.File_Information (D_Entry)))
+               then
+
+                  if Only_Dirs then
+                     Append (Result, Prefix.all & Item & "/");
+                  else
+                     Append (Result, Prefix.all & Item);
+                  end if;
                end if;
             end if;
          end;
