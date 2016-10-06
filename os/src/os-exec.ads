@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2015, AdaCore                   --
+--                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -35,13 +35,22 @@ package OS.Exec is
    --  different type of object depending on the system. On Unix system it will
    --  be usually a process id and on Windows system a handle.
 
+   type Priority_Class is
+     (INHERIT,
+      IDLE,
+      BELOW_NORMAL,
+      NORMAL,
+      ABOVE_NORMAL,
+      HIGH);
+
    function Non_Blocking_Spawn
      (Args      : Argument_List;
       Cwd       : String                := "";
       Env       : Argument_List         := Null_Argument_List;
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
       Stdout_Fd : OS.FS.File_Descriptor := OS.FS.Standout;
-      Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr)
+      Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr;
+      Priority  : Priority_Class        := INHERIT)
       return Handle;
    --  Launch a process in background.
    --
@@ -56,6 +65,8 @@ package OS.Exec is
    --  @param Stdin_Fd Standard input of the spawned process
    --  @param Stdout_Fd likewise for standard output
    --  @param Stderr_Fd likewise for standard error
+   --  @param Priority
+   --      set process priority. If INHERIT then use current process priority.
    --  @return a handle to the spawned process
 
    function Blocking_Spawn
@@ -64,7 +75,8 @@ package OS.Exec is
       Env       : Argument_List         := Null_Argument_List;
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
       Stdout_Fd : OS.FS.File_Descriptor := OS.FS.Standout;
-      Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr)
+      Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr;
+      Priority  : Priority_Class        := INHERIT)
       return Integer;
    --  Launch a process and return its exit status code.
    --
@@ -78,6 +90,7 @@ package OS.Exec is
       Env             : Argument_List         := Null_Argument_List;
       Stdin_Fd        : OS.FS.File_Descriptor := OS.FS.Standin;
       Stderr_Fd       : OS.FS.File_Descriptor := OS.FS.Standerr;
+      Priority        : Priority_Class        := INHERIT;
       Status          : out Integer)
       return Ada.Strings.Unbounded.Unbounded_String;
    --  Launch a process and return output and exit code

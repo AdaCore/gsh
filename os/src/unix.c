@@ -83,12 +83,14 @@ __gsh_set_close_on_exec (int fd,
 
 void *
 __gsh_no_block_spawn (char *args[], char *cwd, char *env[],
-		      int pstdin, int pstdout, int pstderr)
+		      int pstdin, int pstdout, int pstderr,
+                      int priority)
 {
   pid_t pid;
   char path[4097];
   char **cursor;
   int result;
+  int unix_priority;
 
   char *new_args[4097];
   int index = 0;
@@ -123,6 +125,26 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[],
   getcwd(path, 4097);
   chdir(cwd);
   result = posix_spawn(&pid, args[0], &actions, NULL, args, env);
+  if (result == 0) {
+    if (priority == P_IDLE) {
+      unix_priority = 19;
+    } else if (priority == P_BELOW_NORMAL) {
+      unix_priority = 10;
+    } else if (priority == P_NORMAL) {
+      unix_priority = 0;
+    } else if (priority == P_ABOVE_NORMAL) {
+      unix_priority = -10;
+    } else if (priority == P_HIGH) {
+      unix_priority = -20;
+    } else {
+      unix_priority = 20;
+    }
+
+    if (unix_priority != 20) {
+      setpriority(PRIO_PROCESS, pid, unix_priority);
+    }
+
+  }
   chdir(path);
   return (void *) (long) pid;
 }

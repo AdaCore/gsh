@@ -4,7 +4,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *                      Copyright (C) 2011-2015, AdaCore                    *
+ *                      Copyright (C) 2011-2016, AdaCore                    *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -44,3 +44,10 @@ struct gsh_dir_entry {
 #define READ_MODE  0
 #define WRITE_MODE  1
 #define APPEND_MODE 2
+
+#define P_INHERIT 0
+#define P_IDLE 1
+#define P_BELOW_NORMAL 2
+#define P_NORMAL 3
+#define P_ABOVE_NORMAL 4
+#define P_HIGH 5

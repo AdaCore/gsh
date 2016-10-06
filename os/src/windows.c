@@ -194,7 +194,8 @@ __gsh_is_console (int fd)
 
 HANDLE
 __gsh_no_block_spawn (char *args[], char *cwd, char *env[],
-		      int pstdin, int pstdout, int pstderr)
+		      int pstdin, int pstdout, int pstderr,
+                      int priority)
 {
   BOOL result;
   STARTUPINFO SI;
@@ -202,6 +203,7 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[],
   SECURITY_ATTRIBUTES SA;
   TCHAR *wcommand;
   TCHAR *wcwd = NULL;
+  DWORD windows_priority;
   void *block_env = NULL;
 
   /* Startup info. */
@@ -236,9 +238,26 @@ __gsh_no_block_spawn (char *args[], char *cwd, char *env[],
       S2WSC (wcwd, cwd, strlen (cwd) * 2 + 2);
     }
 
+  /* Compute priority */
+  if (priority == P_IDLE) {
+    windows_priority = IDLE_PRIORITY_CLASS;
+  } else if (priority == P_BELOW_NORMAL) {
+    windows_priority = BELOW_NORMAL_PRIORITY_CLASS;
+  } else if (priority == P_NORMAL) {
+    windows_priority = NORMAL_PRIORITY_CLASS;
+  } else if (priority == P_ABOVE_NORMAL) {
+    windows_priority = ABOVE_NORMAL_PRIORITY_CLASS;
+  } else if (priority == P_HIGH) {
+    windows_priority = HIGH_PRIORITY_CLASS;
+  } else {
+    /* We expect 0. Set also priority to current process priority in case of
+       invalid value.  */
+    windows_priority = GetPriorityClass (GetCurrentProcess ());
+  }
+
   result = CreateProcess
       (NULL, wcommand, &SA, NULL, TRUE,
-       GetPriorityClass (GetCurrentProcess()), block_env, wcwd, &SI, &PI);
+       windows_priority, block_env, wcwd, &SI, &PI);
 
   free (block_env);
   free (wcommand);

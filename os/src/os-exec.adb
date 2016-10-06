@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2015, AdaCore                   --
+--                       Copyright (C) 2010-2016, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -31,12 +31,13 @@ package body OS.Exec is
       Norm_Args : in out Argument_List);
 
    function Portable_Execvp
-     (Args   : System.Address;
-      Cwd    : System.Address;
-      Env    : System.Address;
-      Stdin  : OS.FS.File_Descriptor;
-      Stdout : OS.FS.File_Descriptor;
-      Stderr : OS.FS.File_Descriptor)
+     (Args     : System.Address;
+      Cwd      : System.Address;
+      Env      : System.Address;
+      Stdin    : OS.FS.File_Descriptor;
+      Stdout   : OS.FS.File_Descriptor;
+      Stderr   : OS.FS.File_Descriptor;
+      Priority : Priority_Class)
       return Handle;
    pragma Import (C, Portable_Execvp, "__gsh_no_block_spawn");
 
@@ -50,6 +51,7 @@ package body OS.Exec is
       Env             : Argument_List         := Null_Argument_List;
       Stdin_Fd        : OS.FS.File_Descriptor := OS.FS.Standin;
       Stderr_Fd       : OS.FS.File_Descriptor := OS.FS.Standerr;
+      Priority        : Priority_Class        := INHERIT;
       Status          : out Integer)
       return Ada.Strings.Unbounded.Unbounded_String
    is
@@ -70,7 +72,7 @@ package body OS.Exec is
       end if;
 
       Pid := Non_Blocking_Spawn
-        (Args, Cwd, Env, Stdin_Fd, Pipe_Output, Real_Stderr_Fd);
+        (Args, Cwd, Env, Stdin_Fd, Pipe_Output, Real_Stderr_Fd, Priority);
       Close (Pipe_Output);
       loop
          N := Read (Pipe_Input, Buffer);
@@ -94,14 +96,15 @@ package body OS.Exec is
       Env       : Argument_List         := Null_Argument_List;
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
       Stdout_Fd : OS.FS.File_Descriptor := OS.FS.Standout;
-      Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr)
+      Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr;
+      Priority  : Priority_Class        := INHERIT)
       return Integer
    is
       Pid    : Handle;
       Result : Integer;
    begin
       Pid := Non_Blocking_Spawn
-        (Args, Cwd, Env, Stdin_Fd, Stdout_Fd, Stderr_Fd);
+        (Args, Cwd, Env, Stdin_Fd, Stdout_Fd, Stderr_Fd, Priority);
       Result := Wait (Pid);
       return Result;
    end Blocking_Spawn;
@@ -116,7 +119,8 @@ package body OS.Exec is
       Env       : Argument_List         := Null_Argument_List;
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
       Stdout_Fd : OS.FS.File_Descriptor := OS.FS.Standout;
-      Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr)
+      Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr;
+      Priority  : Priority_Class        := INHERIT)
       return Handle
    is
       Result     : Handle;
@@ -167,7 +171,7 @@ package body OS.Exec is
 
       Result := Portable_Execvp
         (C_Arg_List'Address, C_Cwd_Addr, C_Env_Addr,
-         Stdin_Fd, Stdout_Fd, Stderr_Fd);
+         Stdin_Fd, Stdout_Fd, Stderr_Fd, Priority);
       for K in Arg_List'Range loop
          Free (Arg_List (K));
       end loop;
