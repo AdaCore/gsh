@@ -197,4 +197,22 @@ package OS.FS is
    --  then the operation fails if the target file exists, otherwise the file
    --  is replaced. If Preserve_Attributes is True then attributes are
    --  preserved.
+
+   function Move_File
+     (Source : String;
+      Target : String;
+      Force  : Boolean)
+      return Integer;
+   --  Move file Source to Target
+   --
+   --  @param Source source path
+   --  @param Target target path
+   --  @param Force if True and Target file exists then overwritte Target
+
+   function Join
+     (Left  : String;
+      Right : String)
+      return String;
+   pragma Inline (Join);
+
 end OS.FS;

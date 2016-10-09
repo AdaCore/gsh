@@ -39,6 +39,7 @@ with Sh.Builtins.Expr;         use Sh.Builtins.Expr;
 with Sh.Builtins.Head;         use Sh.Builtins.Head;
 with Sh.Builtins.Limit;        use Sh.Builtins.Limit;
 with Sh.Builtins.Mkdir;        use Sh.Builtins.Mkdir;
+with Sh.Builtins.Mv;           use Sh.Builtins.Mv;
 with Sh.Builtins.Printf;       use Sh.Builtins.Printf;
 with Sh.Builtins.Pwd;          use Sh.Builtins.Pwd;
 with Sh.Builtins.Rm;           use Sh.Builtins.Rm;
@@ -451,6 +452,8 @@ package body Sh.Builtins is
          when 'm' =>
             if L = 5 and then Name = "mkdir" then
                return Mkdir_Builtin'Access;
+            elsif L = 2 and then Name = "mv" then
+               return Mv_Builtin'Access;
             end if;
 
          when 'p' =>

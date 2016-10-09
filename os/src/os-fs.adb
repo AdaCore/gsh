@@ -234,6 +234,54 @@ package body OS.FS is
       end if;
    end Is_Null_File;
 
+   ----------
+   -- Join --
+   ----------
+
+   function Join
+     (Left  : String;
+      Right : String)
+      return String
+   is
+   begin
+      return Left & GNAT.Directory_Operations.Dir_Separator & Right;
+   end Join;
+
+   ---------------
+   -- Move_File --
+   ---------------
+
+   function Move_File
+     (Source : String;
+      Target : String;
+      Force  : Boolean)
+      return Integer
+   is
+      pragma Warnings (Off);
+      function Internal
+        (Source    : chars_ptr;
+         Target    : chars_ptr;
+         Overwrite : Boolean)
+         return unsigned_long;
+      pragma Import (C, Internal, "__gsh_mv");
+      pragma Warnings (On);
+      Source_Ptr : chars_ptr := New_String (Source);
+      Target_Ptr : chars_ptr := New_String (Target);
+      Result     : unsigned_long;
+
+   begin
+      Result := Internal (Source_Ptr,
+                          Target_Ptr,
+                          Force);
+      Free (Source_Ptr);
+      Free (Target_Ptr);
+      if Result = 0 then
+         return 0;
+      else
+         return 1;
+      end if;
+   end Move_File;
+
    ---------------
    -- Null_File --
    ---------------
