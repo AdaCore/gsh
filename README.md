@@ -20,6 +20,8 @@ This allows better compiling performance (the build times can be up to 3 or
 
 ![XKCD on shell escaping](http://imgs.xkcd.com/comics/backslashes.png "Understanding shell escaping!")
 
+Image from [XKCD](www.xkcd.com)
+
 Build & Installation
 --------------------
 
