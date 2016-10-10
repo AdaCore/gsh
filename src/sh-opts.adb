@@ -107,6 +107,10 @@ package body Sh.Opts is
                Is_Login_Shell := True;
             elsif Arg = "-s" then
                Read_From_Stdin := True;
+            elsif Arg = "--norc" then
+               --  Currently gsh does not have any rc files. So --norc is
+               --  a nohup.
+               null;
             elsif Arg = "--" then
                exit;
             else --  Unknown switch
