@@ -731,22 +731,29 @@ package body Sh.Tree.Evals is
       if Loop_Var_Values'Length > 0 then
          Set_Loop_Scope_Level (S, My_Nested_Level);
          for I in Loop_Var_Values'Range loop
-               Set_Var_Value (S, Loop_Var, Loop_Var_Values (I).all);
-               Result := Eval (S, T, N.Loop_Code);
-               if Result.Kind = RESULT_CONTINUE then
-                  if Result.Level = My_Nested_Level then
-                     Result := (RESULT_STD, Get_Last_Exit_Status (S));
-                  else
-                     exit;
-                  end if;
-               end if;
-
-               if Result.Kind = RESULT_BREAK then
-                  if Result.Level = My_Nested_Level then
-                     Result := (RESULT_STD, Get_Last_Exit_Status (S));
-                  end if;
+            Set_Var_Value (S, Loop_Var, Loop_Var_Values (I).all);
+            Result := Eval (S, T, N.Loop_Code);
+            if Result.Kind = RESULT_CONTINUE then
+               if Result.Level = My_Nested_Level then
+                  Result := (RESULT_STD, Get_Last_Exit_Status (S));
+               else
                   exit;
                end if;
+            end if;
+
+            if Result.Kind = RESULT_BREAK then
+               if Result.Level = My_Nested_Level then
+                  Result := (RESULT_STD, Get_Last_Exit_Status (S));
+               end if;
+               exit;
+            end if;
+
+            if Result.Kind = RESULT_RETURN or else
+              Result.Kind = RESULT_EXIT
+            then
+               exit;
+            end if;
+
          end loop;
 
          for Index in Loop_Var_Values'Range loop
