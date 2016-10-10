@@ -32,6 +32,27 @@ Alternatively to just compile the `gsh` binary you can do:
 
     $ gprbuild -p -P posix_shell
 
+Example of Usage
+----------------
+
+Currently the main goal of the project is to speed up builds of
+[GNU](https://www.gnu.org) projects on Windows platform. As the project is
+still not complete you still need a [Cygwin](http://www.cygwin.com)
+installation for the tools not provided by GSH. The only requirement is that
+the build should be done in a path for which Cygwin path maps directly to
+a Windows path. For example if you do your build in c:/MyBuilds then in Cygwin
+the path should map to /MyBuilds.
+
+An example of build sequence that does not destroy your current Cygwin
+environment:
+
+    $ (export PATH=$GSH_INSTALL_DIR/bin:$PATH;
+       export SHELL=$GSH_INSTALL_DIR/bin/gsh; 
+       export CONFIG_SHELL=$GSH_INSTALL_DIR/bin/gsh;
+       $CONFIG_SHELL/configure --prefix=/myinstall_dir
+       make)
+ 
+
 License
 -------
 
