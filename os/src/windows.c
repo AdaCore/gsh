@@ -42,6 +42,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include "gsh.h"
+#include "windows-kernel.h"
 
 #define S2WSC(wstr,str,len) \
    MultiByteToWideChar (CP_UTF8, 0, str, -1, wstr, len)
@@ -50,6 +51,11 @@ static DWORD windows_bid = 0;
 
 static const DWORD WINDOWS_XP_BID = 2600;
 
+struct gsh_dir_entry
+__gsh_next_entry (void *handle)
+{
+  return __gsh_kernel_next_entry (handle);
+}
 
 long
 __gsh_getpid (void)
@@ -299,7 +305,7 @@ __gsh_open_directory (char *path)
   name.MaximumLength = name.Length;
   name.Buffer = wname2;
 
-   result = __gsh_u_open_directory (name, &handle);
+   result = __gsh_kernel_open_directory (name, &handle);
    if (NT_SUCCESS(result))
       return handle;
 
@@ -390,15 +396,6 @@ __gsh_close_directory (void *handle)
   CloseHandle ((HANDLE) handle);
 }
 
-
-typedef struct {
-   NTSTATUS last_error_code;
-   ULONG    debug;
-} UNLINK_RESULT;
-
-extern UNLINK_RESULT
-safe_unlink (UNICODE_STRING name);
-
 unsigned long
 __gsh_unlink (char *path)
 {
@@ -419,11 +416,51 @@ __gsh_unlink (char *path)
   name.MaximumLength = name.Length;
   name.Buffer = wname2;
 
-   result = safe_unlink(name);
+   result = __gsh_kernel_safe_unlink(name);
    if (NT_SUCCESS(result.last_error_code))
       return 0;
 
    return result.last_error_code;
+}
+
+unsigned long
+__gsh_mv (char *source,
+	  char *target,
+          char overwrite)
+{
+  const unsigned int slen = strlen(source);
+  const unsigned int tlen = strlen(target);
+  WCHAR wsource[slen + 1];
+  WCHAR wsource2[slen + 1 + 4];
+  WCHAR wtarget[tlen + 1];
+  WCHAR wtarget2[tlen + 1 + 4];
+  UNICODE_STRING u_source;
+  UNICODE_STRING u_target;
+  NTSTATUS result;
+
+  /* create source and target filenames in UNICODE format).  */
+  S2WSC (wsource, source, slen + 1);
+  S2WSC (wtarget, target, tlen + 1);
+
+
+  _tcscpy (wsource2, L"\\??\\");
+  _tcscpy (wtarget2, L"\\??\\");
+  _tcscat (wsource2, wsource);
+  _tcscat (wtarget2, wtarget);
+
+  u_source.Length = (slen + 4) * sizeof (WCHAR);
+  u_source.MaximumLength = u_source.Length;
+  u_source.Buffer = wsource2;
+
+  u_target.Length = (tlen + 4) * sizeof (WCHAR);
+  u_target.MaximumLength = u_target.Length;
+  u_target.Buffer = wtarget2;
+
+  result = __gsh_kernel_move (u_source, u_target, overwrite);
+  if NT_SUCCESS(result) {
+    return 0;
+  }
+  return result;
 }
 
 unsigned long

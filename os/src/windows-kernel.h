@@ -19,38 +19,24 @@
  *                                                                          *
  ****************************************************************************/
 
-struct gsh_file_attributes {
-  int error;
+#include<windows.h>
+#include<subauth.h>
 
-  unsigned char exists;
+NTSTATUS
+__gsh_kernel_open_directory (UNICODE_STRING name, HANDLE *handle);
 
-  unsigned char writable;
-  unsigned char readable;
-  unsigned char executable;
+NTSTATUS
+__gsh_kernel_move (UNICODE_STRING u_source,
+		   UNICODE_STRING u_target,
+		   char overwrite);
 
-  unsigned char symbolic_link;
-  unsigned char regular;
-  unsigned char directory;
+struct gsh_dir_entry
+__gsh_kernel_next_entry (void *handle);
 
-  long long stamp;
-  long long length;
-};
+typedef struct {
+   NTSTATUS last_error_code;
+   ULONG    debug;
+} UNLINK_RESULT;
 
-struct gsh_dir_entry {
-  struct gsh_file_attributes fi;
-  char name[512];
-};
-
-#define READ_MODE  0
-#define WRITE_MODE  1
-#define APPEND_MODE 2
-
-#define P_INHERIT 0
-#define P_IDLE 1
-#define P_BELOW_NORMAL 2
-#define P_NORMAL 3
-#define P_ABOVE_NORMAL 4
-#define P_HIGH 5
-
-void *
-__gsh_open_directory (char *path);
+UNLINK_RESULT
+__gsh_kernel_safe_unlink (UNICODE_STRING name);

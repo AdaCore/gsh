@@ -65,6 +65,9 @@ __declspec(dllimport) int WINAPI WideCharToMultiByte
 
 #endif /* _W64 */
 
+NTSTATUS NTAPI NtQueryAttributesFile (POBJECT_ATTRIBUTES,
+				      PFILE_BASIC_INFORMATION);
+
 #include "stdio.h"
 
 WCHAR digit_image[] = L"0123456789ABCDEF";
@@ -79,10 +82,12 @@ WCHAR trash_dir[] = L"tmp\\trash\\";
 #define MAX_UPATH 32767
 #define MAX_WPATH MAX_UPATH - 4
 
+/* Define empty unicode string.  */
 UNICODE_STRING Empty_Unicode_String = {Length:        0,
 				       MaximumLength: 1,
 				       Buffer:        L"" };
 
+/* Macro to ease declaration of UNICODE_STRING that represent a path. */
 #define UNICODE_PATH(name) \
     UNICODE_STRING name; \
     WCHAR name ## _buffer[MAX_UPATH]; \
@@ -91,7 +96,21 @@ UNICODE_STRING Empty_Unicode_String = {Length:        0,
     name.Buffer = name ## _buffer; \
     memcpy(name.Buffer, L"\\??\\", 5 * sizeof(WCHAR))
 
-void
+/* Append to an unicode path str. */
+static void
+upath_append (UNICODE_STRING* upath, WCHAR *str);
+
+/* Convert UNICODE_STRING path into WCHAR string. Leading \??\ is removed. */
+static WCHAR *
+upath2wpath (UNICODE_STRING upath);
+
+static NTSTATUS
+__gsh_kernel_move_away(HANDLE h, UNICODE_STRING filename);
+
+static NTSTATUS
+__gsh_kernel_is_dir_empty (HANDLE h);
+
+static void
 upath_append (UNICODE_STRING* upath, WCHAR *str)
 {
   memcpy (upath->Buffer + upath->Length / sizeof (WCHAR),
@@ -100,19 +119,42 @@ upath_append (UNICODE_STRING* upath, WCHAR *str)
   upath->Length = upath->Length + wcslen (str) * sizeof (WCHAR);
 }
 
-WCHAR *
+static WCHAR *
 upath2wpath (UNICODE_STRING upath)
 {
   /* return unicode string buffer without initial \??\ */
   return upath.Buffer + 4;
 }
 
-NTSTATUS NTAPI NtQueryAttributesFile (POBJECT_ATTRIBUTES,
-				      PFILE_BASIC_INFORMATION);
-
 /* Move file with handle h to dest */
 static NTSTATUS
-move (HANDLE h, UNICODE_STRING dest)
+__gsh_kernel_move_handler (HANDLE h, UNICODE_STRING dest);
+
+NTSTATUS
+__gsh_kernel_move (UNICODE_STRING u_source,
+		   UNICODE_STRING u_target,
+		   char overwrite)
+{
+  HANDLE handle;
+  ACCESS_MASK access = DELETE;
+  IO_STATUS_BLOCK io;
+  OBJECT_ATTRIBUTES attr;
+  NTSTATUS status;
+
+  InitializeObjectAttributes (&attr, &u_source,
+			       OBJ_CASE_INSENSITIVE, NULL, NULL);
+
+  status = NtOpenFile (&handle, access, &attr, &io, 0, 0);
+  if (!NT_SUCCESS (status)) {
+    return status;
+  }
+  status = __gsh_kernel_move_handler (handle, u_target);
+  NtClose(handle);
+  return status;
+}
+
+static NTSTATUS
+__gsh_kernel_move_handler (HANDLE h, UNICODE_STRING dest)
 {
   PFILE_RENAME_INFORMATION mv_info;
   ULONG mv_info_size;
@@ -143,7 +185,7 @@ move (HANDLE h, UNICODE_STRING dest)
  * When the last entry is reached an entry with an empty filename is returned.
  */
 struct gsh_dir_entry
-__gsh_next_entry (void *handle)
+__gsh_kernel_next_entry (void *handle)
 {
   struct gsh_dir_entry result;
   NTSTATUS status;
@@ -234,7 +276,7 @@ __gsh_next_entry (void *handle)
  * filesystems the fileid is unique thus there cannot be any conflict
  */
 static NTSTATUS
-move_away(HANDLE h, UNICODE_STRING filename)
+__gsh_kernel_move_away(HANDLE h, UNICODE_STRING filename)
 {
   IO_STATUS_BLOCK io;
   FILE_INTERNAL_INFORMATION file_info;
@@ -270,7 +312,7 @@ move_away(HANDLE h, UNICODE_STRING filename)
   dest.Buffer[dest.Length / sizeof(WCHAR)] = L'\0';
 
   /* Move the file.  */
-  return move (h, dest);
+  return __gsh_kernel_move_handler (h, dest);
 }
 
 
@@ -279,7 +321,7 @@ move_away(HANDLE h, UNICODE_STRING filename)
  * If this is the case the function return NT_SUCCESS, any other status
  * otherwise.  */
 static NTSTATUS
-is_dir_empty (HANDLE h)
+__gsh_kernel_is_dir_empty (HANDLE h)
 {
   IO_STATUS_BLOCK io;
   #define FNI FILE_NAMES_INFORMATION
@@ -373,7 +415,7 @@ typedef struct {
 } UNLINK_RESULT;
 
 NTSTATUS
-__gsh_u_open_directory (UNICODE_STRING name, HANDLE *handle)
+__gsh_kernel_open_directory (UNICODE_STRING name, HANDLE *handle)
 {
   OBJECT_ATTRIBUTES attr;
   IO_STATUS_BLOCK io;
@@ -390,7 +432,7 @@ __gsh_u_open_directory (UNICODE_STRING name, HANDLE *handle)
 }
 
 UNLINK_RESULT
-safe_unlink (UNICODE_STRING name)
+__gsh_kernel_safe_unlink (UNICODE_STRING name)
 {
 
    UNLINK_RESULT result = { 0, 0 };
@@ -494,12 +536,12 @@ safe_unlink (UNICODE_STRING name)
 
        /* is the directory empty ? */
        if (is_dir)
-         status = is_dir_empty(handle);
+         status = __gsh_kernel_is_dir_empty(handle);
 
        /* We need to move the file away */
        if (NT_SUCCESS(status))
          {
-           status = move_away(handle, name);
+           status = __gsh_kernel_move_away(handle, name);
            if (NT_SUCCESS(status)) has_been_moved_away = TRUE;
          }
      }
@@ -525,18 +567,21 @@ safe_unlink (UNICODE_STRING name)
 
           /* Decide if we need to retry or not ... */
           if (status == STATUS_DIRECTORY_NOT_EMPTY)
-             {
-               if (!dir_empty) dir_empty = NT_SUCCESS (is_dir_empty(handle));
+	  {
+	    if (!dir_empty)
+	      {
+		dir_empty = NT_SUCCESS (__gsh_kernel_is_dir_empty(handle));
+	      }
                /* if there are still objects in the directory just stop */
-               if (!dir_empty) try_again = FALSE;
-             }
+	    if (!dir_empty) try_again = FALSE;
+	  }
           else if (status == STATUS_CANNOT_DELETE)
              {
 
                /* If our file has not been moved away move it now */
                if (!try_to_move_away)
                  {
-                   status = move_away(handle, name);
+                   status = __gsh_kernel_move_away(handle, name);
                    try_to_move_away = TRUE;
                    if (NT_SUCCESS(status)) has_been_moved_away = TRUE;
                  }
