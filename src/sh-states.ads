@@ -67,8 +67,18 @@ package Sh.States is
    function Is_Var_Set (State : Shell_State; Name : String) return Boolean;
 
    procedure Import_Environment (State : in out Shell_State);
+   --  Import process environment into a shell state.
+   --
+   --  We assume the function is called once per process just after
+   --  initialistion of the root shell state
+   --
+   --  @param State the shell state to initialize.
 
    function Get_Environment (State : Shell_State) return String_List;
+   --  Retrieve an environment to be used with OS.Exec package functions.
+   --
+   --  @param State the current shell state
+   --  @return a list of String of the form "key=value" & ASCII.NUL
 
    procedure Set_Var_Value
      (State        : in out Shell_State;
@@ -77,6 +87,14 @@ package Sh.States is
       Export       : Boolean := False;
       Is_Env_Value : Boolean := False);
    --  Set a var value
+   --
+   --  @param State the current shell state
+   --  @param Name the variable name
+   --  @param Value the variable value
+   --  @param Export True if the variable should be exported
+   --  @param Is_Env_Value
+   --      True if the variable is coming from the original process environment
+   --      (internal use only by import procedure)
 
    procedure Unset_Var (State : in out Shell_State; Name : String);
    --  Unset variable

@@ -138,29 +138,60 @@ package body Sh.States is
       Result      : String_List (1 .. Integer (Length (State.Var_Table)));
       Result_Last : Natural := 0;
 
-      procedure Export_Aux (Position : String_Maps.Cursor);
+      procedure Export_Upper_Case_Variables (Position : String_Maps.Cursor);
+      procedure Export_Other_Variables (Position : String_Maps.Cursor);
 
-      procedure Export_Aux (Position : String_Maps.Cursor) is
-         V : constant Var_Value := Element (Position);
-         K : constant String := Key (Position);
-         --  Upper_Name : constant String := Translate (K, Upper_Case_Map);
+      ---------------------------------
+      -- Export_Upper_Case_Variables --
+      ---------------------------------
+
+      procedure Export_Upper_Case_Variables (Position : String_Maps.Cursor)
+      is
+         Value      : constant Var_Value := Element (Position);
+         Name       : constant String := Key (Position);
+         Upper_Name : constant String := Translate (Name, Upper_Case_Map);
       begin
-         if V.Is_Exported then
-            Result_Last := Result_Last + 1;
-            Result (Result_Last) :=
-              new String'(K & "=" & V.Val.all & ASCII.NUL);
-         elsif V.Env_Val /= null then
-            Result_Last := Result_Last + 1;
-            Result (Result_Last) :=
-              new String'(K & "=" & V.Env_Val.all & ASCII.NUL);
+         if Upper_Name = Name then
+            if Value.Is_Exported then
+               Result_Last := Result_Last + 1;
+               Result (Result_Last) :=
+                 new String'(Name & "=" & Value.Val.all & ASCII.NUL);
+            elsif Value.Env_Val /= null then
+               Result_Last := Result_Last + 1;
+               Result (Result_Last) :=
+                 new String'(Name & "=" & Value.Env_Val.all & ASCII.NUL);
+            end if;
          end if;
-      end Export_Aux;
+      end Export_Upper_Case_Variables;
+
+      ----------------------------
+      -- Export_Other_Variables --
+      ----------------------------
+
+      procedure Export_Other_Variables (Position : String_Maps.Cursor) is
+         Value      : constant Var_Value := Element (Position);
+         Name       : constant String := Key (Position);
+         Upper_Name : constant String := Translate (Name, Upper_Case_Map);
+      begin
+         if Upper_Name /= Name then
+            if Value.Is_Exported then
+               Result_Last := Result_Last + 1;
+               Result (Result_Last) :=
+                 new String'(Name & "=" & Value.Val.all & ASCII.NUL);
+            elsif Value.Env_Val /= null then
+               Result_Last := Result_Last + 1;
+               Result (Result_Last) :=
+                 new String'(Name & "=" & Value.Env_Val.all & ASCII.NUL);
+            end if;
+         end if;
+      end Export_Other_Variables;
 
    begin
       --  Reset environment
       Iterate (State.Var_Table,
-               Export_Aux'Unrestricted_Access);
-
+               Export_Upper_Case_Variables'Unrestricted_Access);
+      Iterate (State.Var_Table,
+               Export_Other_Variables'Unrestricted_Access);
       return Result (1 .. Result_Last);
    end Get_Environment;
 
@@ -448,19 +479,64 @@ package body Sh.States is
    ------------------------
 
    procedure Import_Environment (State : in out Shell_State) is
-      procedure Import_Env_Aux (Name, Value : String);
 
-      procedure Import_Env_Aux (Name, Value : String) is
+      procedure Import_Env_All (Name : String; Value : String);
+      --  Import current environment
+      --
+      --  @param Name variable name
+      --  @param Value variable value
+
+      procedure Import_Env_Fallbacks (Name : String; Value : String);
+      --  For all variables for which the upper case version is not in the
+      --  symbol table create an entry for the upper case version. This is used
+      --  on Windows platform to ensure good interoperability with the system
+      --  which is not case sensitive.
+      --
+      --  @param Name variable name
+      --  @param Value variable value
+
+      --------------------
+      -- Import_Env_All --
+      --------------------
+
+      procedure Import_Env_All
+        (Name  : String;
+         Value : String)
+      is
+      begin
+         if Is_Valid_Variable_Name (Name) then
+            Set_Var_Value (State, Name, Value, False, True);
+         end if;
+      end Import_Env_All;
+
+      --------------------------
+      -- Import_Env_Fallbacks --
+      --------------------------
+
+      procedure Import_Env_Fallbacks
+        (Name  : String;
+         Value : String)
+      is
          Upper_Name : constant String := Translate (Name, Upper_Case_Map);
       begin
-         if Is_Valid_Variable_Name (Upper_Name) then
+
+         if not Contains (State.Var_Table, Upper_Name) and then
+           Is_Valid_Variable_Name (Upper_Name)
+         then
             Set_Var_Value (State, Upper_Name, Value, False, True);
          end if;
-      end Import_Env_Aux;
+      end Import_Env_Fallbacks;
 
    begin
-      --  First import environment to initialize our variables table
-      Iterate (Import_Env_Aux'Unrestricted_Access);
+      --  First import environment respecting original case
+      Iterate (Import_Env_All'Unrestricted_Access);
+
+      --  Then ensure that we have a value for all uppercase version of the
+      --  variables on Windows platform which is case insensitive by default.
+      --  This allow to use a fallback mechanism that improve interoperability.
+      if  Directory_Separator = '\' then
+         Iterate (Import_Env_Fallbacks'Unrestricted_Access);
+      end if;
 
       --  Initialize redirections to default values
       State.Redirections := (others => (OS.FS.Invalid_FD, null, False, False));
