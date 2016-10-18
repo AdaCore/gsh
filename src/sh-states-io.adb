@@ -41,7 +41,11 @@ package body Sh.States.IO is
       return OS.FS.File_Descriptor
    is
    begin
-      return State.Redirections (IO).Fd;
+      if IO in State.Redirections'First .. State.Redirections'Last then
+         return State.Redirections (IO).Fd;
+      else
+         return OS.FS.Invalid_FD;
+      end if;
    end Get_File_Descriptor;
 
    -----------

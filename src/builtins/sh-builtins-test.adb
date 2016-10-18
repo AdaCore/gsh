@@ -26,6 +26,7 @@
 
 with Sh.Utils;            use Sh.Utils;
 with Sh.States.IO; use Sh.States.IO;
+with OS.FS;
 
 package body Sh.Builtins.Test is
 
@@ -56,7 +57,8 @@ package body Sh.Builtins.Test is
       NONZERO_STRING_OP,     --  -n
       ZERO_STRING_OP,        --  -z
       IS_NON_EMPTY_FILE,     --  -s
-      IS_WFILE_OP            --  -w
+      IS_WFILE_OP,           --  -w
+      IS_FD_TTY              --  -t
      );
 
    type Binop_Access is access function
@@ -370,6 +372,18 @@ package body Sh.Builtins.Test is
                      return To_Integer (False);
                   end if;
                end;
+            when IS_FD_TTY =>
+               declare
+                  FD    : Integer;
+                  Valid : Boolean;
+               begin
+                  To_Integer (Param.all, FD, Valid);
+                  if not Valid then
+                     return To_Integer (False);
+                  end if;
+                  return To_Integer
+                    (OS.FS.Is_Console (Get_File_Descriptor (S, FD)));
+               end;
             when IS_FILE_OR_DIR_OP =>
                declare
                   Real_File : constant String := Is_File (Param.all);
@@ -500,6 +514,8 @@ package body Sh.Builtins.Test is
             return ZERO_STRING_OP;
          elsif Str = "-e" then
             return IS_FILE_OR_DIR_OP;
+         elsif Str = "-t" then
+            return IS_FD_TTY;
          end if;
 
          if Str = "-b" or else
@@ -513,7 +529,6 @@ package body Sh.Builtins.Test is
             Str = "-O" or else
             Str = "-p" or else
             Str = "-S" or else
-            Str = "-t" or else
             Str = "-u" or else
             Str = "-x"
          then
