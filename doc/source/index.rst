@@ -4,9 +4,10 @@ GSH's documentation
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    introduction
+   builtins
    todo
 
 Indices and tables

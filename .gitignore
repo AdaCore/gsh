@@ -14,3 +14,9 @@ gnutools/bin/gsh.exe
 lua/src/liblua.a
 lua/src/lua
 lua/src/luac
+c/lib
+c/obj
+c/exe
+gsh/lib
+gsh/obj
+testsuite/gcov

@@ -1,0 +1,2 @@
+title: Test that '<<' are evaluated in the right order
+driver: shell_script

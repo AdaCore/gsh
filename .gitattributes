@@ -11,3 +11,14 @@ os/src/ddk/*/*/* no-precommit-check
 /maintainers/*/* no-precommit-check
 /maintainers/*/*/* no-precommit-check
 /maintainers/*/*/*/* no-precommit-check
+/gsh/src/*.h no-precommit-check
+/gsh/src/readline/* no-precommit-check
+/gsh/src/windows-termcap.c no-precommit-check
+/testsuite/*/*.ad? no-precommit-check 
+/testsuite/*/*/*.ad? no-precommit-check 
+/testsuite/*/*/*/*.ad? no-precommit-check 
+/testsuite/*/*/*/*/*.ad? no-precommit-check 
+/testsuite/*/*.c no-precommit-check 
+/testsuite/*/*/*.c no-precommit-check 
+/testsuite/*/*/*/*.c no-precommit-check 
+/testsuite/*/*/*/*/*.c no-precommit-check 

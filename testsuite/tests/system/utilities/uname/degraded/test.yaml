@@ -1,0 +1,2 @@
+title: degraded Test for uname builtin
+driver: shell_script

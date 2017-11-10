@@ -1,0 +1,9 @@
+description: SH.Lexer unit test
+driver: data_validation
+data_files:
+    test1.sh: "Minimal Test"
+    test2.sh: "Single quoted token"
+    test3.sh: "Double quoted token"
+    test4.sh: "Keywords"
+    test5.sh: "Command Substitution"
+    test6.sh: "Parameter Substitution"

@@ -1,0 +1,67 @@
+with "os.gpr";
+with "c.gpr";
+
+library project GSH is
+   for Library_Name use "gsh";
+   for Library_Dir use "lib";
+   Lib_Kind := external("LIB_KIND", "static");
+   for Library_Kind use Lib_Kind;
+   type Build_Type is ("dev", "prod");
+   Build     : Build_Type   := external ("BUILD", "dev");
+   Build_Dir : Build_Type   := Build;
+   OS        := external("OS", "");
+
+   Default_Switches := ("-gnat12", "-gnatwcfijklmopruvz", "-gnaty");
+   Dev_Switches := ("-g", "-O0");
+
+   case Build is
+      when "dev" =>  Default_Switches := Default_Switches &
+         ("-fpreserve-control-flow", "-fdump-scos");
+      when "prod" => null;
+   end case;
+     
+   case OS is
+       when "Windows_NT" => 
+           for Source_Dirs use ("src", "src/builtins", "src/readline");
+       when others =>
+           for Source_Dirs use ("src", "src/builtins");
+   end case;
+
+   for Languages use ("Ada", "C");
+
+   for Object_Dir use "obj/" & Build_Dir;
+
+   package Binder is
+      case Build is
+         when "prod" => for Default_Switches ("ada") use ();
+         when "dev" =>  for Default_Switches ("ada") use ("-E");
+      end case;
+   end Binder;
+
+   package Builder is
+      case Build is
+         when "prod" =>
+            for Default_Switches ("ada") use ();
+         when "dev" =>
+            for Default_Switches ("c") use ("-g");
+            for Default_Switches ("ada") use ("-g");
+      end case;
+   end Builder;
+
+   package Compiler is
+      case Build is
+         when "prod" =>
+            for Default_Switches ("ada") use ("-O2", "-gnatpn") &
+               Default_Switches;
+            for Default_Switches ("c") use ("-O2", "-DHAVE_CONFIG_H");
+         when "dev" =>
+            for Default_Switches ("ada") use ("-gnata", "-gnatwe") & Dev_Switches &
+               Default_Switches;
+            for Default_Switches ("c") use ("-DHAVE_CONFIG_H") & Dev_Switches;
+      end case;
+   end Compiler;
+
+   package Linker is
+      for Linker_Options use ("-lntdll");
+   end Linker;
+end GSH;

@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import sys
-import os
 
 extensions = []
 
@@ -20,7 +18,7 @@ exclude_patterns = []
 
 pygments_style = 'sphinx'
 
-html_theme = 'default'
+html_theme = 'alabaster'
 
 htmlhelp_basename = 'GSHdoc'
 

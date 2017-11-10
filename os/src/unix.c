@@ -4,7 +4,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *                      Copyright (C) 2011-2016, AdaCore                    *
+ *                      Copyright (C) 2011-2019, AdaCore                    *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -305,4 +305,11 @@ __gsh_is_console (int fd)
     return isatty (fd);
 }
 
+unsigned long
+__gsh_mv (char *source,
+                          char *target,
+                                    char overwrite)
+{
+        return 1;
+}
 #endif

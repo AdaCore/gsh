@@ -1,0 +1,4 @@
+title: Appending Redirected output (>>)
+
+chapter: '2.7.3'
+driver: shell_script

@@ -7,14 +7,10 @@ EXEEXT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo ".exe"; fi))
 LUA_PLAT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo "mingw"; else if test `uname` = 'Darwin'; then echo "macosx"; else echo "linux"; fi; fi))
 
 # Main build target
-all: src/sh-lua_bindings.adb
+all:
 	@echo "building gsh"
-	gprbuild -j0 -p -P posix_shell -XBUILD=prod
-	gprbuild -j0 -p -P posix_shell -XBUILD=dev
-
-src/sh-lua_bindings.adb: unit_test_gen
-	@echo "generated unit testing bindings"
-	python ./unit_test_gen > $@
+	GPR_PROJECT_PATH="`pwd`/os;`pwd`/c;`pwd`/gsh;$(GPR_PROJECT_PATH)" gprbuild -j0 -p -P posix_shell -XBUILD=prod
+	GPR_PROJECT_PATH="`pwd`/os;`pwd`/c;`pwd`/gsh;$(GPR_PROJECT_PATH)" gprbuild -j0 -p -P posix_shell -XBUILD=dev
 
 # Launch the testsuite
 check:
@@ -30,8 +26,6 @@ install:
 	cp -r etc/* $(PREFIX)/etc
 	cp -p obj/prod/gsh$(EXEEXT) $(PREFIX)/bin/gsh$(EXEEXT)
 	cp -p obj/dev/gsh$(EXEEXT) $(PREFIX)/bin_dev/gsh$(EXEEXT)
-	cp -p obj/prod/gsh_unit$(EXEEXT) $(PREFIX)/bin/gsh_unit$(EXEEXT)
-	cp -p obj/dev/gsh_unit$(EXEEXT) $(PREFIX)/bin_dev/gsh_unit$(EXEEXT)
 	if [ "$(OS)" = "Windows_NT" ]; then \
 	  cp -p obj/prod/gsh$(EXEEXT) $(PREFIX)/bin/sh$(EXEEXT) && \
 	  cp -p obj/dev/gsh$(EXEEXT) $(PREFIX)/bin_dev/sh$(EXEEXT) && \

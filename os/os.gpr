@@ -1,6 +1,8 @@
 library project OS is
    for Library_Name use "os";
    for Library_Dir use "lib";
+   Lib_Kind := external("LIB_KIND", "static");
+   for Library_Kind use Lib_Kind;
    type Build_Type is ("dev", "prod");
    Build     : Build_Type   := external ("BUILD", "dev");
    Build_Dir : Build_Type   := Build;
@@ -56,4 +58,7 @@ library project OS is
       end case;
    end Compiler;
 
+   package Linker is
+      for Linker_Options use ("-lntdll");
+   end Linker;
 end OS;

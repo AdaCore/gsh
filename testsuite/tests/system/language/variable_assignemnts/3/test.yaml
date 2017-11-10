@@ -1,0 +1,2 @@
+title: Check influence of variable assignment on $?
+driver: shell_script
