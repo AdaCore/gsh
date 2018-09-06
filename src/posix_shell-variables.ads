@@ -7,7 +7,7 @@
 --                                 S p e c                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2015, AdaCore                   --
+--                       Copyright (C) 2010-2018, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -74,6 +74,7 @@ package Posix_Shell.Variables is
      (State        : in out Shell_State;
       Name         : String;
       Value        : String;
+      Set_By_Cmd   : Boolean := False;
       Export       : Boolean := False;
       Is_Env_Value : Boolean := False);
    --  Set a var value
@@ -100,7 +101,9 @@ package Posix_Shell.Variables is
    function Resolve_Path
      (State : Shell_State; Path : String) return String;
 
-   function Enter_Scope (Previous : Shell_State) return Shell_State;
+   function Enter_Scope
+     (Previous     : Shell_State;
+      Is_Cmd_Scope : Boolean := False) return Shell_State;
    --  Given the current state create a new scope and return its state
 
    procedure Leave_Scope
@@ -236,6 +239,7 @@ private
       Last_Exit_Status       : Integer := 0;
       Pos_Params             : Pos_Params_State;
       Scope_Level            : Natural := 1;
+      Is_Cmd_Scope           : Boolean := False;
       Is_Env_Valid           : Boolean := False;
       Redirections           : Shell_Descriptors;
       Current_Dir            : String_Access := null;

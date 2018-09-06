@@ -248,16 +248,18 @@ package body Posix_Shell.Tree.Evals is
             for I in Assign'First .. Assign'Last loop
                if Assign (I) = '=' then
                   if I = Assign'Last then
-                     Set_Var_Value (S, Assign (Assign'First .. I - 1),
+                     Set_Var_Value (S,
+                                    Assign (Assign'First .. I - 1),
                                     "",
-                                    Do_Export);
+                                    Export => Do_Export);
                   else
                      Set_Var_Value
-                       (S, Assign (Assign'First .. I - 1),
+                       (S,
+                        Assign (Assign'First .. I - 1),
                         Eval_String_Unsplit
                           (S, Assign (I + 1 .. Assign'Last),
                            Has_Command_Subst => Has_Command_Subst),
-                        Do_Export);
+                        Export => Do_Export);
                      if Has_Command_Subst then
                         Force_Status := False;
                      end if;
@@ -457,7 +459,7 @@ package body Posix_Shell.Tree.Evals is
               not Is_Special_Builtin
             then
 
-               New_State := Enter_Scope (S);
+               New_State := Enter_Scope (S, Is_Cmd_Scope => True);
                Eval_Assign (New_State, T, N, True);
 
                if Is_Xtrace_Enabled (S) then

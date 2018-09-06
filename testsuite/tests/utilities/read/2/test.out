@@ -1,0 +1,6 @@
+[warning] read: -r is currently ignored
+IFS=
+field1 = x86_64
+field2 = pc
+field3 = mingw32
+field4 =

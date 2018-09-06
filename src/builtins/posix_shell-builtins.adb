@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2015, AdaCore                   --
+--                       Copyright (C) 2010-2018, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -541,8 +541,29 @@ package body Posix_Shell.Builtins is
    is
       CC : Character := Read (S, 0);
       Line : Annotated_String;
+      Read_Raw : Boolean := False;
+      Saved_Index : Integer := Args'First;
    begin
-      --  First read the complete line
+      --  Parse options
+      for Index in Args'Range loop
+         if Args (Index)'Length > 0 then
+            case Args (Index) (Args (Index)'First) is
+               when '-' =>
+                  if Args (Index).all /= "-r" then
+                     Error (S, "read: bad option " & Args (Index).all);
+                     Shell_Exit (S, 1);
+                  else
+                     Warning (S, "read: -r is currently ignored");
+                     Read_Raw := True;
+                     Saved_Index := Index + 1;
+                  end if;
+               when others =>
+                  exit;
+            end case;
+         end if;
+      end loop;
+
+      --  First, read the complete line
       while CC /= ASCII.LF and CC /= ASCII.EOT loop
          if CC /= ASCII.CR then
             Append (Line, CC);
@@ -550,20 +571,26 @@ package body Posix_Shell.Builtins is
          CC := Read (S, 0);
       end loop;
 
-      if Args'Length > 0 then
+      if Saved_Index <= Args'Last then
          declare
             List : constant String_List := Split_String
-              (S, Str (Line), Args'Length - 1);
+              (S, Str (Line), Args'Last - Saved_Index);
             Index : Integer := List'First;
          begin
-
-            for J in Args'Range loop
+            for J in Saved_Index .. Args'Last loop
                if Index <= List'Last then
-                  Set_Var_Value (S, Args (J).all, List (Index).all);
+                  Set_Var_Value (S,
+                                 Args (J).all,
+                                 List (Index).all,
+                                 Set_By_Cmd => True);
                   Index := Index + 1;
                else
-                  Set_Var_Value (S, Args (J).all, "");
+                  Set_Var_Value (S,
+                                 Args (J).all,
+                                 "",
+                                 Set_By_Cmd => True);
                end if;
+
             end loop;
          end;
       end if;

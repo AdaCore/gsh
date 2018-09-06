@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2015, AdaCore                   --
+--                       Copyright (C) 2010-2018, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -47,8 +47,8 @@ begin
    begin
       --  Reset PWD and OLDPWD in order to avoid inheriting the values
       --  from the parent process.
-      Set_Var_Value (State, "PWD", Current_Dir, True);
-      Set_Var_Value (State, "OLDPWD", Current_Dir, True);
+      Set_Var_Value (State, "PWD", Current_Dir, Export => True);
+      Set_Var_Value (State, "OLDPWD", Current_Dir, Export => True);
       Set_Var_Value (State, "IFS", " " & ASCII.HT & ASCII.LF);
       Set_Var_Value (State, "PATH_SEPARATOR", ":");
 

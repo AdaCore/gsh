@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2015, AdaCore                   --
+--                       Copyright (C) 2010-2018, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -69,7 +69,9 @@ package body Posix_Shell.Variables is
    -- Enter_Scope --
    -----------------
 
-   function Enter_Scope (Previous : Shell_State) return Shell_State is
+   function Enter_Scope
+     (Previous : Shell_State;
+      Is_Cmd_Scope : Boolean := False) return Shell_State is
 
       Result : Shell_State;
 
@@ -100,6 +102,7 @@ package body Posix_Shell.Variables is
       end Enter_Scope_Aux2;
    begin
       Result.Scope_Level := Previous.Scope_Level + 1;
+      Result.Is_Cmd_Scope := Is_Cmd_Scope;
       --  Create a new var table based on the previous context
       Reserve_Capacity (Result.Var_Table, 256);
       Iterate (Previous.Var_Table,
@@ -167,7 +170,7 @@ package body Posix_Shell.Variables is
    procedure Export_Var (State : in out Shell_State; Name : String) is
       V : constant String := Get_Var_Value (State, Name);
    begin
-      Set_Var_Value (State, Name, V, True);
+      Set_Var_Value (State, Name, V, Export => True);
    end Export_Var;
 
    ----------------
@@ -178,7 +181,7 @@ package body Posix_Shell.Variables is
      (State : in out Shell_State; Name : String; Value : String)
    is
    begin
-      Set_Var_Value (State, Name, Value, True);
+      Set_Var_Value (State, Name, Value, Export => True);
    end Export_Var;
 
    ---------------------
@@ -450,7 +453,11 @@ package body Posix_Shell.Variables is
          Upper_Name : constant String := Translate (Name, Upper_Case_Map);
       begin
          if Is_Valid_Variable_Name (Upper_Name) then
-            Set_Var_Value (State, Upper_Name, Value, False, True);
+            Set_Var_Value (State,
+                           Upper_Name,
+                           Value,
+                           Export => False,
+                           Is_Env_Value => True);
          end if;
       end Import_Env_Aux;
 
@@ -606,14 +613,31 @@ package body Posix_Shell.Variables is
 
       procedure Leave_Scope_Aux (Position : String_Maps.Cursor) is
          V : Var_Value := Element (Position);
+         K : constant String := Key (Position);
+         Is_New_Variable : constant Boolean
+           := not Contains (Previous.Var_Table, K);
       begin
+
+         --  if cmd scope then the local variables with a scope owner
+         --  of higher level must be carried up in the call chain
+         if Current.Is_Cmd_Scope
+             and then V.Scope_Owner = Previous.Scope_Level
+         then
+            if Is_New_Variable then
+               Insert (Previous.Var_Table, K, V);
+            else
+               Replace (Previous.Var_Table, K, V);
+            end if;
+
+         end if;
+
          if V.Scope_Owner = Current.Scope_Level and then V.Val /= null then
             Free (V.Val);
          end if;
+
       end Leave_Scope_Aux;
    begin
-
-      --  Clear variable table
+      --  Transmit info and Clear variable table
       Iterate (Current.Var_Table,
                Leave_Scope_Aux'Unrestricted_Access);
       Clear (Current.Var_Table);
@@ -849,10 +873,11 @@ package body Posix_Shell.Variables is
    -------------------
 
    procedure Set_Var_Value
-     (State  : in out Shell_State;
-      Name   : String;
-      Value  : String;
-      Export : Boolean := False;
+     (State        : in out Shell_State;
+      Name         : String;
+      Value        : String;
+      Set_By_Cmd   : Boolean := False;
+      Export       : Boolean := False;
       Is_Env_Value : Boolean := False)
    is
       V : Var_Value := (null, null, False, State.Scope_Level);
@@ -930,8 +955,14 @@ package body Posix_Shell.Variables is
 
       Effective_Value : constant String := Path_Transform (Value, Name);
 
+      Var_Scope : Natural := State.Scope_Level;
    begin
+
       Check_Variable_Name (Name);
+
+      if State.Is_Cmd_Scope and Set_By_Cmd then
+         Var_Scope := Var_Scope - 1;
+      end if;
 
       if not Is_New_Var then
          --  This is not a new variable so retrieve its value
@@ -957,7 +988,7 @@ package body Posix_Shell.Variables is
             V.Val := new String'(Effective_Value);
          end if;
 
-         V.Scope_Owner := State.Scope_Level;
+         V.Scope_Owner := Var_Scope;
 
          --  Update the variable table
          Replace (State.Var_Table, Name, V);
@@ -975,9 +1006,10 @@ package body Posix_Shell.Variables is
                new String'(Value), Export, State.Scope_Level));
          else
             Include
-              (State.Var_Table, Name,
-               (new String'(Effective_Value),
-                null, Export, State.Scope_Level));
+              (State.Var_Table, Name, (new String'(Effective_Value),
+                                       null,
+                                       Export,
+                                       Var_Scope));
          end if;
 
          --  Invalidate current env
