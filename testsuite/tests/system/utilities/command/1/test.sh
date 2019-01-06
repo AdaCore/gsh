@@ -14,3 +14,4 @@ which -q
 
 echo "* command with several but no -v"
 command cp ls echo printf
+true

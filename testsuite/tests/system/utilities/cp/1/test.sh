@@ -33,3 +33,5 @@ cp -r dir_a new_dir/nested_new_dir
 echo ""
 echo "copy and rename a dir with -r into a not yet existing dir: cp -r dir_a new_dir/copy_dir_a"
 cp -r dir_a new_dir/copy_dir_a
+
+true

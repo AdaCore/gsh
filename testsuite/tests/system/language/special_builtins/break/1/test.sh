@@ -33,8 +33,10 @@ for j in `seq 1 10`; do
 done
 echo $?
 
-for j in `seq 1 10`; do
+(for j in `seq 1 10`; do
     break a 2>/dev/null
 done
 echo "FAILED" 
 echo $?
+)
+true

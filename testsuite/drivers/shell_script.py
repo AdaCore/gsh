@@ -2,6 +2,8 @@ from e3.fs import sync_tree
 from e3.testsuite.result import TestStatus
 from drivers import GNATcollTestDriver
 from drivers.valgrind import check_call_valgrind
+from e3.diff import diff
+from e3.os.fs import unixpath
 import os
 
 
@@ -43,10 +45,17 @@ class ShellScriptDriver(GNATcollTestDriver):
             [self.env.gsh, './test.sh'],
             timeout=self.process_timeout)
 
-        with open(os.path.join(self.test_env['test_dir'], 'test.out'), 'r') as fd:
+        with open(os.path.join(self.test_env['test_dir'],
+                               'test.out'), 'r') as fd:
             expected_output = fd.read()
-        if process.out.strip() == expected_output.strip():
+        actual_output = process.out.replace(self.test_env['working_dir'], '')
+        actual_output = actual_output.replace('\\', '/')
+        actual_output = actual_output.replace(
+            unixpath(self.test_env['working_dir']),
+            '')
+        d = diff(actual_output, expected_output)
+        if not d:
             self.result.set_status(TestStatus.PASS)
         else:
-            self.result.set_status(TestStatus.FAIL)
+            self.result.set_status(TestStatus.FAIL, d)
         self.push_result()

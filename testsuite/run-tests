@@ -55,6 +55,9 @@ class MyTestsuite(Testsuite):
         else:
             self.env.gsh_gpr_dir = None
 
+        self.env.add_path(os.path.dirname(self.env.gsh))
+        os.environ['SHELL'] = self.env.gsh
+
         if self.main.args.recompile:
             work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'prod')
             gpr_dir, _, _ = make_gsh(work_dir, gcov=False)
@@ -110,8 +113,9 @@ class MyTestsuite(Testsuite):
                 total_sources += total
                 total_covered += covered
 
-                logging.info('%6.2f %% %8d/%-8d %s',
+                logging.info('%6.2f %% %8d %8d/%-8d %s',
                              float(covered) * 100.0 / float(total),
+                             total - covered,
                              covered,
                              total,
                              os.path.basename(source_file))

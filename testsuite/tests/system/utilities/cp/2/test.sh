@@ -106,4 +106,4 @@ echo "* cat dir_c"
 cat dir_c/*
 
 rm -r dir_c/initial* dir_c/nested_dir
-
+true
