@@ -45,7 +45,7 @@ package OS.Exec is
       HIGH);
 
    function Non_Blocking_Spawn
-     (Args      : Argument_List;
+     (Args      : CList;
       Env       : CList;
       Cwd       : String                := "";
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
@@ -71,7 +71,7 @@ package OS.Exec is
    --  @return a handle to the spawned process
 
    function Blocking_Spawn
-     (Args      : Argument_List;
+     (Args      : CList;
       Env       : CList;
       Cwd       : String                := "";
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
@@ -86,7 +86,7 @@ package OS.Exec is
    --  @return the exit status of the process
 
    function Blocking_Spawn
-     (Args            : Argument_List;
+     (Args            : CList;
       Env             : CList;
       Cwd             : String                := "";
       Stdin_Fd        : OS.FS.File_Descriptor := OS.FS.Standin;

@@ -27,8 +27,8 @@ with GNAT.Task_Lock;
 package body OS.Exec is
 
    procedure Normalize_Arguments
-     (Args      : Argument_List;
-      Norm_Args : in out Argument_List);
+     (Args      : CList;
+      Norm_Args : in out CList);
 
    function Portable_Execvp
      (Args     : System.Address;
@@ -46,7 +46,7 @@ package body OS.Exec is
    --------------------
 
    function Blocking_Spawn
-     (Args            : Argument_List;
+     (Args            : CList;
       Env             : CList;
       Cwd             : String                := "";
       Stdin_Fd        : OS.FS.File_Descriptor := OS.FS.Standin;
@@ -91,7 +91,7 @@ package body OS.Exec is
    --------------------
 
    function Blocking_Spawn
-     (Args      : Argument_List;
+     (Args      : CList;
       Env       : CList;
       Cwd       : String                := "";
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
@@ -114,7 +114,7 @@ package body OS.Exec is
    ------------------------
 
    function Non_Blocking_Spawn
-     (Args      : Argument_List;
+     (Args      : CList;
       Env       : CList;
       Cwd       : String                := "";
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
@@ -124,8 +124,7 @@ package body OS.Exec is
       return Handle
    is
       Result     : Handle;
-      Arg_List   : String_List (1 .. Args'Length + 1) := (others => null);
-      C_Arg_List : aliased array (1 .. Args'Length + 1) of System.Address;
+      Arg_List   : CList;
       C_Cwd      : aliased String (1 .. Cwd'Length + 1);
       C_Cwd_Addr : System.Address := System.Null_Address;
       Success : Boolean;
@@ -133,21 +132,10 @@ package body OS.Exec is
 
       use OS.FS;
    begin
-      GNAT.Task_Lock.Lock;
       Normalize_Arguments (Args, Arg_List);
-      --  Prepare an array of arguments to pass to C
-
-      Arg_List (Arg_List'Last) := null;
+      GNAT.Task_Lock.Lock;
 
       --  Prepare low-level argument list from the normalized arguments
-
-      for K in Arg_List'Range loop
-         if Arg_List (K) /= null then
-            C_Arg_List (K) := Arg_List (K).all'Address;
-         else
-            C_Arg_List (K) := System.Null_Address;
-         end if;
-      end loop;
 
       if Cwd /= "" then
          C_Cwd (Cwd'Range) := Cwd;
@@ -160,16 +148,15 @@ package body OS.Exec is
       Set_Close_On_Exec (Stderr_Fd, False);
 
       Result := Portable_Execvp
-        (C_Arg_List'Address, C_Cwd_Addr, As_C_String_Array (Env),
+        (As_C_String_Array (Arg_List),
+         C_Cwd_Addr,
+         As_C_String_Array (Env),
          Stdin_Fd, Stdout_Fd, Stderr_Fd, Priority);
-      for K in Arg_List'Range loop
-         Free (Arg_List (K));
-      end loop;
-
       Set_Close_On_Exec (Stdin_Fd, True);
       Set_Close_On_Exec (Stdout_Fd, True);
       Set_Close_On_Exec (Stderr_Fd, True);
       GNAT.Task_Lock.Unlock;
+      Deallocate (Arg_List);
       return Result;
    end Non_Blocking_Spawn;
 
@@ -178,12 +165,11 @@ package body OS.Exec is
    -------------------------
 
    procedure Normalize_Arguments
-     (Args : Argument_List;
-      Norm_Args : in out Argument_List)
+     (Args      : CList;
+      Norm_Args : in out CList)
    is
 
-      procedure Quote_Argument
-        (Arg : String;  Norm_Arg : in out String_Access);
+      procedure Quote_Argument (Arg : String);
       --  Add quote around argument if it contains spaces
 
       C_Argument_Needs_Quote : Integer;
@@ -194,8 +180,7 @@ package body OS.Exec is
       -- Quote_Argument --
       --------------------
 
-      procedure Quote_Argument
-        (Arg : String;  Norm_Arg : in out String_Access)
+      procedure Quote_Argument (Arg : String)
       is
          Res          : String (1 .. Arg'Length * 2 + 3);
          J            : Positive := 1;
@@ -249,9 +234,9 @@ package body OS.Exec is
          Res (J) := '"';
 
          if Quote_Needed or else Arg'Length = 0 then
-            Norm_Arg := new String'(Res (1 .. J) & ASCII.NUL);
+            Append (Norm_Args, Res (1 .. J));
          else
-            Norm_Arg := new String'(Res (2 .. J - 1) & ASCII.NUL);
+            Append (Norm_Args, Res (2 .. J - 1));
          end if;
       end Quote_Argument;
 
@@ -259,18 +244,12 @@ package body OS.Exec is
 
    begin
       if Argument_Needs_Quote then
-         for K in Args'Range loop
-            if Args (K) /= null then
-               Quote_Argument
-                 (Args (K).all, Norm_Args (K - Args'First + Norm_Args'First));
-            end if;
+         for K in 1 .. Length (Args) loop
+            Quote_Argument (Element (Args, K));
          end loop;
       else
-         for K in Args'Range loop
-            if Args (K) /= null then
-               Norm_Args (K - Args'First + Norm_Args'First) :=
-                 new String'(Args (K).all & ASCII.NUL);
-            end if;
+         for K in 1 .. Length (Args) loop
+            Append (Norm_Args, Element (Args, K));
          end loop;
       end if;
    end Normalize_Arguments;

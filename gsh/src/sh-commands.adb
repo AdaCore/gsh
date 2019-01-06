@@ -172,18 +172,16 @@ package body Sh.Commands is
                Append (Cmd_Line, Element (Args, Idx));
             end loop;
 
-            declare
-               Cmd_Line2 : constant String_List := As_List (Cmd_Line);
             begin
-
-               Sh.Traces.Log (Sh.Traces.LOG_EXEC, Cmd_Line2);
-               Exit_Status := (RESULT_STD, Blocking_Spawn
-                               (Cmd_Line2,
-                                  Env,
-                                  Get_Current_Dir (S),
-                                  Get_File_Descriptor (S, 0),
-                                  Get_File_Descriptor (S, 1),
-                                  Get_File_Descriptor (S, 2)));
+               Exit_Status := (
+                  RESULT_STD,
+                  Blocking_Spawn
+                     (Cmd_Line,
+                      Env,
+                      Get_Current_Dir (S),
+                      Get_File_Descriptor (S, 0),
+                      Get_File_Descriptor (S, 1),
+                      Get_File_Descriptor (S, 2)));
             exception
                when Program_Error =>
                   Exit_Status := (RESULT_STD, 127);
