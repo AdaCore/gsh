@@ -58,15 +58,4 @@ package Sh.Utils is
 
    function Readline (Prompt : String) return String;
 
-   --  package Dynamic_String_Lists is new GNAT.Dynamic_Tables
-   --  (String_Access,
-   --   Natural,
-   --   1,
-   --   8,
-   --   50);
-
-   --  procedure Append
-   --  (L : in out Dynamic_String_Lists.Instance;
-   --   E : String_List);
-   --  Append a list of string to a dynamic_string_list
 end Sh.Utils;
