@@ -20,7 +20,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with GNAT.OS_Lib;
 with GNAT.Directory_Operations;
 
 package Sh is
@@ -120,11 +119,6 @@ package Sh is
    --  At the time when this exception is raised, the exit status has
    --  already been saved. The exception mechanism is used only during shell
    --  substitution.
-
-   Null_String_List : GNAT.OS_Lib.String_List (1 .. 0);
-
-   Null_String_List_Access : GNAT.OS_Lib.String_List_Access :=
-     new GNAT.OS_Lib.String_List'(Null_String_List);
 
    subtype Node_Id is Natural;
    Null_Node : constant Node_Id := 0;
