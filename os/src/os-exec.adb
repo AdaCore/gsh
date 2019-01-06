@@ -47,8 +47,8 @@ package body OS.Exec is
 
    function Blocking_Spawn
      (Args            : Argument_List;
+      Env             : CList;
       Cwd             : String                := "";
-      Env             : Argument_List         := Null_Argument_List;
       Stdin_Fd        : OS.FS.File_Descriptor := OS.FS.Standin;
       Stderr_Fd       : OS.FS.File_Descriptor := OS.FS.Standerr;
       Priority        : Priority_Class        := INHERIT;
@@ -72,7 +72,7 @@ package body OS.Exec is
       end if;
 
       Pid := Non_Blocking_Spawn
-        (Args, Cwd, Env, Stdin_Fd, Pipe_Output, Real_Stderr_Fd, Priority);
+        (Args, Env, Cwd, Stdin_Fd, Pipe_Output, Real_Stderr_Fd, Priority);
       Close (Pipe_Output);
       loop
          N := Read (Pipe_Input, Buffer);
@@ -92,8 +92,8 @@ package body OS.Exec is
 
    function Blocking_Spawn
      (Args      : Argument_List;
+      Env       : CList;
       Cwd       : String                := "";
-      Env       : Argument_List         := Null_Argument_List;
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
       Stdout_Fd : OS.FS.File_Descriptor := OS.FS.Standout;
       Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr;
@@ -104,7 +104,7 @@ package body OS.Exec is
       Result : Integer;
    begin
       Pid := Non_Blocking_Spawn
-        (Args, Cwd, Env, Stdin_Fd, Stdout_Fd, Stderr_Fd, Priority);
+        (Args, Env, Cwd, Stdin_Fd, Stdout_Fd, Stderr_Fd, Priority);
       Result := Wait (Pid);
       return Result;
    end Blocking_Spawn;
@@ -115,8 +115,8 @@ package body OS.Exec is
 
    function Non_Blocking_Spawn
      (Args      : Argument_List;
+      Env       : CList;
       Cwd       : String                := "";
-      Env       : Argument_List         := Null_Argument_List;
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
       Stdout_Fd : OS.FS.File_Descriptor := OS.FS.Standout;
       Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr;
@@ -128,8 +128,6 @@ package body OS.Exec is
       C_Arg_List : aliased array (1 .. Args'Length + 1) of System.Address;
       C_Cwd      : aliased String (1 .. Cwd'Length + 1);
       C_Cwd_Addr : System.Address := System.Null_Address;
-      C_Env      : aliased array (1 .. Env'Length + 1) of System.Address;
-      C_Env_Addr : System.Address := System.Null_Address;
       Success : Boolean;
       pragma Warnings (Off, Success);
 
@@ -157,20 +155,12 @@ package body OS.Exec is
          C_Cwd_Addr := C_Cwd'Address;
       end if;
 
-      if Env'Length > 0 then
-         for K in Env'Range loop
-            C_Env (K - Env'First + C_Env'First) := Env (K).all'Address;
-         end loop;
-         C_Env (C_Env'Last) := System.Null_Address;
-         C_Env_Addr := C_Env'Address;
-      end if;
-
       Set_Close_On_Exec (Stdin_Fd, False);
       Set_Close_On_Exec (Stdout_Fd, False);
       Set_Close_On_Exec (Stderr_Fd, False);
 
       Result := Portable_Execvp
-        (C_Arg_List'Address, C_Cwd_Addr, C_Env_Addr,
+        (C_Arg_List'Address, C_Cwd_Addr, As_C_String_Array (Env),
          Stdin_Fd, Stdout_Fd, Stderr_Fd, Priority);
       for K in Arg_List'Range loop
          Free (Arg_List (K));

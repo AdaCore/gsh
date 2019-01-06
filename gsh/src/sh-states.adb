@@ -131,11 +131,8 @@ package body Sh.States is
    -- Get_Environment --
    ---------------------
 
-   function Get_Environment (State : Shell_State) return String_List is
-
-      Result      : String_List (1 .. Integer (Length (State.Var_Table)));
-      Result_Last : Natural := 0;
-
+   procedure Get_Environment (State : Shell_State; Env : in out CList)
+   is
       procedure Export_Upper_Case_Variables (Position : String_Maps.Cursor);
       procedure Export_Other_Variables (Position : String_Maps.Cursor);
 
@@ -151,13 +148,9 @@ package body Sh.States is
       begin
          if Upper_Name = Name then
             if Value.Is_Exported then
-               Result_Last := Result_Last + 1;
-               Result (Result_Last) :=
-                 new String'(Name & "=" & Value.Val.all & ASCII.NUL);
+               Append (Env, Name & "=" & Value.Val.all);
             elsif Value.Env_Val /= null then
-               Result_Last := Result_Last + 1;
-               Result (Result_Last) :=
-                 new String'(Name & "=" & Value.Env_Val.all & ASCII.NUL);
+               Append (Env, Name & "=" & Value.Env_Val.all);
             end if;
          end if;
       end Export_Upper_Case_Variables;
@@ -173,13 +166,9 @@ package body Sh.States is
       begin
          if Upper_Name /= Name then
             if Value.Is_Exported then
-               Result_Last := Result_Last + 1;
-               Result (Result_Last) :=
-                 new String'(Name & "=" & Value.Val.all & ASCII.NUL);
+               Append (Env, Name & "=" & Value.Val.all);
             elsif Value.Env_Val /= null then
-               Result_Last := Result_Last + 1;
-               Result (Result_Last) :=
-                 new String'(Name & "=" & Value.Env_Val.all & ASCII.NUL);
+               Append (Env, Name & "=" & Value.Env_Val.all);
             end if;
          end if;
       end Export_Other_Variables;
@@ -190,7 +179,6 @@ package body Sh.States is
                Export_Upper_Case_Variables'Unrestricted_Access);
       Iterate (State.Var_Table,
                Export_Other_Variables'Unrestricted_Access);
-      return Result (1 .. Result_Last);
    end Get_Environment;
 
    ----------------

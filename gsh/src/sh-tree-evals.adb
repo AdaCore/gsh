@@ -573,7 +573,7 @@ package body Sh.Tree.Evals is
      return Eval_Result
    is
       Exit_Status : Eval_Result;
-      Env         : String_List := Get_Environment (State);
+      Env         : CList;
       Descriptors : constant Shell_Descriptors := Get_Descriptors (State);
 
       --  When the command to be executed is the exec special builtin, then
@@ -582,6 +582,7 @@ package body Sh.Tree.Evals is
       Is_Exec     : constant Boolean := Command = "exec";
 
    begin
+      Get_Environment (State, Env);
       if not Apply_Redirections (State, Redirections, In_Place => Is_Exec) then
          --  If descriptors update fails then do not execute the command and
          --  set the exit status to 1.
@@ -590,12 +591,8 @@ package body Sh.Tree.Evals is
       end if;
 
       Exit_Status := Run (State, Command, Arguments, Env);
+      Deallocate (Env);
       Restore_Descriptors (State, Descriptors, In_Place => Is_Exec);
-
-      --  Free the environment block
-      for J in Env'Range loop
-         Free (Env (J));
-      end loop;
 
       --  And finally propagate the command exit status
       if Exit_Status.Kind = RESULT_STD then

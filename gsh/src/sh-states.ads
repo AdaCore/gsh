@@ -75,7 +75,7 @@ package Sh.States is
    --
    --  @param State the shell state to initialize.
 
-   function Get_Environment (State : Shell_State) return String_List;
+   procedure Get_Environment (State : Shell_State; Env : in out CList);
    --  Retrieve an environment to be used with OS.Exec package functions.
    --
    --  @param State the current shell state

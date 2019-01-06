@@ -20,7 +20,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with GNAT.OS_Lib; use GNAT.OS_Lib;
 with Sh.States; use Sh.States;
 with C.Strings; use C.Strings;
 
@@ -30,7 +29,7 @@ package Sh.Commands is
      (S    : in out Shell_State;
       Cmd  : String;
       Args : CList;
-      Env  : String_List)
+      Env  : CList)
       return Eval_Result;
    --  Run the given command with the arguments provided, and
    --  return its exit status.

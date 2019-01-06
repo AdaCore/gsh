@@ -148,11 +148,14 @@ package body Sh.Builtins.Command is
          declare
             Command   : constant String := Args (Command_List_Start).all;
             Arguments : CList;
-
+            Env       : CList;
             Result    : Eval_Result;
          begin
             Append (Arguments, Args (Command_List_Start .. Args'Last));
-            Result := Run (S, Command, Arguments, Get_Environment (S));
+            Get_Environment (S, Env);
+            Result := Run (S, Command, Arguments, Env);
+            Deallocate (Env);
+            Deallocate (Arguments);
             case Result.Kind is
                when RESULT_STD =>
                   return (RESULT_STD, Result.Status);

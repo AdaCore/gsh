@@ -28,6 +28,8 @@ with Sh.Traces;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with Ada.Text_IO;
 with OS.Exec; use OS.Exec;
+with OS.FS; use OS.FS;
+with GNAT.Strings; use GNAT.Strings;
 
 package body Sh.Commands is
 
@@ -45,9 +47,9 @@ package body Sh.Commands is
       Buffer       : aliased String (1 .. 256);
       Buffer_Last  : Integer := 0;
    begin
-      Fd := Open_Read (Filename, Binary);
+      Fd := Open (Filename);
       --  Here we read only 256 characters. That should be sufficient
-      Buffer_Last := Read (Fd, Buffer'Address, 256);
+      Buffer_Last := Read (Fd, Buffer);
       Close (Fd);
 
       if Buffer_Last >= 2 and then Buffer (1 .. 2) = "#!" then
@@ -109,7 +111,7 @@ package body Sh.Commands is
      (S    : in out Shell_State;
       Cmd  : String;
       Args : CList;
-      Env  : String_List)
+      Env  : CList)
       return Eval_Result
    is
       Exec_Path   : String_Access := null;
@@ -177,8 +179,8 @@ package body Sh.Commands is
                Sh.Traces.Log (Sh.Traces.LOG_EXEC, Cmd_Line2);
                Exit_Status := (RESULT_STD, Blocking_Spawn
                                (Cmd_Line2,
-                                  Get_Current_Dir (S),
                                   Env,
+                                  Get_Current_Dir (S),
                                   Get_File_Descriptor (S, 0),
                                   Get_File_Descriptor (S, 1),
                                   Get_File_Descriptor (S, 2)));

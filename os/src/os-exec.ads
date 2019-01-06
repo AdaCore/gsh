@@ -22,6 +22,7 @@
 
 with GNAT.Strings;
 with Ada.Strings.Unbounded;
+with C.Strings; use C.Strings;
 with OS.FS;
 
 package OS.Exec is
@@ -45,8 +46,8 @@ package OS.Exec is
 
    function Non_Blocking_Spawn
      (Args      : Argument_List;
+      Env       : CList;
       Cwd       : String                := "";
-      Env       : Argument_List         := Null_Argument_List;
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
       Stdout_Fd : OS.FS.File_Descriptor := OS.FS.Standout;
       Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr;
@@ -71,8 +72,8 @@ package OS.Exec is
 
    function Blocking_Spawn
      (Args      : Argument_List;
+      Env       : CList;
       Cwd       : String                := "";
-      Env       : Argument_List         := Null_Argument_List;
       Stdin_Fd  : OS.FS.File_Descriptor := OS.FS.Standin;
       Stdout_Fd : OS.FS.File_Descriptor := OS.FS.Standout;
       Stderr_Fd : OS.FS.File_Descriptor := OS.FS.Standerr;
@@ -86,8 +87,8 @@ package OS.Exec is
 
    function Blocking_Spawn
      (Args            : Argument_List;
+      Env             : CList;
       Cwd             : String                := "";
-      Env             : Argument_List         := Null_Argument_List;
       Stdin_Fd        : OS.FS.File_Descriptor := OS.FS.Standin;
       Stderr_Fd       : OS.FS.File_Descriptor := OS.FS.Standerr;
       Priority        : Priority_Class        := INHERIT;

@@ -1,3 +1,5 @@
+with "c.gpr";
+
 library project OS is
    for Library_Name use "os";
    for Library_Dir use "lib";

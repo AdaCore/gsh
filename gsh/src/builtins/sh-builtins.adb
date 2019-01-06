@@ -250,10 +250,13 @@ package body Sh.Builtins is
          declare
             Command : constant String := Args (Args'First).all;
             Arguments : CList;
-
+            Env       : CList;
          begin
             Append (Arguments, Args);
-            Result := Run (S, Command, Arguments, Get_Environment (S));
+            Get_Environment (S, Env);
+            Result := Run (S, Command, Arguments, Env);
+            Deallocate (Arguments);
+            Deallocate (Env);
             case Result.Kind is
                when RESULT_STD | RESULT_EXIT | RESULT_RETURN =>
                   return (RESULT_EXIT, Result.Status);
@@ -261,7 +264,6 @@ package body Sh.Builtins is
                when others =>
                   return (RESULT_EXIT, 1);
             end case;
-
          end;
       end if;
    end Exec_Builtin;
