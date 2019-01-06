@@ -44,8 +44,6 @@ package body Sh.Commands is
       Fd           : File_Descriptor;
       Buffer       : aliased String (1 .. 256);
       Buffer_Last  : Integer := 0;
-      --  Result       : String_List (1 .. 32);
-      --  Result_Last  : Natural := 0;
    begin
       Fd := Open_Read (Filename, Binary);
       --  Here we read only 256 characters. That should be sufficient
