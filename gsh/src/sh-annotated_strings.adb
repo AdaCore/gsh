@@ -28,7 +28,8 @@ with Ada.Unchecked_Deallocation;
 
 package body Sh.Annotated_Strings is
 
-   Null_Element : aliased constant Str_Element := (Kind => E_NULL);
+   Null_Element : aliased constant Str_Element := (Kind => E_CHAR,
+                                                   Char => ASCII.NUL);
    Null_Elements : aliased Str_Elements :=
      (1 .. 0 => Null_Element);
 
@@ -191,10 +192,7 @@ package body Sh.Annotated_Strings is
                         Result (F .. F + 3) := "<F/>";
                         Result_Last := F + 3;
                   end case;
-               when others =>
-                  null;
             end case;
-
          end;
       end loop;
 
@@ -266,7 +264,7 @@ package body Sh.Annotated_Strings is
          return "";
       end if;
 
-      for Index in Source.Buffer'Range loop
+      for Index in 1 .. Source.Last loop
          case Source.Buffer (Index).Kind is
             when E_CHAR =>
                Result_Last := Result_Last + 1;
@@ -276,8 +274,6 @@ package body Sh.Annotated_Strings is
                   Result_Last := Result_Last + 1;
                   Result (Result_Last) := ' ';
                end if;
-            when others =>
-               null;
          end case;
       end loop;
       return Result (1 .. Result_Last);

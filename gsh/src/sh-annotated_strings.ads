@@ -30,19 +30,16 @@ package Sh.Annotated_Strings is
 
    type Str_Element_Kind is
      (E_CHAR,
-      E_CTRL,
-      E_NULL);
+      E_CTRL);
    --  Element in an annotated string can be either a regular character, an
    --  annotation or null (??? should we remove null)
 
-   type Str_Element (Kind : Str_Element_Kind := E_NULL) is record
+   type Str_Element (Kind : Str_Element_Kind := E_CHAR) is record
       case Kind is
          when E_CHAR =>
             Char : Character;
          when E_CTRL =>
             Ctrl : Annotation;
-         when E_NULL =>
-            null;
       end case;
    end record;
 

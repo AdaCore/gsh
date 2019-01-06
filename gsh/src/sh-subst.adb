@@ -280,8 +280,6 @@ package body Sh.Subst is
                      Buffer_Last := Buffer_Last + 1;
                      Buffer (Buffer_Last) := El.Char;
                   end if;
-               when E_NULL =>
-                  raise Program_Error;
             end case;
          end;
       end loop;
