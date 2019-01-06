@@ -65,9 +65,15 @@ package body Sh.Builtins.Source is
       --  up, because the script should be in this case able to access
       --  the positional arguments of the parent script.
       if Args'Length > 1 then
-         Saved_Pos_Params := Get_Positional_Parameters (S);
-         Set_Positional_Parameters
-           (S, Args (Args'First + 1 .. Args'Last), False);
+         declare
+            New_Pos_Params : CList;
+         begin
+            Append (New_Pos_Params,
+                    Args (Args'First + 1 .. Args'Last));
+            Get_Positional_Parameters (S, Saved_Pos_Params);
+            Set_Positional_Parameters (S, New_Pos_Params);
+            Deallocate (New_Pos_Params);
+         end;
       end if;
 
       Return_Code := Eval (S, T);

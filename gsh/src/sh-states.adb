@@ -57,9 +57,8 @@ package body Sh.States is
    -- Enter_Scope --
    -----------------
 
-   function Enter_Scope (Previous : Shell_State) return Shell_State is
-
-      Result : Shell_State;
+   procedure Enter_Scope (Previous : Shell_State; Result : in out Shell_State)
+   is
 
       procedure Enter_Scope_Aux (Position : String_Maps.Cursor);
 
@@ -102,7 +101,8 @@ package body Sh.States is
                Enter_Scope_Aux2'Unrestricted_Access);
 
       --  Copy also the positional parameters status
-      Result.Pos_Params := Previous.Pos_Params;
+      Result.Pos_Params.Shift := Previous.Pos_Params.Shift;
+      Append (Result.Pos_Params.Table, Previous.Pos_Params.Table);
 
       --  Copy the current directory information
       Result.Current_Dir := new String'(Previous.Current_Dir.all);
@@ -124,8 +124,6 @@ package body Sh.States is
 
       Result.Script_Name := Previous.Script_Name;
       Result.Last_Exit_Status := Previous.Last_Exit_Status;
-
-      return Result;
 
    end Enter_Scope;
 
@@ -328,8 +326,7 @@ package body Sh.States is
             Shift : constant Integer := State.Pos_Params.Shift;
          begin
             Append (Result,
-                    State.Pos_Params.Table
-                    (Index + Shift).all);
+                    Element (State.Pos_Params.Table, Index + Shift));
             return Result;
          end;
       end if;
@@ -354,16 +351,17 @@ package body Sh.States is
                --  performed when expanding '@' even if IFS is set to '' or if
                --  we are in a quoted context
                declare
-                  PP : constant Pos_Params_State := State.Pos_Params;
                   Has_Parameter : Boolean := False;
                begin
-                  for J in PP.Table'First + PP.Shift .. PP.Table'Last loop
+                  for J in 1 + State.Pos_Params.Shift ..
+                     Length (State.Pos_Params.Table)
+                  loop
                      Has_Parameter := True;
-                     Append (Result, PP.Table (J).all);
+                     Append (Result, Element (State.Pos_Params.Table, J));
 
                      --  Add a 'forced' field separator which is not influenced
                      --  by IFS variable value
-                     if J < PP.Table'Last then
+                     if J < Length (State.Pos_Params.Table) then
                         Append (Result, FIELD_SEP);
                      end if;
                   end loop;
@@ -392,7 +390,6 @@ package body Sh.States is
                   --  Set to true when a separator should be added between each
                   --  positional parameter expansion.
 
-                  PP : constant Pos_Params_State := State.Pos_Params;
                begin
                   --  First compute the field separator if we are in a quoted
                   --  context.
@@ -411,9 +408,11 @@ package body Sh.States is
                      end;
                   end if;
 
-                  for J in PP.Table'First + PP.Shift .. PP.Table'Last loop
-                     Append (Result, PP.Table (J).all);
-                     if J < PP.Table'Last then
+                  for J in 1 + State.Pos_Params.Shift ..
+                     Length (State.Pos_Params.Table)
+                  loop
+                     Append (Result, Element (State.Pos_Params.Table, J));
+                     if J < Length (State.Pos_Params.Table) then
                         if Is_Splitable and then not Have_Sep then
                            Append (Result, FIELD_SEP);
                         elsif Have_Sep then
@@ -429,7 +428,7 @@ package body Sh.States is
             when '#' =>
                declare
                   Real_Size : constant Integer :=
-                    State.Pos_Params.Table'Length;
+                     Length (State.Pos_Params.Table);
                   Shift : constant Integer :=
                     State.Pos_Params.Shift;
                begin
@@ -629,8 +628,7 @@ package body Sh.States is
             Index : constant Integer := Integer'Value (Name);
             Shift : constant Integer := State.Pos_Params.Shift;
          begin
-            if Index + Shift <=
-              State.Pos_Params.Table'Last
+            if Index + Shift <= Length (State.Pos_Params.Table)
             then
                return True;
             else
@@ -702,11 +700,7 @@ package body Sh.States is
       Clear (State.Var_Table);
 
       --  Clear positional parameters
-      if State.Pos_Params.Scope = State.Scope_Level then
-         for J in State.Pos_Params.Table'Range loop
-            Free (State.Pos_Params.Table (J));
-         end loop;
-      end if;
+      Deallocate (State.Pos_Params.Table);
 
       --  Free Trap actions
       for J in State.Trap_Actions'Range loop
@@ -789,17 +783,13 @@ package body Sh.States is
    -----------------------------------
 
    procedure Restore_Positional_Parameters
-     (State : in out Shell_State; Pos_Params : Pos_Params_State)
+     (State : in out Shell_State; Pos_Params : in out Pos_Params_State)
    is
    begin
-      --  Free if necessary previous parameters
-      if State.Pos_Params.Scope = State.Scope_Level then
-         for J in State.Pos_Params.Table'Range loop
-            Free (State.Pos_Params.Table (J));
-         end loop;
-      end if;
-
-      State.Pos_Params := Pos_Params;
+      Deallocate (State.Pos_Params.Table);
+      State.Pos_Params.Shift := Pos_Params.Shift;
+      Append (State.Pos_Params.Table, Pos_Params.Table);
+      Deallocate (Pos_Params.Table);
    end Restore_Positional_Parameters;
 
    ---------------------------
@@ -817,12 +807,14 @@ package body Sh.States is
    -- Get_Positional_Parameters --
    -------------------------------
 
-   function Get_Positional_Parameters
-     (State : Shell_State)
-      return Pos_Params_State
+   procedure Get_Positional_Parameters
+     (State  : Shell_State;
+      Result : in out Pos_Params_State)
    is
    begin
-      return State.Pos_Params;
+      Result.Shift := State.Pos_Params.Shift;
+      Deallocate (Result.Table);
+      Append (Result.Table, State.Pos_Params.Table);
    end Get_Positional_Parameters;
 
    ---------------------
@@ -849,32 +841,12 @@ package body Sh.States is
 
    procedure Set_Positional_Parameters
      (State         : in out Shell_State;
-      Args          : String_List;
-      Free_Previous : Boolean := True)
+      Args          : CList)
    is
-      Args_Copy : constant String_List_Access
-        := new String_List (1 .. Args'Length);
    begin
-      for J in 1 .. Args'Length loop
-         --  We take the pain of readjusting the index of this array
-         --  so that the first index is 1.  That way, later one, when
-         --  we need to access say $3, we know that its value is at
-         --  index 3 of our array.
-         Args_Copy (J) := new String'(Args (Args'First + J - 1).all);
-      end loop;
-
-      --  Free if necessary previous parameters
-      if Free_Previous then
-         if State.Pos_Params.Scope = State.Scope_Level then
-            for J in State.Pos_Params.Table'Range loop
-               Free (State.Pos_Params.Table (J));
-            end loop;
-         end if;
-      end if;
-      --  XXX missing free for the list itself.
-
-      --  Set the new parameters
-      State.Pos_Params := (Args_Copy, 0, State.Scope_Level);
+      Deallocate (State.Pos_Params.Table);
+      Append (State.Pos_Params.Table, Args);
+      State.Pos_Params.Shift := 0;
    end Set_Positional_Parameters;
 
    ---------------------
@@ -1121,7 +1093,7 @@ package body Sh.States is
    is
       Shift : constant Integer := State.Pos_Params.Shift;
       Pos_Params_Size : constant Integer :=
-        State.Pos_Params.Table.all'Length;
+        Length (State.Pos_Params.Table);
    begin
       if Shift + N > Pos_Params_Size then
          --  Shift is too large, report an error.

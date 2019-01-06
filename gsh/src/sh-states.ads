@@ -30,10 +30,11 @@ with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Strings.Hash;
 with Sh.Tree; use Sh.Tree;
 with OS.FS;
+with C.Strings; use C.Strings;
 
 package Sh.States is
 
-   type Shell_State is private;
+   type Shell_State is limited private;
    --  Due to the approach taken in the implementation to use threads instead
    --  of processes (no fork on Windows), the shell state contains all the
    --  state needed by a shell "process". This means:
@@ -137,7 +138,7 @@ package Sh.States is
    --  @param Path the path to transform
    --  @return the normalized path
 
-   function Enter_Scope (Previous : Shell_State) return Shell_State;
+   procedure Enter_Scope (Previous : Shell_State; Result : in out Shell_State);
    --  Given the current state create a new scope and return its state
 
    function Leave_Scope
@@ -156,18 +157,18 @@ package Sh.States is
    -- Positional Parameters --
    ---------------------------
 
-   type Pos_Params_State is private;
+   type Pos_Params_State is limited private;
 
    procedure Set_Positional_Parameters
      (State         : in out Shell_State;
-      Args          : String_List;
-      Free_Previous : Boolean := True);
+      Args          : CList);
 
-   function Get_Positional_Parameters
-     (State : Shell_State) return Pos_Params_State;
+   procedure Get_Positional_Parameters
+     (State : Shell_State; Result : in out Pos_Params_State);
 
    procedure Restore_Positional_Parameters
-     (State : in out Shell_State; Pos_Params : Pos_Params_State);
+     (State : in out Shell_State;
+      Pos_Params : in out Pos_Params_State);
 
    procedure Shift_Positional_Parameters
      (State : in out Shell_State; N : Natural; Success : out Boolean);
@@ -209,10 +210,9 @@ package Sh.States is
 
 private
 
-   type Pos_Params_State is record
-      Table : String_List_Access := null;
+   type Pos_Params_State is limited record
+      Table : CList;
       Shift : Integer := 0;
-      Scope : Integer := 0;
    end record;
 
    type Var_Value is record

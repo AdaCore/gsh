@@ -299,7 +299,7 @@ package body Sh.Tree.Evals is
             --  of closing the writable side of the pipe and the main task the
             --  reading part
             GNAT.Task_Lock.Lock;
-            S_Copy := Enter_Scope (State);
+            Enter_Scope (State, S_Copy);
             Set_Descriptor (S_Copy, 1, Pipe_Output);
 
             --  Pass to the main task the fd to the readble side of the pipe.
@@ -646,7 +646,7 @@ package body Sh.Tree.Evals is
                --  that has assignments associated we need to create a
                --  temporary scope. In that case no Shell_Exit,
                --  Break_Exception or Continue_Exeception can be raised.
-               New_State := Enter_Scope (S);
+               Enter_Scope (S, New_State);
                Eval_Assign (New_State, T, N, True);
                Result := Eval_Cmd (State        => New_State,
                                    Command      => Cmd,
@@ -872,7 +872,7 @@ package body Sh.Tree.Evals is
             N           : Node_Id)
          do
             --  Create a new scope and override the stdout with the pipe output
-            Task_State := Enter_Scope (State);
+            Enter_Scope (State, Task_State);
             Set_Descriptor (Task_State, 1, Pipe_Output);
 
             --  If this is not the first task in the pipe list then stdin
@@ -915,7 +915,7 @@ package body Sh.Tree.Evals is
          S_Copy : Shell_State;
          Exit_Status : Integer;
       begin
-         S_Copy := Enter_Scope (State);
+         Enter_Scope (State, S_Copy);
          Set_Descriptor (S_Copy, 0, Input_Fd);
 
          Eval (S_Copy, Tree, N.Pipe_Childs (N.Pipe_Childs'Last));
@@ -944,11 +944,13 @@ package body Sh.Tree.Evals is
       N     : Node)
       return Eval_Result
    is
-      New_State   : Shell_State := Enter_Scope (State);
-      Descriptors : constant Shell_Descriptors := Get_Descriptors (New_State);
+      New_State   : Shell_State;
+      Descriptors : Shell_Descriptors;
       Exit_Status : Integer;
       Result      : Eval_Result;
    begin
+      Enter_Scope (State, New_State);
+      Descriptors := Get_Descriptors (New_State);
       --  Apply redirections
       if not Apply_Redirections (New_State, N.Redirections) then
          Exit_Status := Leave_Scope (New_State);

@@ -668,7 +668,13 @@ package body Sh.Builtins is
       end loop;
 
       if Saved_Index >= Args'First and then Saved_Index <= Args'Last then
-         Set_Positional_Parameters (S, Args (Saved_Index .. Args'Last));
+         declare
+            Pos_Args : CList;
+         begin
+            Append (Pos_Args, Args (Saved_Index .. Args'Last));
+            Set_Positional_Parameters (S, Pos_Args);
+            Deallocate (Pos_Args);
+         end;
       end if;
       return (RESULT_STD, 0);
    end Set_Builtin;

@@ -22,7 +22,6 @@
 
 with Sh.Tree.Evals; use Sh.Tree.Evals;
 with Sh.Tree; use Sh.Tree;
-with GNAT.Strings; use GNAT.Strings;
 
 package body Sh.Functions is
 
@@ -38,16 +37,18 @@ package body Sh.Functions is
    is
       Function_Tree : constant Shell_Tree :=
         Get_Function (State, Name);
-      Saved_Pos_Params : constant Pos_Params_State :=
-        Get_Positional_Parameters (State);
+      Saved_Pos_Params : Pos_Params_State;
       Result : Eval_Result;
-
-      Temp_List : constant String_List := As_List (Args);
+      New_Args : CList;
    begin
+      Get_Positional_Parameters (State, Saved_Pos_Params);
+      for Idx in 2 .. Length (Args) loop
+         Append (New_Args, Element (Args, Idx));
+      end loop;
       Set_Positional_Parameters
         (State,
-         Temp_List (Temp_List'First + 1 .. Temp_List'Last),
-         False);
+         New_Args);
+      Deallocate (New_Args);
 
       Result := Eval (State, Function_Tree);
       Restore_Positional_Parameters (State, Saved_Pos_Params);

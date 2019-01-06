@@ -28,7 +28,6 @@ with Ada.Command_Line; use Ada.Command_Line;
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Strings.Unbounded;
 with GNAT.OS_Lib;
-with GNAT.Strings; use GNAT.Strings;
 with Sh.Builtins; use Sh.Builtins;
 with Sh.Traces; use Sh.Traces;
 with OS;
@@ -195,18 +194,19 @@ package body Sh.Opts is
       if Arg_Number > Argument_Count then
          --  no positional parameters
          declare
-            Empty_List : String_List (1 .. 0);
+            Empty_List : CList;
          begin
             Set_Positional_Parameters (State, Empty_List);
          end;
       else
          declare
-            Args : String_List (1 .. Argument_Count - Arg_Number + 1);
+            Args : CList;
          begin
             for J in Arg_Number .. Argument_Count loop
-               Args (J - Arg_Number + 1) := new String'(Argument (J));
+               Append (Args, Argument (J));
             end loop;
             Set_Positional_Parameters (State, Args);
+            Deallocate (Args);
          end;
       end if;
 
