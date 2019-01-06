@@ -137,6 +137,19 @@ package body C.Strings is
       end loop;
    end Append;
 
+   ------------
+   -- Append --
+   ------------
+
+   procedure Append (Self : in out CList; Item : CList)
+   is
+   begin
+      Allocate (Self, Length (Item), Item.Str_Last);
+      for Idx in 1 .. Length (Item) loop
+         Append (Self, Element (Item, Idx));
+      end loop;
+   end Append;
+
    -----------------------
    -- As_C_String_Array --
    -----------------------

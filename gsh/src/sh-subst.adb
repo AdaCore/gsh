@@ -26,7 +26,6 @@
 
 with GNAT.Directory_Operations;     use GNAT.Directory_Operations;
 with Ada.Exceptions;                use Ada.Exceptions;
-with GNAT.OS_Lib; use GNAT.OS_Lib;
 with Sh.Annotated_Strings; use Sh.Annotated_Strings;
 with Sh.Buffers;           use Sh.Buffers;
 with Sh.Tokens;            use Sh.Tokens;
@@ -74,13 +73,12 @@ package body Sh.Subst is
    --  accounts. If the pattern is not valid or if no files are matching it
    --  then it resturns an empty list.
 
-   Empty_Set : constant String_List := (1 => new String'(""));
-
-   function Filename_Expansion
-     (SS  : in out Shell_State;
-      D   : String;
-      Set : String_List := Empty_Set)
-      return String_List;
+   procedure Filename_Expansion
+     (SS   : in out Shell_State;
+      List : in out CList;
+      D    : String;
+      Set  : CList := Empty_CList);
+   --  Append to List the filename expansion of D
 
    function Strip (S : String) return String;
    --  Strip any CR in the string and also all trailing LF.
@@ -166,8 +164,7 @@ package body Sh.Subst is
                Append (Result, Buffer (1 .. Buffer_Last));
             when WORD_FIELD =>
                if Is_File_Expansion_Enabled (SS) then
-                  Append (Result,
-                          Filename_Expansion (SS, Buffer (1 .. Buffer_Last)));
+                  Filename_Expansion (SS, Result, Buffer (1 .. Buffer_Last));
                else
                   Append (Result,
                           Buffer (1 .. Buffer_Last));
@@ -1365,11 +1362,11 @@ package body Sh.Subst is
    -- Filename_Expansion --
    ------------------------
 
-   function Filename_Expansion
-     (SS  : in out Shell_State;
-      D   : String;
-      Set : String_List := Empty_Set)
-      return String_List
+   procedure Filename_Expansion
+     (SS     : in out Shell_State;
+      List   : in out CList;
+      D      : String;
+      Set    : CList := Empty_CList)
    is
       Got_Open_Par  : Boolean := False;
       Need_Eval     : Boolean := False;
@@ -1377,18 +1374,6 @@ package body Sh.Subst is
       Pattern_End   : Integer := D'Last;
       Pattern_Begin : Integer;
       Only_Dirs     : Boolean := False;
-      CWD           : String_Access := null;
-      Entry_Buffer  : CList;
-
-      function Result (R : String_List) return String_List;
-      pragma Inline (Result);
-
-      function Result (R : String_List) return String_List is
-      begin
-         Free (CWD);
-         return R;
-      end Result;
-
    begin
       --  Detect pattern presence
       for I in D'Range loop
@@ -1415,88 +1400,100 @@ package body Sh.Subst is
 
       --  No pattern has been found
       if not Need_Eval then
-         if Set = Empty_Set then
+         if Length (Set) = 0 then
             --  If at toplevel then we can return the "pattern"
-            return (1 => new String'(D));
+            Append (List, D);
          else
-            declare
-               Buffer : String_List (1 .. Set'Length);
-               Buffer_Last : Natural := 0;
-            begin
-               --  otherwise check entries existence
-               for I in Set'Range loop
-                  declare
-                     Tmp : constant String := Resolve_Path
-                       (SS, Set (I).all & D);
-                  begin
-                     if GNAT.OS_Lib.Is_Regular_File (Tmp) or else
-                       GNAT.OS_Lib.Is_Directory (Tmp)
-                     then
-                        Buffer_Last := Buffer_Last + 1;
-                        Buffer (Buffer_Last) := new String'(Set (I).all & D);
-                     end if;
-                  end;
-               end loop;
-               return Buffer (1 .. Buffer_Last);
-            end;
+            --  otherwise check entries existence
+            for I in 1 .. Length (Set) loop
+               declare
+                  use OS.FS.Stat;
+                  Tmp : constant String := Normalize_Path
+                     (SS, Element (Set, I) & D);
+                  Tmp_Stat : constant File_Attributes :=
+                     File_Information (Tmp);
+               begin
+                  if Is_Regular_File (Tmp_Stat) or else
+                    Is_Directory (Tmp_Stat)
+                  then
+                     Append (List, Element (Set, I) & D);
+                  end if;
+               end;
+            end loop;
          end if;
+         return;
       end if;
 
       --  Set the current working directory
-      if Last_Slash >= D'First then
-         CWD := new String'(D (D'First .. Last_Slash));
-      else
-         CWD := new String'("");
-      end if;
-
-      --  Are we interested only in directory entries ?
-      if Pattern_End < D'Last then
-         Only_Dirs := True;
-      end if;
-
-      --  Find the entries
-      for I in Set'Range loop
-         if CWD.all = "" or else
-              GNAT.OS_Lib.Is_Directory
-                (Resolve_Path (SS, Set (I).all & CWD.all))
-         then
-            Simple_Filename_Expansion
-              (SS,
-               Entry_Buffer,
-               Set (I).all & CWD.all,
-               D (Pattern_Begin .. Pattern_End),
-               Only_Dirs);
+      declare
+         CWD : constant String := D (D'First .. Last_Slash);
+         Entry_Buffer  : CList;
+         use OS.FS.Stat;
+      begin
+         --  Are we interested only in directory entries ?
+         if Pattern_End < D'Last then
+            Only_Dirs := True;
          end if;
-      end loop;
 
-      if Length (Entry_Buffer) < 1 then
-         --  No entry has been found. If at toplevel return the pattern.
-         --  Otherwise propagate a null length string list
-         if Set = Empty_Set then
-            return Result ((1 => new String'(D)));
+         --  Find the entries
+         if Length (Set) = 0 then
+            if CWD = "" or else
+                    Is_Directory (File_Information (
+                      (Normalize_Path (SS, CWD))))
+            then
+               Simple_Filename_Expansion
+                    (SS,
+                     Entry_Buffer,
+                     CWD,
+                     D (Pattern_Begin .. Pattern_End),
+                     Only_Dirs);
+            end if;
+
          else
-            return Result (Null_String_List);
-         end if;
-      else
-         --  some entry have been found that match the first encountered
-         --  pattern start the recursion if needed
-         if Pattern_End < D'Last - 1 then
-            declare
-               Tmp : constant String_List := Filename_Expansion
-                 (SS, D (Pattern_End + 2 .. D'Last),
-                  As_List (Entry_Buffer));
-            begin
-               if Set = Empty_Set and Tmp = Null_String_List then
-                  return Result ((1 => new String'(D)));
-               else
-                  return Result (Tmp);
+            for I in 1 .. Length (Set) loop
+               if CWD = "" or else
+                    Is_Directory (File_Information (
+                      (Normalize_Path (SS, Element (Set, I) & CWD))))
+               then
+                  Simple_Filename_Expansion
+                    (SS,
+                     Entry_Buffer,
+                     Element (Set, I) & CWD,
+                     D (Pattern_Begin .. Pattern_End),
+                     Only_Dirs);
                end if;
-            end;
-         else
-            return Result
-              (As_List (Entry_Buffer));
+            end loop;
          end if;
-      end if;
+
+         if Length (Entry_Buffer) = 0 then
+            --  No entry has been found. If at toplevel return the pattern.
+            --  Otherwise propagate a null length string list
+            if Length (Set) = 0  then
+               Append (List, D);
+            end if;
+         else
+            --  some entry have been found that match the first encountered
+            --  pattern start the recursion if needed
+            if Pattern_End < D'Last - 1 then
+               declare
+                  Tmp : CList;
+               begin
+                  Filename_Expansion (SS, Tmp,
+                                      D (Pattern_End + 2 .. D'Last),
+                                      Entry_Buffer);
+                  if Length (Set) = 0 and Length (Tmp) = 0 then
+                     Append (List, D);
+                  else
+                     Append (List, Tmp);
+                  end if;
+                  Deallocate (Tmp);
+               end;
+            else
+               Append (List, Entry_Buffer);
+            end if;
+            Deallocate (Entry_Buffer);
+         end if;
+      end;
    end Filename_Expansion;
 
    ----------------

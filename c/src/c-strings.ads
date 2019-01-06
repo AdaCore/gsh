@@ -41,6 +41,9 @@ package C.Strings is
    procedure Append (Self : in out CList; Item : GS.String_List);
    --  Likewise with String_List
 
+   procedure Append (Self : in out CList; Item : CList);
+   --  Likewise with CList
+
    function Length (Self : CList) return Natural;
    pragma Inline (Length);
    --  Return number of elements stored
@@ -72,6 +75,7 @@ package C.Strings is
       Quote     : String)
       return String;
 
+   Empty_CList : constant CList;
 private
 
    type Indices is array (Natural range <>) of System.Address;
@@ -84,6 +88,6 @@ private
       Str_Last : Natural          := 0;
    end record;
 
-   Null_String_List : constant CList := (null, null, 0, 0);
+   Empty_CList : constant CList := (null, null, 0, 0);
 
 end C.Strings;
