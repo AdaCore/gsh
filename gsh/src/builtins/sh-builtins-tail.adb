@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -27,6 +27,7 @@
 with Sh.States.IO; use Sh.States.IO;
 with Sh.Utils; use Sh.Utils;
 with Sh.String_Utils; use Sh.String_Utils;
+with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 package body Sh.Builtins.Tail is
 
@@ -36,12 +37,12 @@ package body Sh.Builtins.Tail is
 
    function Tail_Builtin
      (S : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       Buffer        : String_Access := null;
-      Current_Arg   : Integer := Args'First;
-      Args_Last     : constant Integer := Args'Last;
+      Current_Arg   : Integer := 1;
+      Args_Last     : constant Integer := Length (Args);
       Use_Char_Mode : Boolean := False;
       --  tail can either count lines or characters. Default mode is line mode.
 
@@ -72,7 +73,7 @@ package body Sh.Builtins.Tail is
       --  First parse options
       while Current_Arg <= Args_Last loop
          declare
-            CA : constant String := Args (Current_Arg).all;
+            CA : constant String := Element (Args, Current_Arg);
          begin
 
             if CA = "-f" then
@@ -94,7 +95,7 @@ package body Sh.Builtins.Tail is
                end if;
 
                --  Check that the argument is an integer
-               if not Parse_Number (Args (Current_Arg).all) then
+               if not Parse_Number (Element (Args, Current_Arg)) then
                   Error (S, "tail: invalid context");
                   return (RESULT_STD, 1);
                end if;
@@ -123,7 +124,7 @@ package body Sh.Builtins.Tail is
 
       end loop;
 
-      if Current_Arg > Args'Last then
+      if Current_Arg > Length (Args) then
          Buffer := new String'(Read (S, 0));
       else
          declare
@@ -131,7 +132,7 @@ package body Sh.Builtins.Tail is
             Byte_Reads : Integer;
             Length : Long_Integer;
          begin
-            Fd := Open_Read (Resolve_Path (S, Args (Current_Arg).all),
+            Fd := Open_Read (Resolve_Path (S, Element (Args, Current_Arg)),
                              Binary);
             Length := File_Length (Fd);
             Buffer := new String (1 .. Integer (Length));

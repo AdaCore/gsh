@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -35,7 +35,7 @@ package body Sh.Builtins.Echo is
 
    function Echo_Builtin
      (S : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       Enable_Newline : Boolean := True;
@@ -99,38 +99,43 @@ package body Sh.Builtins.Echo is
       end Transform_Backslashes;
 
    begin
-      for I in Args'Range loop
-         if Args (I).all /= "" then
+      for I in 1 .. Length (Args) loop
+         declare
+            Arg : constant String := Element (Args, I);
+         begin
 
-            case Args (I).all (Args (I)'First) is
-               when '-' =>
-                  if Args (I).all = "-n" and In_Options then
-                     Enable_Newline := False;
-                  elsif Args (I).all = "-e" and In_Options then
-                     Enable_Backslash := True;
-                  else
+            if Arg /= "" then
+
+               case Arg (Arg'First) is
+                  when '-' =>
+                     if Arg = "-n" and In_Options then
+                        Enable_Newline := False;
+                     elsif Arg = "-e" and In_Options then
+                        Enable_Backslash := True;
+                     else
+                        In_Options := False;
+                        if Enable_Backslash then
+                           Put (S, 1, Transform_Backslashes (Arg));
+                        else
+                           Put (S, 1, Arg);
+                        end if;
+                        if I < Length (Args) then
+                           Put (S, 1, " ");
+                        end if;
+                     end if;
+                  when others =>
                      In_Options := False;
                      if Enable_Backslash then
-                        Put (S, 1, Transform_Backslashes (Args (I).all));
+                        Put (S, 1, Transform_Backslashes (Arg));
                      else
-                        Put (S, 1, Args (I).all);
+                        Put (S, 1, Arg);
                      end if;
-                     if I < Args'Last then
+                     if I < Length (Args) then
                         Put (S, 1, " ");
                      end if;
-                  end if;
-               when others =>
-                  In_Options := False;
-                  if Enable_Backslash then
-                     Put (S, 1, Transform_Backslashes (Args (I).all));
-                  else
-                     Put (S, 1, Args (I).all);
-                  end if;
-                  if I < Args'Last then
-                     Put (S, 1, " ");
-                  end if;
-            end case;
-         end if;
+               end case;
+            end if;
+         end;
       end loop;
 
       if Enable_Newline then
@@ -144,7 +149,7 @@ package body Sh.Builtins.Echo is
    -------------------
 
    function REcho_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
       function Replace_LF (S : String) return String;
 
@@ -165,10 +170,10 @@ package body Sh.Builtins.Echo is
          return Result (S'First .. Result_Index - 1);
       end Replace_LF;
    begin
-      for I in Args'Range loop
-         Put (S, 1, "argv[" & To_String (I - Args'First + 1) & "] = <" &
-              Replace_LF (Args (I).all) & ">");
-         if I < Args'Last then
+      for I in 1 .. Length (Args) loop
+         Put (S, 1, "argv[" & To_String (I) & "] = <" &
+              Replace_LF (Element (Args, I)) & ">");
+         if I < Length (Args) then
             New_Line (S, 1);
          end if;
       end loop;

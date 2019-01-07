@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -27,6 +27,7 @@
 with Sh.States.IO; use Sh.States.IO;
 with Sh.Utils; use Sh.Utils;
 with Sh.String_Utils; use Sh.String_Utils;
+with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 package body Sh.Builtins.Head is
 
@@ -36,12 +37,12 @@ package body Sh.Builtins.Head is
 
    function Head_Builtin
      (S : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       Buffer             : String_Access := null;
-      Current_Arg        : Integer := Args'First;
-      Args_Last          : constant Integer := Args'Last;
+      Current_Arg        : Integer := 1;
+      Args_Last          : constant Integer := Length (Args);
       Line_Number        : Integer := 10;
       Enable_Minus_N_Opt : Boolean := True;
 
@@ -49,7 +50,7 @@ package body Sh.Builtins.Head is
       --  First parse options
       while Current_Arg <= Args_Last loop
          declare
-            CA : constant String := Args (Current_Arg).all;
+            CA : constant String := Element (Args, Current_Arg);
             Is_Valid : Boolean;
          begin
 
@@ -67,7 +68,7 @@ package body Sh.Builtins.Head is
                end if;
 
                   --  Check that the argument is an integer
-               To_Integer (Args (Current_Arg).all, Line_Number, Is_Valid);
+               To_Integer (Element (Args, Current_Arg), Line_Number, Is_Valid);
 
                if not Is_Valid then
                   Put (S, 2, "head: invalid context" & ASCII.LF);
@@ -96,7 +97,7 @@ package body Sh.Builtins.Head is
 
       end loop;
 
-      if Current_Arg > Args'Last then
+      if Current_Arg > Length (Args) then
          Buffer := new String'(Read (S, 0));
       else
          declare
@@ -104,7 +105,7 @@ package body Sh.Builtins.Head is
             Byte_Reads : Integer;
             Length : Long_Integer;
          begin
-            Fd := Open_Read (Resolve_Path (S, Args (Current_Arg).all),
+            Fd := Open_Read (Resolve_Path (S, Element (Args, Current_Arg)),
                              Binary);
             Length := File_Length (Fd);
             Buffer := new String (1 .. Integer (Length));

@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -37,47 +37,51 @@ package body Sh.Builtins.Mkdir is
 
    function Mkdir_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
-      File_List_Start : Integer := Args'First;
+      File_List_Start : Integer := 1;
       Create_Intermediates : Boolean := False;
       Got_Errors : Boolean := False;
 
    begin
          --  Parse options
-      for Index in Args'Range loop
-         if Args (Index) (Args (Index)'First) = '-' then
-            if Args (Index).all = "--" then
-               File_List_Start := Index + 1;
+      for Index in 1 .. Length (Args) loop
+         declare
+            Arg : constant String := Element (Args, Index);
+         begin
+
+            if Arg (Arg'First) = '-' then
+               if Arg = "--" then
+                  File_List_Start := Index + 1;
+                  exit;
+               end if;
+
+               for C in Arg'First + 1 .. Arg'Last loop
+                  case Arg (C) is
+                     when 'p' => Create_Intermediates := True;
+                     when others =>
+                        Error (S, "mkdir: unknown option: " & Arg);
+                        return (RESULT_STD, 1);
+                  end case;
+               end loop;
+            else
+               File_List_Start := Index;
                exit;
             end if;
-
-            for C in Args (Index).all'First + 1 .. Args (Index).all'Last loop
-               case Args (Index).all (C) is
-                  when 'p' => Create_Intermediates := True;
-                  when others =>
-                     Error (S, "mkdir: unknown option: " &
-                            Args (Index).all);
-                     return (RESULT_STD, 1);
-               end case;
-            end loop;
-         else
-            File_List_Start := Index;
-            exit;
-         end if;
+         end;
       end loop;
 
       --  Check for operands presence.
-      if File_List_Start > Args'Last then
+      if File_List_Start > Length (Args) then
          Error (S, "mkdir: too few arguments");
          return (RESULT_STD, 1);
       end if;
 
       --  Iterate other the files
-      for Index in File_List_Start .. Args'Last loop
+      for Index in File_List_Start .. Length (Args) loop
          declare
-            CP : constant String := Normalize_Path (S, Args (Index).all);
+            CP : constant String := Normalize_Path (S, Element (Args, Index));
          begin
             if Create_Intermediates then
                Recursive_Make_Dir (CP);

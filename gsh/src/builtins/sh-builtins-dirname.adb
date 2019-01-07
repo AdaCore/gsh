@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -33,40 +33,40 @@ package body Sh.Builtins.Dirname is
    ----------------------
 
    function Dirname_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
       First : Integer := 0;
    begin
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          Error (S, "dirname: need at least one operand");
          return (RESULT_STD, 1);
       end if;
 
-      if Args (Args'First).all = "--" then
-         First := Args'First + 1;
+      if Element (Args, 1) = "--" then
+         First := 2;
       else
-         First := Args'First;
+         First := 1;
       end if;
 
-      if Args'Last - First + 1 > 1 then
+      if Length (Args) - First + 1 > 1 then
          Error (S, "dirname: does not accept more than one operand");
          return (RESULT_STD, 1);
       end if;
 
-      if Args (First).all = "" then
+      if Element (Args, First) = "" then
          Put (S, 1, "." & ASCII.LF);
          return (RESULT_STD, 0);
       end if;
 
       --  Step 1. If string is "//" just preserved the // which has special
       --  meaning on windows.
-      if Args (First).all = "//" or else Args (First).all = "\\" then
-         Put (S, 1, Args (First).all & ASCII.LF);
+      if Element (Args, First) = "//" or else Element (Args, First) = "\\" then
+         Put (S, 1, Element (Args, First) & ASCII.LF);
          return (RESULT_STD, 0);
       end if;
 
       declare
-         Path : constant String := Args (First).all;
+         Path : constant String := Element (Args, First);
          Filename_End : Integer := Path'Last;
       begin
          --  Remove trailing slashes (step 2 and 3)

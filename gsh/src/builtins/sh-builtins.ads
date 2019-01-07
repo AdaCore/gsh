@@ -7,7 +7,7 @@
 --                                 S p e c                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -26,13 +26,12 @@
 
 with Sh.States; use Sh.States;
 with C.Strings; use C.Strings;
-with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 package Sh.Builtins is
 
    type Builtin_Function
      is access function
-       (S : in out Shell_State; Args : String_List) return Eval_Result;
+       (S : in out Shell_State; Args : CList) return Eval_Result;
    --  The signature of a function implementing a given builtin.
 
    function Is_Builtin (Cmd : String) return Boolean;

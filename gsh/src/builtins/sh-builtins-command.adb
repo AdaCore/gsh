@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -27,6 +27,7 @@
 with Sh.Commands;              use Sh.Commands;
 with Sh.Utils;                 use Sh.Utils;
 with Sh.States.IO;      use Sh.States.IO;
+with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 package body Sh.Builtins.Command is
 
@@ -38,7 +39,7 @@ package body Sh.Builtins.Command is
 
    function Common_to_Type_and_Which
      (S    : in out Shell_State;
-      Args : String_List;
+      Args : CList;
       From : String;
       Path_Only : Boolean := True) return Integer;
 
@@ -92,7 +93,7 @@ package body Sh.Builtins.Command is
    ---------------------
 
    function Command_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
 
       From : constant String := "command";
@@ -101,57 +102,62 @@ package body Sh.Builtins.Command is
       Path_Only      : Boolean := False;
       Got_Errors     : Boolean := False;
 
-      Command_List_Start : Integer := Args'First;
+      Command_List_Start : Integer := 1;
    begin
 
       --  Parse options
-      for Index in Args'Range loop
+      for Index in 1 .. Length (Args) loop
+         declare
+            Arg : constant String := Element (Args, Index);
+         begin
+            if Arg (Arg'First) = '-' then
+               if Arg = "--" then
+                  Command_List_Start := Index + 1;
+                  exit;
+               elsif Arg = "-" then
+                  Command_List_Start := Index;
+                  exit;
+               end if;
 
-         if Args (Index) (Args (Index)'First) = '-' then
-            if Args (Index).all = "--" then
-               Command_List_Start := Index + 1;
-               exit;
-            elsif Args (Index).all = "-" then
+               for C in Arg'First + 1 .. Arg'Last loop
+                  case Arg (C) is
+                     when 'p'       =>
+                        Using_PATH := True;
+                        pragma Warnings (Off, Using_PATH);
+                        --  ??? The following is 'temporary' code
+                        --  not fully sure about how option '-p' should be
+                        --  treated
+                        Error (S,
+                               From & ": -p option is currently not handled");
+                        return (RESULT_STD, 1);
+
+                     when 'v' | 'V' =>
+                        Invoke_Command := False;
+                        Path_Only      := Arg (C) = 'v';
+                     when others =>
+                        Error (S,
+                               From & ": unknown option: " & Arg);
+                        return (RESULT_STD, 1);
+                  end case;
+               end loop;
+            else
                Command_List_Start := Index;
                exit;
             end if;
-
-            for C in Args (Index).all'First + 1 .. Args (Index).all'Last loop
-               case Args (Index).all (C) is
-                  when 'p'       =>
-                     Using_PATH := True;
-                     pragma Warnings (Off, Using_PATH);
-                     --  ??? The following is 'temporary' code
-                     --  not fully sure about how option '-p' should be
-                     --  treated
-                     Error (S,
-                            From & ": -p option is currently not handled");
-                     return (RESULT_STD, 1);
-
-                  when 'v' | 'V' =>
-                     Invoke_Command := False;
-                     Path_Only      := Args (Index).all (C) = 'v';
-                  when others =>
-                     Error (S,
-                            From & ": unknown option: " & Args (Index).all);
-                     return (RESULT_STD, 1);
-               end case;
-            end loop;
-         else
-            Command_List_Start := Index;
-            exit;
-         end if;
+         end;
       end loop;
 
       if Invoke_Command then
 
          declare
-            Command   : constant String := Args (Command_List_Start).all;
+            Command   : constant String := Element (Args, Command_List_Start);
             Arguments : CList;
             Env       : CList;
             Result    : Eval_Result;
          begin
-            Append (Arguments, Args (Command_List_Start .. Args'Last));
+            for Idx in Command_List_Start .. Length (Args) loop
+               Append (Arguments, Element (Args, Idx));
+            end loop;
             Get_Environment (S, Env);
             Result := Run (S, Command, Arguments, Env);
             Deallocate (Env);
@@ -165,9 +171,9 @@ package body Sh.Builtins.Command is
          end;
 
       else
-         for Index in Command_List_Start .. Args'Last loop
+         for Index in Command_List_Start .. Length (Args) loop
                Got_Errors := Got_Errors and Identify (S,
-                                                      Args (Index).all,
+                                                      Element (Args, Index),
                                                       From,
                                                       Path_Only);
          end loop;
@@ -184,7 +190,7 @@ package body Sh.Builtins.Command is
 
    function Common_to_Type_and_Which
      (S         : in out Shell_State;
-      Args      : String_List;
+      Args      : CList;
       From      : String;
       Path_Only : Boolean := True) return Integer
    is
@@ -192,18 +198,22 @@ package body Sh.Builtins.Command is
    begin
 
       --  No options are expected
-      for Index in Args'Range loop
-         if Args (Index) (Args (Index)'First) = '-' then
-            Error (S,
-                   From & ": unknown option: " & Args (Index).all);
-            return 1;
-         end if;
+      for Index in 1 .. Length (Args) loop
+         declare
+            Arg : constant String := Element (Args, Index);
+         begin
+            if Arg (Arg'First) = '-' then
+               Error (S,
+                      From & ": unknown option: " & Arg);
+               return 1;
+            end if;
+         end;
       end loop;
 
       --  Iterate on commands
-      for Index in Args'Range loop
+      for Index in 1 .. Length (Args) loop
          Got_Errors := Got_Errors and Identify (S,
-                                                Args (Index).all,
+                                                Element (Args, Index),
                                                 From,
                                                 Path_Only);
       end loop;
@@ -216,7 +226,7 @@ package body Sh.Builtins.Command is
    ------------------
 
    function Type_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
       From       : constant String := "type";
    begin
@@ -228,7 +238,7 @@ package body Sh.Builtins.Command is
    -------------------
 
    function Which_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
       From       : constant String := "which";
    begin

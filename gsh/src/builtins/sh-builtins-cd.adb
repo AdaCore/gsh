@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -33,23 +33,23 @@ package body Sh.Builtins.Cd is
    ------------------------
 
    function Change_Dir_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
       Status : Integer;
    begin
       --  If there was no argument provided, then cd to the HOME directory.
       --  If HOME directory is not provided, then the behavior is
       --  implementation-defined, and we simply do nothing.
-      if Args'Length =  0 then
+      if Length (Args) =  0 then
          Status := Change_Dir (S, Get_Var_Value (S, "HOME"));
-      elsif Args (Args'First).all = "-" then
+      elsif Element (Args, 1) = "-" then
          --  "-" is a special case: It should be equivalent to
          --  ``cd "$OLDPWD" && pwd''
          Status := Change_Dir
            (S, Get_Var_Value (S, "OLDPWD"), Verbose => True);
       else
 
-         Status := Change_Dir (S, Args (Args'First).all);
+         Status := Change_Dir (S, Element (Args, 1));
       end if;
       return (RESULT_STD, Status);
    end Change_Dir_Builtin;

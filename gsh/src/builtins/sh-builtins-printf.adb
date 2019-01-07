@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -30,14 +30,14 @@ with Sh.States.IO; use Sh.States.IO;
 package body Sh.Builtins.Printf is
 
    function Printf_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
-      Format_String : constant String := Args (Args'First).all;
+      Format_String : constant String := Element (Args, 1);
       Output        : Unbounded_String := To_Unbounded_String ("");
       Index         : Integer := Format_String'First;
       CC            : Character := Format_String (Index);
       Is_Left_Align : Boolean := False;
-      CS_Index      : Integer := Args'First + 1;
+      CS_Index      : Integer := 2;
       Number_First  : Integer;
       String_Size   : Integer := -1;
    begin
@@ -69,7 +69,7 @@ package body Sh.Builtins.Printf is
 
                case CC is
                   when 's' =>
-                     if CS_Index > Args'Last then
+                     if CS_Index > Length (Args) then
                         if String_Size > 0 then
                            declare
                               Result : constant String (1 .. String_Size) :=
@@ -79,24 +79,28 @@ package body Sh.Builtins.Printf is
                            end;
                         end if;
                      else
-                        if Args (CS_Index)'Length >= String_Size then
-                           Append (Output, Args (CS_Index).all);
-                        else
-                           declare
-                              Result : String (1 .. String_Size) :=
-                                (others => ' ');
-                           begin
-                              if Is_Left_Align then
-                                 Result (1 .. Args (CS_Index)'Length) :=
-                                   Args (CS_Index).all;
-                              else
-                                 Result
-                                   (String_Size - Args (CS_Index)'Length + 1 ..
-                                      String_Size) := Args (CS_Index).all;
-                              end if;
-                              Append (Output, Result);
-                           end;
-                        end if;
+                        declare
+                           Arg : constant String := Element (Args, CS_Index);
+                        begin
+
+                           if Arg'Length >= String_Size then
+                              Append (Output, Arg);
+                           else
+                              declare
+                                 Result : String (1 .. String_Size) :=
+                                   (others => ' ');
+                              begin
+                                 if Is_Left_Align then
+                                    Result (1 .. Arg'Length) := Arg;
+                                 else
+                                    Result
+                                      (String_Size - Arg'Length + 1 ..
+                                         String_Size) := Arg;
+                                 end if;
+                                 Append (Output, Result);
+                              end;
+                           end if;
+                        end;
                      end if;
                      CS_Index := CS_Index + 1;
                   when others => Append (Output, CC);

@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -25,7 +25,7 @@
 ------------------------------------------------------------------------------
 
 with Sh.States.IO; use Sh.States.IO;
-
+with GNAT.OS_Lib; use GNAT.OS_Lib;
 with GNAT.Directory_Operations;
 
 package body Sh.Builtins.Support is

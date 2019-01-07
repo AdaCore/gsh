@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -37,19 +37,19 @@ package body Sh.Builtins.Source is
    --------------------
 
    function Source_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
       T                : Shell_Tree;
       Return_Code      : Eval_Result;
       Saved_Pos_Params : Pos_Params_State;
    begin
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          Error (S, ".: filename argument required");
          return (RESULT_STD, 2);
       end if;
 
       begin
-         T := Parse_File (Resolve_Path (S, Args (Args'First).all));
+         T := Parse_File (Resolve_Path (S, Element (Args, 1)));
          Allow_Return (T);
       exception
          when OS.OS_Error =>
@@ -64,12 +64,13 @@ package body Sh.Builtins.Source is
       --  Note: If no arguments are provided, then do NOT set the arguments
       --  up, because the script should be in this case able to access
       --  the positional arguments of the parent script.
-      if Args'Length > 1 then
+      if Length (Args) > 1 then
          declare
             New_Pos_Params : CList;
          begin
-            Append (New_Pos_Params,
-                    Args (Args'First + 1 .. Args'Last));
+            for Idx in 2 .. Length (Args) loop
+               Append (New_Pos_Params, Element (Args, Idx));
+            end loop;
             Get_Positional_Parameters (S, Saved_Pos_Params);
             Set_Positional_Parameters (S, New_Pos_Params);
             Deallocate (New_Pos_Params);
@@ -83,7 +84,7 @@ package body Sh.Builtins.Source is
       Free_Node (T);
 
       --  Restore the positional parameters if necessary.
-      if Args'Length > 1 then
+      if Length (Args) > 1 then
          Restore_Positional_Parameters (S, Saved_Pos_Params);
       end if;
 

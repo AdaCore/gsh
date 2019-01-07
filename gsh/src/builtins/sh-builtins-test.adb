@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -26,6 +26,7 @@
 
 with Sh.Utils;            use Sh.Utils;
 with Sh.States.IO; use Sh.States.IO;
+with GNAT.OS_Lib; use GNAT.OS_Lib;
 with OS.FS;
 
 package body Sh.Builtins.Test is
@@ -65,7 +66,7 @@ package body Sh.Builtins.Test is
      (Left, Right : Long_Long_Integer) return Boolean;
 
    function Eval_Binop (S : in out Shell_State;
-                        Left, Right : String_Access;
+                        Left, Right : String;
                         Binop : Binop_Access) return Integer;
    --  A function that converts Left and Right to integers, and evaluates
    --  the Binop function using these values. Return 0 if Binop returned
@@ -122,21 +123,21 @@ package body Sh.Builtins.Test is
    ----------------
 
    function Eval_Binop (S : in out Shell_State;
-                        Left, Right : String_Access;
+                        Left, Right : String;
                         Binop : Binop_Access) return Integer
    is
       Left_V, Right_V : Long_Long_Integer;
       Success : Boolean;
    begin
-      To_LongLong (Left.all, Left_V, Success);
+      To_LongLong (Left, Left_V, Success);
       if not Success then
-         Error (S, "test: " & Left.all & ": integer expression expected");
+         Error (S, "test: " & Left & ": integer expression expected");
          return 2;
       end if;
 
-      To_LongLong (Right.all, Right_V, Success);
+      To_LongLong (Right, Right_V, Success);
       if not Success then
-         Error (S, "test: " & Right.all & ": integer expression expected");
+         Error (S, "test: " & Right & ": integer expression expected");
          return 2;
       end if;
 
@@ -235,9 +236,9 @@ package body Sh.Builtins.Test is
    ------------------
 
    function Test_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
-      Current_Pos : Integer := Args'First;
+      Current_Pos : Integer := 1;
       --  Position of the string currently parsed in Args.
 
       function Get_Bin_Op (Str : String) return Binary_Op;
@@ -251,13 +252,13 @@ package body Sh.Builtins.Test is
 
       function Eval
         (Op    : Binary_Op;
-         Left  : String_Access;
-         Right : String_Access)
+         Left  : String;
+         Right : String)
          return Integer;
       pragma Inline (Eval);
       --  Eval a binary operator expression.
 
-      function Eval (Op : Unary_Op; Param : String_Access) return Integer;
+      function Eval (Op : Unary_Op; Param : String) return Integer;
       --  Idem with unary operators.
 
       -- Parser functions --
@@ -274,28 +275,28 @@ package body Sh.Builtins.Test is
 
       function Eval
         (Op : Binary_Op;
-         Left : String_Access;
-         Right : String_Access)
+         Left : String;
+         Right : String)
          return Integer
       is
       begin
          case Op is
             when EQUAL_OP =>
-               return To_Integer (Left.all = Right.all);
+               return To_Integer (Left = Right);
             when NOT_EQUAL_OP =>
-               return To_Integer (Left.all /= Right.all);
+               return To_Integer (Left /= Right);
             when GREATER_THAN_OP =>
                return Eval_Binop (S, Left, Right, Greater_Than'Access);
             when GREATER_EQUAL_THAN_OP =>
                return Eval_Binop (S, Left, Right, Greater_Equal'Access);
             when NEWER_THAN_OP =>
-               if Newer_Than (Left.all, Right.all) then
+               if Newer_Than (Left, Right) then
                   return 0;
                else
                   return 1;
                end if;
             when OLDER_THAN_OP =>
-               if Older_Than (Left.all, Right.all) then
+               if Older_Than (Left, Right) then
                   return 0;
                else
                   return 1;
@@ -323,7 +324,7 @@ package body Sh.Builtins.Test is
       -- Eval --
       ----------
 
-      function Eval (Op : Unary_Op; Param : String_Access) return Integer is
+      function Eval (Op : Unary_Op; Param : String) return Integer is
          Fd : File_Descriptor;
          Result : Boolean;
 
@@ -364,7 +365,7 @@ package body Sh.Builtins.Test is
          case Op is
             when IS_DIR_OP  =>
                declare
-                  Real_File : constant String := Is_File (Param.all);
+                  Real_File : constant String := Is_File (Param);
                begin
                   if Real_File /= "" then
                      return To_Integer (Is_Directory (Real_File));
@@ -377,7 +378,7 @@ package body Sh.Builtins.Test is
                   FD    : Integer;
                   Valid : Boolean;
                begin
-                  To_Integer (Param.all, FD, Valid);
+                  To_Integer (Param, FD, Valid);
                   if not Valid then
                      return To_Integer (False);
                   end if;
@@ -386,7 +387,7 @@ package body Sh.Builtins.Test is
                end;
             when IS_FILE_OR_DIR_OP =>
                declare
-                  Real_File : constant String := Is_File (Param.all);
+                  Real_File : constant String := Is_File (Param);
                begin
                   if Real_File /= "" then
                      return To_Integer ((Is_Directory (Real_File) or else
@@ -398,7 +399,7 @@ package body Sh.Builtins.Test is
                end;
             when IS_FILE_OP =>
                declare
-                  Real_File : constant String := Is_File (Param.all);
+                  Real_File : constant String := Is_File (Param);
                begin
                   if Real_File /= "" then
                      return To_Integer (Is_Regular_File (Real_File) and then
@@ -409,7 +410,7 @@ package body Sh.Builtins.Test is
                end;
             when IS_NON_EMPTY_FILE =>
                declare
-                  Real_File : constant String := Is_File (Param.all);
+                  Real_File : constant String := Is_File (Param);
                begin
                   if Real_File /= "" then
                      Fd := Open_Read (Real_File, Binary);
@@ -426,7 +427,7 @@ package body Sh.Builtins.Test is
                end;
             when IS_RFILE_OP =>
                declare
-                  Real_File : constant String := Is_File (Param.all);
+                  Real_File : constant String := Is_File (Param);
                begin
                   if Real_File /= "" then
                      return To_Integer (Is_Readable_File (Real_File));
@@ -437,7 +438,7 @@ package body Sh.Builtins.Test is
 
             when IS_WFILE_OP =>
                declare
-                  Real_File : constant String := Is_File (Param.all);
+                  Real_File : constant String := Is_File (Param);
                begin
                   if Real_File /= "" then
                      return To_Integer (Is_Writable_File (Real_File));
@@ -550,14 +551,14 @@ package body Sh.Builtins.Test is
          Result := Parse_Not_Expr;
          if Result /= 0 then
             return Result;
-         elsif Current_Pos > Args'Last then
+         elsif Current_Pos > Length (Args) then
             return 0;
          end if;
 
-         if Args (Current_Pos).all = "-a" then
+         if Element (Args, Current_Pos) = "-a" then
             Current_Pos := Current_Pos + 1;
 
-            if Current_Pos > Args'Last then
+            if Current_Pos > Length (Args) then
                Error (S,
                       "test: argument expected after -a binary operator");
                --  This error message is different from what bash is
@@ -580,11 +581,11 @@ package body Sh.Builtins.Test is
 
       function Parse_Not_Expr return Integer is
       begin
-         if Args (Current_Pos).all = "!" then
+         if Element (Args, Current_Pos) = "!" then
 
             Current_Pos := Current_Pos + 1;
 
-            if Current_Pos > Args'Last then
+            if Current_Pos > Length (Args) then
                return 0;
             end if;
 
@@ -605,14 +606,14 @@ package body Sh.Builtins.Test is
 
          if Result = 0 then
             return 0;
-         elsif Current_Pos > Args'Last then
+         elsif Current_Pos > Length (Args) then
             return Result;
          end if;
 
-         if Args (Current_Pos).all = "-o" then
+         if Element (Args, Current_Pos) = "-o" then
             Current_Pos := Current_Pos + 1;
 
-            if Current_Pos > Args'Last then
+            if Current_Pos > Length (Args) then
                Error (S,
                       "test: argument expected after -o binary operator");
                --  This error message is different from what bash is
@@ -637,33 +638,33 @@ package body Sh.Builtins.Test is
          Current_Bin_Op : Binary_Op := NULL_BIN_OP;
          Current_Unary_Op : Unary_Op := NULL_UNARY_OP;
       begin
-         if Current_Pos + 2 <= Args'Last then
-            Current_Bin_Op := Get_Bin_Op (Args (Current_Pos + 1).all);
+         if Current_Pos + 2 <= Length (Args) then
+            Current_Bin_Op := Get_Bin_Op (Element (Args, Current_Pos + 1));
             if Current_Bin_Op /= NULL_BIN_OP then
                Current_Pos := Current_Pos + 3;
                return Eval (Current_Bin_Op,
-                            Args (Current_Pos - 3),
-                            Args (Current_Pos - 1));
+                            Element (Args, Current_Pos - 3),
+                            Element (Args, Current_Pos - 1));
             end if;
          end if;
 
-         if Current_Pos + 1 <= Args'Last then
-            Current_Unary_Op := Get_Unary_Op (Args (Current_Pos).all);
+         if Current_Pos + 1 <= Length (Args) then
+            Current_Unary_Op := Get_Unary_Op (Element (Args, Current_Pos));
             if Current_Unary_Op /= NULL_UNARY_OP then
                Current_Pos := Current_Pos + 2;
                return Eval (Current_Unary_Op,
-                            Args (Current_Pos - 1));
+                            Element (Args, Current_Pos - 1));
             end if;
          end if;
 
          Current_Pos := Current_Pos + 1;
-         return To_Integer (Args (Current_Pos - 1).all /= "");
+         return To_Integer (Element (Args, Current_Pos - 1) /= "");
       end Parse_Primary_Expr;
 
    begin
       --  special case describe in Posix. If test has 0 arguments then return
       --  false (non zero value).
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          return (RESULT_STD, 1);
       end if;
 

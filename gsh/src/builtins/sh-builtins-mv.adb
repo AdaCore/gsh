@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -33,18 +33,18 @@ with GNAT.Directory_Operations;
 package body Sh.Builtins.Mv is
 
    function Mv_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
       Status             : Integer;
-      Source_Index       : Integer := Args'First;
+      Source_Index       : Integer := 1;
       Overwrite_If_Exist : Boolean := False;
       Has_Errors         : Boolean := False;
    begin
       --  Handle options
       loop
-         exit when Source_Index > Args'Last;
+         exit when Source_Index > Length (Args);
          declare
-            Arg : constant String := Args (Source_Index).all;
+            Arg : constant String := Element (Args, Source_Index);
          begin
 
             if Arg (Arg'First) = '-' then
@@ -66,18 +66,19 @@ package body Sh.Builtins.Mv is
       end loop;
 
       --  We need at least two positional arguments
-      if Source_Index > Args'Last - 1 then
+      if Source_Index > Length (Args) - 1 then
          Error (S, "mv: need at least two arguments: source and destination");
          return (RESULT_STD, 1);
       end if;
 
       declare
-         Target : constant String := Normalize_Path (S, Args (Args'Last).all);
+         Target : constant String :=
+            Normalize_Path (S, Element (Args, Length (Args)));
          Is_Target_Dir : constant Boolean := Is_Directory
            (File_Information (Target));
       begin
 
-         if Source_Index /= Args'Last - 1 and then not Is_Target_Dir then
+         if Source_Index /= Length (Args) - 1 and then not Is_Target_Dir then
             --  We have multiple sources so ensure that target is an existing
             --  directory.
             Error (S, "mv: " & Target & " is not a directory");
@@ -85,10 +86,10 @@ package body Sh.Builtins.Mv is
          end if;
 
          --  Move all sources to target
-         for Index in Source_Index .. Args'Last - 1 loop
+         for Index in Source_Index .. Length (Args) - 1 loop
             declare
                Source : constant String := Normalize_Path
-                 (S, Args (Index).all);
+                 (S, Element (Args, Index));
                Final_Target : constant String :=
                  (if Is_Target_Dir then Join
                     (Target, GNAT.Directory_Operations.Base_Name (Source))

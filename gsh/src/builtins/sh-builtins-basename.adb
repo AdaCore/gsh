@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -33,38 +33,38 @@ package body Sh.Builtins.Basename is
    ----------------------
 
    function Basename_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
       First : Integer := 0;
    begin
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          Error (S, "basename: need at least one operand");
          return (RESULT_STD, 1);
       end if;
 
-      if Args (Args'First).all = "--" then
-         First := Args'First + 1;
+      if Element (Args, 1) = "--" then
+         First := 2;
       else
-         First := Args'First;
+         First := 1;
       end if;
 
-      if Args'Last - First + 1 > 2 then
+      if Length (Args) - First + 1 > 2 then
          Error (S, "basename: does not accept more than two operands");
          return (RESULT_STD, 1);
       end if;
 
-      if Args (First).all = "" then
+      if Element (Args, First) = "" then
          Put (S, 1, "" & ASCII.LF);
          return (RESULT_STD, 0);
       end if;
 
-      if Args (First).all = "//" or else Args (First).all = "\\" then
-         Put (S, 1, Args (First).all & ASCII.LF);
+      if Element (Args, First) = "//" or else Element (Args, First) = "\\" then
+         Put (S, 1, Element (Args, First) & ASCII.LF);
          return (RESULT_STD, 0);
       end if;
 
       declare
-         Path : constant String := Args (First).all;
+         Path : constant String := Element (Args, First);
          Filename_Start : Integer := Path'First;
          Filename_End : Integer := Path'Last;
       begin
@@ -84,9 +84,9 @@ package body Sh.Builtins.Basename is
             end if;
          end loop;
 
-         if Args'Last - First + 1 = 2 then
+         if Length (Args) - First + 1 = 2 then
             declare
-               Ext : constant String := Args (First + 1).all;
+               Ext : constant String := Element (Args, First + 1);
             begin
                if Filename_End - Filename_Start + 1 >= Ext'Length and then
                  Path (Filename_End - Ext'Length + 1 .. Filename_End) = Ext

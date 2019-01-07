@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -63,15 +63,15 @@ package body Sh.Builtins is
    --  called Name then null is returned.
 
    function Return_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
    --  Implement the "return" builtin.
 
    function Shift_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
    --  Implement the "shift" builtin.
 
    function Exec_Builtin
-     (S : in out Shell_State; Args : String_List)
+     (S : in out Shell_State; Args : CList)
       return Eval_Result;
    --  The exec utility shall open, close, and/or copy file descriptors as
    --  specified by any redirections as part of the command.
@@ -86,41 +86,41 @@ package body Sh.Builtins is
    --  fork/exec on Windows systems.
 
    function Eval_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    function Trap_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    function Export_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    function Set_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    function Unsetenv_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    function Exit_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    function Continue_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    function Break_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    function Read_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    function Unset_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    -------------------
    -- Break_Builtin --
    -------------------
 
    function Break_Builtin
-     (S : in out Shell_State; Args : String_List)
+     (S : in out Shell_State; Args : CList)
       return Eval_Result
    is
       Break_Number : Integer;
@@ -135,13 +135,13 @@ package body Sh.Builtins is
          return (RESULT_STD, 0);
       end if;
 
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          Break_Number := Current_Loop_Level;
       else
-         To_Integer (Args (Args'First).all, Break_Number, Is_Valid);
+         To_Integer (Element (Args, 1), Break_Number, Is_Valid);
          if not Is_Valid then
             Put (S, 2, "break: " &
-                 Args (Args'First).all &
+                 Element (Args, 1) &
                  ":numeric argument required" & ASCII.LF);
             return (RESULT_EXIT, 128);
          end if;
@@ -165,7 +165,7 @@ package body Sh.Builtins is
 
    function Continue_Builtin
      (S : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       Break_Number : Integer;
@@ -180,13 +180,13 @@ package body Sh.Builtins is
          return (RESULT_STD, 0);
       end if;
 
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          Break_Number := Current_Loop_Level;
       else
-         To_Integer (Args (Args'First).all, Break_Number, Is_Valid);
+         To_Integer (Element (Args, 1), Break_Number, Is_Valid);
          if not Is_Valid then
             Put (S, 2, "continue: " &
-                 Args (Args'First).all &
+                 Element (Args, 1) &
                  ":numeric argument required" & ASCII.LF);
             return (RESULT_EXIT, 128);
          end if;
@@ -210,7 +210,7 @@ package body Sh.Builtins is
 
    function Eval_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       use Ada.Strings.Unbounded;
@@ -219,9 +219,9 @@ package body Sh.Builtins is
       Result : Eval_Result;
 
    begin
-      Str := To_Unbounded_String (Args (Args'First).all);
-      for I in Args'First + 1 .. Args'Last loop
-         Str := Str & " " & Args (I).all;
+      Str := To_Unbounded_String (Element (Args, 1));
+      for I in 1 + 1 .. Length (Args) loop
+         Str := Str & " " & Element (Args, I);
       end loop;
 
       T := Parse_String (To_String (Str));
@@ -239,16 +239,16 @@ package body Sh.Builtins is
 
    function Exec_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       Result : Eval_Result;
    begin
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          return (RESULT_STD, 0);
       else
          declare
-            Command : constant String := Args (Args'First).all;
+            Command : constant String := Element (Args, 1);
             Arguments : CList;
             Env       : CList;
          begin
@@ -279,10 +279,12 @@ package body Sh.Builtins is
       return Eval_Result
    is
       Builtin  : constant Builtin_Function := Get_Builtin (Cmd);
-      Arg_List : constant String_List := As_List (Args);
+      Arg_List : CList;
    begin
-
-      return Builtin (S, Arg_List (Arg_List'First + 1 .. Arg_List'Last));
+      for Idx in 2 .. Length (Args) loop
+         Append (Arg_List, Element (Args, Idx));
+      end loop;
+      return Builtin (S, Arg_List);
    end Execute_Builtin;
 
    ------------------
@@ -291,7 +293,7 @@ package body Sh.Builtins is
 
    function Exit_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       Exit_Code : Integer;
@@ -299,22 +301,22 @@ package body Sh.Builtins is
    begin
       --  Calling "exit" without argument is equivalent to calling
       --  it with "$?" as its argument.
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          return (RESULT_EXIT, Get_Last_Exit_Status (S));
       end if;
 
       --  If more than one argument was provided, print an error
       --  message and return 1.
-      if Args'Length > 1 then
+      if Length (Args) > 1 then
          Error (S, "exit: too many arguments");
          return (RESULT_STD, 1);
       end if;
 
-      To_Integer (Args (Args'First).all, Exit_Code, Success);
+      To_Integer (Element (Args, 1), Exit_Code, Success);
       if not Success then
          --  The exit code value is not entirely numeric.
          --  Report the error and exit with value 255.
-         Error (S, "exit: " & Args (Args'First).all
+         Error (S, "exit: " & Element (Args, 1)
                 & ": numeric argument required");
          Exit_Code := 255;
       end if;
@@ -329,13 +331,13 @@ package body Sh.Builtins is
 
    function Export_Builtin
      (S : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
    begin
-      for I in Args'Range loop
+      for I in 1 .. Length (Args) loop
          declare
-            Arg : constant String := Args (I).all;
+            Arg : constant String := Element (Args, I);
             Equal_Pos : Integer := Arg'First;
          begin
             for Index in Arg'Range loop
@@ -546,7 +548,7 @@ package body Sh.Builtins is
 
    function Read_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       CC   : Character := Read (S, 0);
@@ -560,21 +562,21 @@ package body Sh.Builtins is
          CC := Read (S, 0);
       end loop;
 
-      if Args'Length > 0 then
+      if Length (Args) > 0 then
          declare
             List        : CList;
             Index       : Natural;
             List_Length : Natural;
          begin
-            Split_String (S, List, Str (Line), Args'Length - 1);
+            Split_String (S, List, Str (Line), Length (Args) - 1);
             List_Length := Length (List);
             Index := 1;
-            for J in Args'Range loop
+            for J in 1 .. Length (Args) loop
                if Index <= List_Length then
-                  Set_Var_Value (S, Args (J).all, Element (List, Index));
+                  Set_Var_Value (S, Element (Args, J), Element (List, Index));
                   Index := Index + 1;
                else
-                  Set_Var_Value (S, Args (J).all, "");
+                  Set_Var_Value (S, Element (Args, J), "");
                end if;
             end loop;
          end;
@@ -594,7 +596,7 @@ package body Sh.Builtins is
 
    function Return_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       Return_Value : Integer;
@@ -602,17 +604,17 @@ package body Sh.Builtins is
    begin
       --  If more than one argument was provided: Report an error and
       --  execute the return with a fixed return value of 1.
-      if Args'Length > 1 then
+      if Length (Args) > 1 then
          Error (S, "return: too many arguments");
          Save_Last_Exit_Status (S, 1);
 
       --  If one argument was provided: Return with this value.
-      elsif Args'Length = 1 then
-         To_Integer (Args (Args'First).all, Return_Value, Success);
+      elsif Length (Args) = 1 then
+         To_Integer (Element (Args, 1), Return_Value, Success);
          if not Success then
             --  The provided value is not a valid number, so report
             --  this problem, and force the return value to 255.
-            Error (S, "return: " & Args (Args'First).all
+            Error (S, "return: " & Element (Args, 1)
                    & ": numeric argument required");
             Return_Value := 255;
          end if;
@@ -633,47 +635,53 @@ package body Sh.Builtins is
 
    function Set_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       Saved_Index : Integer := -1;
    begin
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          return (RESULT_STD, 0);
       end if;
 
       --  Parse options
-      for Index in Args'Range loop
-         if Args (Index)'Length > 0 then
-            case Args (Index) (Args (Index)'First) is
-               when '-' =>
-                  if Args (Index).all = "--" then
-                     Saved_Index := Index + 1;
-                     exit;
-                  elsif Args (Index).all = "-x" then
-                     Set_Xtrace (S, True);
-                  elsif Args (Index).all = "-f" then
-                     Set_File_Expansion (S, False);
-                  else
-                     null;
-                  end if;
-               when '+' =>
-                  if Args (Index).all = "+x" then
-                     Set_Xtrace (S, False);
-                  elsif Args (Index).all = "+f" then
-                     Set_File_Expansion (S, True);
-                  end if;
+      for Index in 1 .. Length (Args) loop
+         declare
+            Arg : constant String := Element (Args, Index);
+         begin
+            if Arg'Length > 0 then
+               case Arg (Arg'First) is
+                  when '-' =>
+                     if Arg = "--" then
+                        Saved_Index := Index + 1;
+                        exit;
+                     elsif Arg = "-x" then
+                        Set_Xtrace (S, True);
+                     elsif Arg = "-f" then
+                        Set_File_Expansion (S, False);
+                     else
+                        null;
+                     end if;
+                  when '+' =>
+                     if Arg = "+x" then
+                        Set_Xtrace (S, False);
+                     elsif Arg = "+f" then
+                        Set_File_Expansion (S, True);
+                     end if;
 
-               when others => Saved_Index := Index; exit;
-            end case;
-         end if;
+                  when others => Saved_Index := Index; exit;
+               end case;
+            end if;
+         end;
       end loop;
 
-      if Saved_Index >= Args'First and then Saved_Index <= Args'Last then
+      if Saved_Index >= 1 and then Saved_Index <= Length (Args) then
          declare
             Pos_Args : CList;
          begin
-            Append (Pos_Args, Args (Saved_Index .. Args'Last));
+            for Index in Saved_Index .. Length (Args) loop
+               Append (Pos_Args, Element (Args, Index));
+            end loop;
             Set_Positional_Parameters (S, Pos_Args);
             Deallocate (Pos_Args);
          end;
@@ -687,7 +695,7 @@ package body Sh.Builtins is
 
    function Shift_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
       Shift : Integer := 1;
@@ -696,7 +704,7 @@ package body Sh.Builtins is
       --  If more than one argument was provided: Report an error,
       --  and abort with error code 1.
 
-      if Args'Length > 1 then
+      if Length (Args) > 1 then
          Error (S, "shift: too many arguments");
          return (RESULT_EXIT, 1);
       end if;
@@ -704,17 +712,17 @@ package body Sh.Builtins is
       --  If one argument was provided, convert it to an integer
       --  and use it as the number of shifts to perform.
 
-      if Args'Length = 1 then
-         To_Integer (Args (Args'First).all, Shift, Success);
+      if Length (Args) = 1 then
+         To_Integer (Element (Args, 1), Shift, Success);
 
          if not Success then
-            Error (S, "shift: " & Args (Args'First).all
+            Error (S, "shift: " & Element (Args, 1)
                    & ": numeric argument required");
             return (RESULT_EXIT, 1);
          end if;
 
          if Shift < 0 then
-            Error (S, "shift: " & Args (Args'First).all
+            Error (S, "shift: " & Element (Args, 1)
                    & ": shift count out of range");
             return (RESULT_STD, 1);
          end if;
@@ -734,23 +742,23 @@ package body Sh.Builtins is
 
    function Trap_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
 
    begin
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          --  To be implemented (should show the list of registered actions)
          null;
          return (RESULT_STD, 0);
-      elsif Args'Length = 1 then
+      elsif Length (Args) = 1 then
          Error (S, "trap: invalid number of arguments");
          return (RESULT_STD, 1);
       end if;
 
-      for J in Args'First + 1 .. Args'Last loop
+      for J in 1 + 1 .. Length (Args) loop
          declare
-            Cond : constant String := Args (J).all;
+            Cond : constant String := Element (Args, J);
             Signal_Number : Integer;
          begin
             if Cond = "EXIT" or else Cond = "0" then
@@ -761,11 +769,11 @@ package body Sh.Builtins is
             end if;
 
             if Signal_Number >= 0 then
-               if Args (Args'First).all = "-" then
+               if Element (Args, 1) = "-" then
                   Set_Trap_Action (S, null, Signal_Number);
                else
                   Set_Trap_Action (S,
-                                   new String'(Args (Args'First).all),
+                                   new String'(Element (Args, 1)),
                                    Signal_Number);
                end if;
             end if;
@@ -780,12 +788,12 @@ package body Sh.Builtins is
 
    function Unset_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
    begin
-      for Index in Args'Range loop
-         Unset_Var (S, Args (Index).all);
+      for Index in 1 .. Length (Args) loop
+         Unset_Var (S, Element (Args, Index));
       end loop;
       return (RESULT_STD, 0);
    end Unset_Builtin;
@@ -796,11 +804,11 @@ package body Sh.Builtins is
 
    function Unsetenv_Builtin
      (S    : in out Shell_State;
-      Args : String_List)
+      Args : CList)
       return Eval_Result
    is
    begin
-      Export_Var (S, Args (Args'First).all, "");
+      Export_Var (S, Element (Args, 1), "");
       return (RESULT_STD, 0);
    end Unsetenv_Builtin;
 

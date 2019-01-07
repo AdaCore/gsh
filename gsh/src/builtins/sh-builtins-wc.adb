@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -25,6 +25,7 @@
 ------------------------------------------------------------------------------
 
 with Sh.States.IO;      use Sh.States.IO;
+with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 package body Sh.Builtins.Wc is
 
@@ -33,7 +34,7 @@ package body Sh.Builtins.Wc is
    ----------------
 
    function Wc_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
 
       Global_Line_Count : Integer := 0;
@@ -101,25 +102,29 @@ package body Sh.Builtins.Wc is
 
    begin
       --  Parse arguments
-      for Index in Args'Range loop
-         if Args (Index).all (Args (Index)'First) = '-' then
-            Has_Option := True;
-            for Char_Index in Args (Index)'First + 1 .. Args (Index)'Last loop
-               case Args (Index) (Char_Index) is
-                  when 'w' => Show_Word_Count := True;
-                  when 'c' => Show_Byte_Count := True;
-                  when 'l' => Show_Line_Count := True;
-                  when others =>
-                     Put (S, 2,
-                          "unexpected option " &
-                            Args (Index) (Char_Index) & ASCII.LF);
-                     return (RESULT_STD, 1);
-               end case;
-            end loop;
-         else
-            File_List_Index := Index;
-            exit;
-         end if;
+      for Index in 1 .. Length (Args) loop
+         declare
+            Arg : constant String := Element (Args, Index);
+         begin
+            if Arg (Arg'First) = '-' then
+               Has_Option := True;
+               for Char_Index in Arg'First + 1 .. Arg'Last loop
+                  case Arg (Char_Index) is
+                     when 'w' => Show_Word_Count := True;
+                     when 'c' => Show_Byte_Count := True;
+                     when 'l' => Show_Line_Count := True;
+                     when others =>
+                        Put (S, 2,
+                             "unexpected option " &
+                               Arg (Char_Index) & ASCII.LF);
+                        return (RESULT_STD, 1);
+                  end case;
+               end loop;
+            else
+               File_List_Index := Index;
+               exit;
+            end if;
+         end;
       end loop;
 
       if not Has_Option then
@@ -132,7 +137,7 @@ package body Sh.Builtins.Wc is
       --  At this stage we read data either from files passed as arguments or
       --  if no file has been passed from stdin
       if File_List_Index /= -1 then
-         for File_Index in File_List_Index .. Args'Last loop
+         for File_Index in File_List_Index .. Length (Args) loop
             declare
                Fd : File_Descriptor;
                Fl : Long_Integer := 0;
@@ -140,16 +145,16 @@ package body Sh.Builtins.Wc is
                R : Integer;
                pragma Unreferenced (R);
             begin
-               Fd := Open_Read (Resolve_Path (S, Args (File_Index).all),
+               Fd := Open_Read (Resolve_Path (S, Element (Args, File_Index)),
                                 Binary);
                if Fd < 0 then
-                  Put (S, 2, "wc: " & Args (File_Index).all &
+                  Put (S, 2, "wc: " & Element (Args, File_Index) &
                        ": No such file or directory" & ASCII.LF);
                else
                   Fl := File_Length (Fd);
                   Buffer := new String (1 .. Integer (Fl));
                   R := Read (Fd, Buffer.all'Address, Buffer.all'Last);
-                  Count (Buffer.all, Args (File_Index).all);
+                  Count (Buffer.all, Element (Args, File_Index));
                   Close (Fd);
                   Free (Buffer);
                end if;
@@ -158,7 +163,7 @@ package body Sh.Builtins.Wc is
          end loop;
 
          --  more than 2 files so print totals
-         if Args'Last - File_List_Index > 0 then
+         if Length (Args) - File_List_Index > 0 then
             if Show_Line_Count then
                Put (S, 1, Integer'Image (Global_Line_Count));
             end if;

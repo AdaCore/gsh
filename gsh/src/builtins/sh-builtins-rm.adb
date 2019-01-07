@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -36,10 +36,10 @@ package body Sh.Builtins.Rm is
    ----------------
 
    function Rm_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
 
-      File_List_Start : Integer := Args'First;
+      File_List_Start : Integer := 1;
       Recursive       : Boolean := False;
       Force           : Boolean := False;
       Got_Errors      : Boolean := False;
@@ -124,35 +124,40 @@ package body Sh.Builtins.Rm is
    begin
 
       --  Parse options
-      for Index in Args'Range loop
-         if Args (Index) (Args (Index)'First) = '-' then
-            if Args (Index).all = "--" then
-               File_List_Start := Index + 1;
-               exit;
-            elsif Args (Index).all = "-" then
+      for Index in 1 .. Length (Args) loop
+         declare
+            Arg : constant String := Element (Args, Index);
+         begin
+
+            if Arg (Arg'First) = '-' then
+               if Arg = "--" then
+                  File_List_Start := Index + 1;
+                  exit;
+               elsif Arg = "-" then
+                  File_List_Start := Index;
+                  exit;
+               end if;
+
+               for C in Arg'First + 1 .. Arg'Last loop
+                  case Arg (C) is
+                     when 'f' => Force := True;
+                     when 'i' => Force := False;
+                     when 'R' => Recursive := True;
+                     when 'r' => Recursive := True;
+                     when others =>
+                        Error (S, "rm: unknown option: " & Arg);
+                        return (RESULT_STD, 1);
+                  end case;
+               end loop;
+            else
                File_List_Start := Index;
                exit;
             end if;
-
-            for C in Args (Index).all'First + 1 .. Args (Index).all'Last loop
-               case Args (Index).all (C) is
-                  when 'f' => Force := True;
-                  when 'i' => Force := False;
-                  when 'R' => Recursive := True;
-                  when 'r' => Recursive := True;
-                  when others =>
-                     Error (S, "rm: unknown option: " & Args (Index).all);
-                     return (RESULT_STD, 1);
-               end case;
-            end loop;
-         else
-            File_List_Start := Index;
-            exit;
-         end if;
+         end;
       end loop;
 
       --  Check for operands presence.
-      if File_List_Start > Args'Last then
+      if File_List_Start > Length (Args) then
          if not Force then
             Error (S, "rm: missing operand");
             return (RESULT_STD, 1);
@@ -162,10 +167,10 @@ package body Sh.Builtins.Rm is
       end if;
 
       --  Iterate other the files
-      for Index in File_List_Start .. Args'Last loop
+      for Index in File_List_Start .. Length (Args) loop
          declare
             Filename : constant String :=
-              Normalize_Path (S, Args (Index).all);
+              Normalize_Path (S, Element (Args, Index));
             Filename_Info : constant OS.FS.Stat.File_Attributes :=
               OS.FS.Stat.File_Information (Filename);
          begin

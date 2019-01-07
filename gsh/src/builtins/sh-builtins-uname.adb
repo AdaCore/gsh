@@ -7,7 +7,7 @@
 --                                 B o d y                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -33,7 +33,7 @@ package body Sh.Builtins.Uname is
    -------------------
 
    function Uname_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result
+     (S : in out Shell_State; Args : CList) return Eval_Result
    is
       Kernel_Name       : Boolean := False;
       Node_Name         : Boolean := False;
@@ -46,13 +46,13 @@ package body Sh.Builtins.Uname is
       Add_Space         : Boolean := False;
 
    begin
-      if Args'Length = 0 then
+      if Length (Args) = 0 then
          Kernel_Name := True;
 
       else
-         for Index in Args'Range loop
+         for Index in 1 .. Length (Args) loop
             declare
-               Arg : constant String := Args (Index).all;
+               Arg : constant String := Element (Args, Index);
             begin
                case Arg (Arg'First) is
                   when '-' =>

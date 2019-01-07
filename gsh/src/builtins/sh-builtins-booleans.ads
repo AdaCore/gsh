@@ -7,7 +7,7 @@
 --                                 S p e c                                  --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2016, AdaCore                   --
+--                       Copyright (C) 2010-2019, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -27,9 +27,9 @@
 package Sh.Builtins.Booleans is
 
    function True_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
    function False_Builtin
-     (S : in out Shell_State; Args : String_List) return Eval_Result;
+     (S : in out Shell_State; Args : CList) return Eval_Result;
 
 end Sh.Builtins.Booleans;
