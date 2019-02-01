@@ -18,7 +18,7 @@ GSH_ROOT_DIR = os.path.dirname(TESTSUITE_ROOT_DIR)
 DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
 
 
-def make_gsh(work_dir, gcov=False):
+def make_gsh(work_dir, gcov=False, recompile=True):
     """Build gsh with or without gcov instrumentation.
 
     :param work_dir: working directory. gsh is built in `build` subdir
@@ -47,10 +47,29 @@ def make_gsh(work_dir, gcov=False):
                          '-largs', '-lgcov',
                          '-gargs']
 
-    for project in ('c', 'os', 'gsh'):
-        logging.info('Compiling project %s', project)
-        obj_dir = os.path.join(build_dir, project)
-        mkdir(obj_dir)
+    if recompile:
+        for project in ('c', 'os', 'gsh'):
+            logging.info('Compiling project %s', project)
+            obj_dir = os.path.join(build_dir, project)
+            mkdir(obj_dir)
+
+            # Build & Install
+            p = Run(['gprbuild', '--relocate-build-tree', '-p', '-P',
+                     os.path.join(GSH_ROOT_DIR, project,
+                                  '%s.gpr' % project)] + gprbuild_opts,
+                    cwd=obj_dir, timeout=DEFAULT_TIMEOUT,
+                    output=None)
+
+            assert p.status == 0, \
+                "%s installation failed:\n%s" % (project, p.out)
+
+            p = Run(['gprinstall', '-p', '-f', '--prefix=%s' % install_dir,
+                     '--relocate-build-tree',
+                     '-P', os.path.join(GSH_ROOT_DIR, project,
+                                        '%s.gpr' % project)],
+                    cwd=obj_dir, timeout=DEFAULT_TIMEOUT)
+            assert p.status == 0, \
+                "%s installation failed:\n%s" % (project, p.out)
 
         # Build & Install
         p = Run(['gprbuild', '--relocate-build-tree', '-p', '-P',
@@ -69,20 +88,20 @@ def make_gsh(work_dir, gcov=False):
                 cwd=obj_dir, timeout=DEFAULT_TIMEOUT)
         assert p.status == 0, "%s installation failed:\n%s" % (project, p.out)
 
-    # Build & Install
-    p = Run(['gprbuild', '--relocate-build-tree', '-p', '-P',
-             os.path.join(GSH_ROOT_DIR, 'posix_shell.gpr')] +
-            gprbuild_opts,
-            cwd=obj_dir, timeout=DEFAULT_TIMEOUT,
-            output=None)
+        # Build & Install
+        p = Run(['gprbuild', '--relocate-build-tree', '-p', '-P',
+                 os.path.join(GSH_ROOT_DIR, 'posix_shell.gpr')] +
+                gprbuild_opts,
+                cwd=obj_dir, timeout=DEFAULT_TIMEOUT,
+                output=None)
 
-    assert p.status == 0, "mains installation failed:\n%s" % p.out
+        assert p.status == 0, "mains installation failed:\n%s" % p.out
 
-    p = Run(['gprinstall', '-p', '-f', '--prefix=%s' % install_dir,
-             '--relocate-build-tree',
-             '-P', os.path.join(GSH_ROOT_DIR, 'posix_shell.gpr')],
-            cwd=obj_dir, timeout=DEFAULT_TIMEOUT)
-    assert p.status == 0, "mains installation failed:\n%s" % p.out
+        p = Run(['gprinstall', '-p', '-f', '--prefix=%s' % install_dir,
+                 '--relocate-build-tree',
+                 '-P', os.path.join(GSH_ROOT_DIR, 'posix_shell.gpr')],
+                cwd=obj_dir, timeout=DEFAULT_TIMEOUT)
+        assert p.status == 0, "mains installation failed:\n%s" % p.out
 
     return (os.path.join(install_dir, 'share', 'gpr'),
             os.path.join(install_dir, 'include'),

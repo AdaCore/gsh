@@ -46,7 +46,8 @@ class MyTestsuite(Testsuite):
         self.env.gsh = os.path.abspath(os.path.join('../install/bin/gsh.exe'))
         if self.main.args.gcov:
             work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'gcov')
-            gpr_dir, src_dir, obj_dir = make_gsh(work_dir, gcov=True)
+            gpr_dir, src_dir, obj_dir = make_gsh(
+                    work_dir, gcov=True, recompile=self.main.args.recompile)
             self.env.gsh_gpr_dir = gpr_dir
             self.env.gsh_src_dir = src_dir
             self.env.gsh_obj_dir = obj_dir
@@ -58,7 +59,7 @@ class MyTestsuite(Testsuite):
         self.env.add_path(os.path.dirname(self.env.gsh))
         os.environ['SHELL'] = self.env.gsh
 
-        if self.main.args.recompile:
+        if self.main.args.recompile and not self.main.args.gcov:
             work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'prod')
             gpr_dir, _, _ = make_gsh(work_dir, gcov=False)
             self.env.gsh_prod_gpr_dir = gpr_dir
