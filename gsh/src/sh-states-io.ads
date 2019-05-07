@@ -39,7 +39,7 @@ package Sh.States.IO is
    --      operations are closed. This means that we cannot restore the
    --      previous state afterwards. The In_Place is currently used only in
    --      the context of the ``exec`` builtin
-   --  @return True if the operation is successfull, False otherwise
+   --  @return True if the operation is successful, False otherwise
 
    function Get_Descriptors (State : Shell_State) return Shell_Descriptors;
    --  Retrieves the current list of file descriptors.
