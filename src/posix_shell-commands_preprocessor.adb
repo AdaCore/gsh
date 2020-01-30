@@ -3,7 +3,7 @@
 --                                  G S H                                   --
 --                                                                          --
 --                                                                          --
---                       Copyright (C) 2010-2015, AdaCore                   --
+--                       Copyright (C) 2010-2020, AdaCore                   --
 --                                                                          --
 -- GSH is free software;  you can  redistribute it  and/or modify it under  --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -133,7 +133,7 @@ package body Posix_Shell.Commands_Preprocessor is
       Exec_Path   : String_Access := null;
       Exit_Status : Integer;
       Args_First  : Integer := Args'First;
-      Opt_Args    : access String_List := null;
+      Opt_Args    : String_List_Access := null;
    begin
 
       --  Output command line if -x is set
