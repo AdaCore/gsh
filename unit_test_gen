@@ -78,7 +78,7 @@ FUNCTION_LIST = {
     'Posix_Shell.Fileutils.Is_Null':
         {'args': ['Posix_Shell.Fileutils.Dir_Entry'],
          'return': 'Boolean'},
-   'Posix_Shell.Fileutils.Name':
+    'Posix_Shell.Fileutils.Name':
         {'args': ['Posix_Shell.Fileutils.Dir_Entry'],
          'return': 'String'},
 }
@@ -91,39 +91,39 @@ if __name__ == '__main__':
     packages |= set(["Lua.Ada_Types", "Lua.Ada_Limited_Types"])
 
     for package in packages:
-        print 'with %s;' % package
-    print
+        print('with %s;' % package)
+    print()
 
-    print 'package body Posix_Shell.Lua_Bindings is'
-    print
+    print('package body Posix_Shell.Lua_Bindings is')
+    print()
 
     for ada_type in TYPE_LIST:
         base = ada_type.split('.')[-1]
         if TYPE_LIST[ada_type]['kind'] == ADA_MANAGED:
-            print '   package Lua_%s is new Lua.Ada_Limited_Types' % base
-            print '     (%s);' % ada_type
-            print '   use Lua_%s;' % base
-            print
+            print('   package Lua_%s is new Lua.Ada_Limited_Types' % base)
+            print('     (%s);' % ada_type)
+            print('   use Lua_%s;' % base)
+            print()
         else:
-            print '   package Lua_%s is new Lua.Ada_Types' % base
-            print '     ("%s", %s);' % (ada_type, ada_type)
-            print '   use Lua_%s;' % base
-            print
+            print('   package Lua_%s is new Lua.Ada_Types' % base)
+            print('     ("%s", %s);' % (ada_type, ada_type))
+            print('   use Lua_%s;' % base)
+            print()
 
     for ada_fun in FUNCTION_LIST:
         base = ada_fun.split('.')[-1]
-        print '   function Lua_%s' % base
-        print '     (State : Lua_State)'
-        print '     return Integer;'
-        print '   pragma Convention (C, Lua_%s);' % base
-        print
+        print('   function Lua_%s' % base)
+        print('     (State : Lua_State)')
+        print('     return Integer;')
+        print('   pragma Convention (C, Lua_%s);' % base)
+        print()
 
     for ada_fun in FUNCTION_LIST:
         base = ada_fun.split('.')[-1]
-        print '   function Lua_%s' % base
-        print '     (State : Lua_State)'
-        print '     return Integer'
-        print '   is'
+        print('   function Lua_%s' % base)
+        print('     (State : Lua_State)')
+        print('     return Integer')
+        print('   is')
 
         index = 1
         call_list = ''
@@ -132,12 +132,12 @@ if __name__ == '__main__':
 
         for arg in FUNCTION_LIST[ada_fun]['args']:
             if arg in TYPE_LIST and TYPE_LIST[arg]['kind'] == ADA_MANAGED:
-                print '      A%s : constant access %s :=' % (index, arg)
-                print '        To_Ada (State, %s);' % index
+                print('      A%s : constant access %s :=' % (index, arg))
+                print('        To_Ada (State, %s);' % index)
                 call_list = 'A%s.all,' % index
             else:
-                print '      A%s : constant %s :=' % (index, arg)
-                print '        To_Ada (State, %s);' % index
+                print('      A%s : constant %s :=' % (index, arg))
+                print('        To_Ada (State, %s);' % index)
                 call_list = 'A%s,' % index
             index += 1
         if call_list:
@@ -149,43 +149,44 @@ if __name__ == '__main__':
             ret = FUNCTION_LIST[ada_fun]['return']
 
             if ret in TYPE_LIST and TYPE_LIST[ret]['kind'] == ADA_MANAGED:
-                print '      Result : constant access %s :=' % ret
-                print '        new %s\'' % ret
-                print '        (%s%s);' % (ada_fun_name, call_list)
+                print('      Result : constant access %s :=' % ret)
+                print('        new %s\'' % ret)
+                print('        (%s%s);' % (ada_fun_name, call_list))
             else:
-                print '      Result : constant %s :=' % ret
-                print '        %s%s;' % (ada_fun_name, call_list)
+                print('      Result : constant %s :=' % ret)
+                print('        %s%s;' % (ada_fun_name, call_list))
 
-            print '   begin'
-            print '      Push (State, Result);'
-            print '      return 1;'
+            print('   begin')
+            print('      Push (State, Result);')
+            print('      return 1;')
         else:
-            print '   begin'
-            print '      %s%s;' % (ada_fun_name, call_list)
-            print '      return 0;'
+            print('   begin')
+            print('      %s%s;' % (ada_fun_name, call_list))
+            print('      return 0;')
 
-        print '   end Lua_%s;' % base
-        print
+        print('   end Lua_%s;' % base)
+        print()
 
-    print '   procedure Initialize (State : Lua_State) is'
-    print '   begin'
+    print('   procedure Initialize (State : Lua_State) is')
+    print('   begin')
     for ada_fun in FUNCTION_LIST:
         base = ada_fun.split('.')[-1]
-        print '      Lua.Register_Function'
-        print '        (State,'
-        print '         "%s",' % ada_fun
-        print '         Lua_%s\'Access);' % base
+        print('      Lua.Register_Function')
+        print('        (State,')
+        print('         "%s",' % ada_fun)
+        print('         Lua_%s\'Access);' % base)
     for ada_type in TYPE_LIST:
         base = ada_type.split('.')[-1]
         pack = ".".join(ada_type.split('.')[:-1])
         if 'image' in TYPE_LIST[ada_type]:
-            print '      Lua_%s.Register_Image' % base
-            print '        (State, %s\'Access);' % (TYPE_LIST[ada_type]['image'])
+            print('      Lua_%s.Register_Image' % base)
+            print('        (State, %s\'Access);'
+                  % (TYPE_LIST[ada_type]['image']))
         for constant in TYPE_LIST[ada_type].get('constants', []):
-            print '      Lua_%s.Register_Object' % base
-            print '        (State, "%s", %s);' % ("%s.%s" % (pack, constant),
-                                                  "%s.%s" % (pack, constant))
+            print('      Lua_%s.Register_Object' % base)
+            print('        (State, "%s", %s);' % ("%s.%s" % (pack, constant),
+                                                  "%s.%s" % (pack, constant)))
 
-    print '   end Initialize;'
+    print('   end Initialize;')
 
-    print 'end Posix_Shell.Lua_Bindings;'
+    print('end Posix_Shell.Lua_Bindings;')
