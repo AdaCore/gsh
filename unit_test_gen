@@ -92,10 +92,10 @@ if __name__ == '__main__':
 
     for package in packages:
         print('with %s;' % package)
-    print()
+    print('')
 
     print('package body Posix_Shell.Lua_Bindings is')
-    print()
+    print('')
 
     for ada_type in TYPE_LIST:
         base = ada_type.split('.')[-1]
@@ -103,12 +103,12 @@ if __name__ == '__main__':
             print('   package Lua_%s is new Lua.Ada_Limited_Types' % base)
             print('     (%s);' % ada_type)
             print('   use Lua_%s;' % base)
-            print()
+            print('')
         else:
             print('   package Lua_%s is new Lua.Ada_Types' % base)
             print('     ("%s", %s);' % (ada_type, ada_type))
             print('   use Lua_%s;' % base)
-            print()
+            print('')
 
     for ada_fun in FUNCTION_LIST:
         base = ada_fun.split('.')[-1]
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         print('     (State : Lua_State)')
         print('     return Integer;')
         print('   pragma Convention (C, Lua_%s);' % base)
-        print()
+        print('')
 
     for ada_fun in FUNCTION_LIST:
         base = ada_fun.split('.')[-1]
@@ -165,7 +165,7 @@ if __name__ == '__main__':
             print('      return 0;')
 
         print('   end Lua_%s;' % base)
-        print()
+        print('')
 
     print('   procedure Initialize (State : Lua_State) is')
     print('   begin')
