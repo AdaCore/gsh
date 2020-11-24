@@ -1,15 +1,13 @@
 #!python
 
-from gnatpython.fileutils import rm
+from e3.fs import rm
 import argparse
 import os
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Remove empty directories')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Remove empty directories")
     parser.add_argument("dirs", nargs="*")
     args = parser.parse_args()
     if len(args.dirs) > 0:
         dirs = [k for k in args.dirs if os.path.isdir(k)]
         rm(dirs)
-    
-    
