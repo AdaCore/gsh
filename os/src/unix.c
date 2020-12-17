@@ -4,7 +4,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *                      Copyright (C) 2011-2019, AdaCore                    *
+ *                      Copyright (C) 2011-2020, AdaCore                    *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -39,6 +39,11 @@
 
 #if defined(__APPLE__)
 #include <copyfile.h>
+#define open64 open
+#endif
+#if defined(__unix__)
+#include <sys/time.h>
+#include <sys/resource.h>
 #define open64 open
 #endif
 
