@@ -62,6 +62,9 @@ library project GSH is
    end Compiler;
 
    package Linker is
-      for Linker_Options use ("-lntdll");
+      case OS is
+         when "Windows_NT" =>
+            for Linker_Options use ("-lntdll");
+      end case;
    end Linker;
 end GSH;
