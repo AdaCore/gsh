@@ -358,7 +358,9 @@ InterlockedExchangeAdd(
 #define InterlockedXor64 _InterlockedXor64
 #define InterlockedIncrement64 _InterlockedIncrement64
 #define InterlockedDecrement64 _InterlockedDecrement64
+#ifndef __INTRINSIC_DEFINED__InterlockedAdd64
 #define InterlockedAdd64 _InterlockedAdd64
+#endif
 #define InterlockedExchange64 _InterlockedExchange64
 #define InterlockedExchangeAdd64 _InterlockedExchangeAdd64
 #define InterlockedCompareExchange64 _InterlockedCompareExchange64
@@ -369,6 +371,8 @@ InterlockedExchangeAdd(
 
 #endif // _M_AMD64
 
+#ifndef __INTRINSIC_DEFINED__InterlockedAdd64
+#define __INTRINSIC_DEFINED__InterlockedAdd64
 #if defined(_M_AMD64) && !defined(RC_INVOKED) && !defined(MIDL_PASS)
 //#if !defined(_X86AMD64_) // FIXME: what's _X86AMD64_ used for?
 FORCEINLINE
@@ -381,7 +385,7 @@ InterlockedAdd64(
 }
 //#endif
 #endif
-
+#endif
 #endif /* !__INTERLOCKED_DECLARED */
 
 
