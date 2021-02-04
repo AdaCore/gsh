@@ -1,2 +1,4 @@
 title: Test for cp utility - nominal cases for Windows exe
 driver: shell_script
+skip:
+    - ['NOT_APPLICABLE', 'env.build.os.name != "windows"']

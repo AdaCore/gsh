@@ -35,8 +35,14 @@ class ShellScriptDriver(GNATcollTestDriver):
         """
         self.add_fragment(dag, 'check_run')
 
-    def check_run(self, previous_values):
+    def check_run(self, previous_values, slot):
         """Check status fragment."""
+        skip = self.should_skip()
+        if skip is not None:
+            self.result.set_status(skip)
+            self.push_result()
+            return False
+
         sync_tree(self.test_env['test_dir'],
                   self.test_env['working_dir'])
 

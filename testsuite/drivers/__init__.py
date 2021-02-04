@@ -152,7 +152,7 @@ def gprbuild(driver,
     mkdir(cwd)
     gprbuild_cmd = [
         'gprbuild', '--relocate-build-tree', '-p', '-P', project_file]
-    for k, v in scenario.iteritems():
+    for k, v in scenario.items():
         gprbuild_cmd.append('-X%s=%s' % (k, v))
     if gcov:
         gprbuild_cmd += ['-largs', '-lgcov', '-cargs',

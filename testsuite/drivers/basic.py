@@ -35,9 +35,9 @@ class BasicTestDriver(GNATcollTestDriver):
         self.add_fragment(dag, 'check_run', after=['build'])
 
         if 'test_exe' not in self.test_env:
-            self.test_env['test_exe'] = 'obj/test'
+            self.test_env['test_exe'] = os.path.join('obj', 'test')
 
-    def build(self, previous_values):
+    def build(self, previous_values, slot):
         """Build fragment."""
         skip = self.should_skip()
         if skip is not None:
@@ -52,7 +52,7 @@ class BasicTestDriver(GNATcollTestDriver):
         return gprbuild(self, gcov=self.env.gcov,
                         gpr_project_path=gpr_project_path)
 
-    def check_run(self, previous_values):
+    def check_run(self, previous_values, slot):
         """Check status fragment."""
         if not previous_values['build']:
             return

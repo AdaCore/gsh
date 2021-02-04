@@ -64,6 +64,7 @@ library project OS is
       case OS is
          when "Windows_NT" =>
             for Linker_Options use ("-lntdll");
+         when others => null;
       end case;
    end Linker;
 end OS;

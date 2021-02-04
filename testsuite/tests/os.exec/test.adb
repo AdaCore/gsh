@@ -11,12 +11,13 @@ is
    package GS renames GNAT.Strings;
    package EnvVar renames Ada.Environment_Variables;
    S : Ada.Strings.Unbounded.Unbounded_String;
-   Arg : Argument_List := (new String'(EnvVar.Value ("PYTHON_TEST_EXEC", "")),
-                           new String'("-c"),
-                           new String'("print 'hello'"));
+   Arg : CList;
    Status : Integer;
    Env    : CList;
-begin
+   begin
+   C.Strings.Append(Arg, EnvVar.Value ("PYTHON_TEST_EXEC", ""));
+   C.Strings.Append(Arg, "-c");
+   C.Strings.Append(Arg, "print('hello')");
    S := Blocking_Spawn (Arg, Env => Env, Status => Status);
    A.Assert (Status = 0);
    return A.Report;

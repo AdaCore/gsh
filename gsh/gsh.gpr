@@ -65,6 +65,8 @@ library project GSH is
       case OS is
          when "Windows_NT" =>
             for Linker_Options use ("-lntdll");
+         when others =>
+            for Linker_Options use ("-lreadline");
       end case;
    end Linker;
 end GSH;

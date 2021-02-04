@@ -17,17 +17,17 @@ class DataValidationDriver(GNATcollTestDriver):
         self.add_fragment(dag, 'build')
 
         tear_down_deps = []
-        for data_file, description in self.test_env['data_files'].iteritems():
+        for data_file, description in self.test_env['data_files'].items():
             tear_down_deps.append(data_file)
             self.add_fragment(
                 dag,
                 data_file,
-                fun=lambda x, d=data_file, m=description:
-                self.run_subtest(d, m, x),
+                fun=lambda x, y, d=data_file, m=description:
+                self.run_subtest(d, m, x, y),
                 after=['build'])
         self.add_fragment(dag, 'tear_down', after=tear_down_deps)
 
-    def run_subtest(self, data_file, description, previous_values):
+    def run_subtest(self, data_file, description, previous_values, slot):
         test_name = self.test_name + '.' + data_file
         result = TestResult(test_name, env=self.test_env)
 
@@ -53,7 +53,7 @@ class DataValidationDriver(GNATcollTestDriver):
             self.push_result(result)
             return TestStatus.FAIL
 
-    def tear_down(self, previous_values):
+    def tear_down(self, previous_values, slot):
         failures = [v for v in previous_values.values() if
                     not isinstance(v, TestStatus) or v != TestStatus.PASS]
         if failures:
@@ -67,6 +67,6 @@ class DataValidationDriver(GNATcollTestDriver):
         if self.env.enable_cleanup:
             rm(self.test_env['working_dir'], recursive=True)
 
-    def build(self, previous_values):
+    def build(self, previous_values, slot):
         return gprbuild(self, gcov=self.env.gcov,
                         gpr_project_path=self.env.gsh_gpr_dir)

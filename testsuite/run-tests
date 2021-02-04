@@ -14,59 +14,72 @@ import logging
 
 
 class MyTestsuite(Testsuite):
-    CROSS_SUPPORT = True
-    TEST_SUBDIR = 'tests'
-    DRIVERS = {
-        'json_validation': JSONValidationDriver,
-        'data_validation': DataValidationDriver,
-        'shell_script': ShellScriptDriver,
-        'default': BasicTestDriver}
+    tests_subdir = "tests"
+    test_driver_map = {
+        "json_validation": JSONValidationDriver,
+        "data_validation": DataValidationDriver,
+        "shell_script": ShellScriptDriver,
+        "default": BasicTestDriver,
+    }
 
-    def add_options(self):
-        self.main.argument_parser.add_argument(
-            '--gcov',
+    def add_options(self, parser):
+        parser.add_argument(
+            "--gcov",
             help="compute testsuite coverage of gsh",
             default=False,
-            action="store_true")
-        self.main.argument_parser.add_argument(
-            '--valgrind',
+            action="store_true",
+        )
+        parser.add_argument(
+            "--valgrind",
             help="check memory usage with Valgrind (memcheck tool)",
-            action="store_true")
-        self.main.argument_parser.add_argument(
-            '--recompile',
+            action="store_true",
+        )
+        parser.add_argument(
+            "--recompile",
             help="recompile production version of gsh for testing",
             default=False,
-            action="store_true")
+            action="store_true",
+        )
 
-    def tear_up(self):
+    def set_up(self):
         self.env.gcov = self.main.args.gcov
         self.env.valgrind = self.main.args.valgrind
         self.env.enable_cleanup = self.main.args.enable_cleanup
-        os.environ['PYTHON_TEST_EXEC'] = sys.executable
-        self.env.gsh = os.path.abspath(os.path.join('../install/bin/gsh.exe'))
+        os.environ["PYTHON_TEST_EXEC"] = sys.executable
+
+        if self.env.build.os.name == "windows":
+            # In order to get all the utilities from GnuWin32
+            self.env.add_path(os.path.join(TESTSUITE_ROOT_DIR, "prod-base"))
+
         if self.main.args.gcov:
-            work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'gcov')
+            work_dir = os.path.join(TESTSUITE_ROOT_DIR, "gcov")
+            recompile = self.main.args.recompile or os.path.isdir(work_dir)
             gpr_dir, src_dir, obj_dir = make_gsh(
-                    work_dir, gcov=True, recompile=self.main.args.recompile)
+                work_dir, gcov=True, recompile=recompile
+            )
             self.env.gsh_gpr_dir = gpr_dir
             self.env.gsh_src_dir = src_dir
             self.env.gsh_obj_dir = obj_dir
             self.env.gsh = os.path.abspath(
-                os.path.join(gpr_dir, '..', '..', 'bin', 'gsh.exe'))
+                os.path.join(
+                    gpr_dir, "..", "..", "bin", "gsh" + self.env.build.os.exeext
+                )
+            )
+            self.env.gsh_prod_gpr_dir = None
         else:
-            self.env.gsh_gpr_dir = None
+            work_dir = os.path.join(TESTSUITE_ROOT_DIR, "prod")
+            recompile = self.main.args.recompile or os.path.isdir(work_dir)
+            gpr_dir, _, _ = make_gsh(work_dir, gcov=False, recompile=recompile)
+            self.env.gsh_prod_gpr_dir = gpr_dir
+            self.env.gsh_gpr_dir = gpr_dir
+            self.env.gsh = os.path.abspath(
+                os.path.join(
+                    gpr_dir, "..", "..", "bin", "gsh" + self.env.build.os.exeext
+                )
+            )
 
         self.env.add_path(os.path.dirname(self.env.gsh))
-        os.environ['SHELL'] = self.env.gsh
-
-        if self.main.args.recompile and not self.main.args.gcov:
-            work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'prod')
-            gpr_dir, _, _ = make_gsh(work_dir, gcov=False)
-            self.env.gsh_prod_gpr_dir = gpr_dir
-            if self.env.gsh_gpr_dir is None:
-                self.env.gsh_gpr_dir = gpr_dir
-        else:
-            self.env.gsh_prod_gpr_dir = None
+        os.environ["SHELL"] = self.env.gsh
 
     def tear_down(self):
         if self.main.args.gcov:
@@ -74,39 +87,43 @@ class MyTestsuite(Testsuite):
 
             # We need to call gcov on gcda present both in gsh itself and
             # tests (for generics coverage).
-            gcda_files = \
-                find(os.path.join(self.env.gsh_obj_dir), '*.gcda') + \
-                find(os.path.join(self.env.working_dir), '*.gcda')
-            mkdir(os.path.join(wd, 'gcov', 'results'))
-            gcr = os.path.join(wd, 'gcov', 'results')
-            Run(['gcov'] + gcda_files,
-                cwd=os.path.join(wd, 'gcov', 'results'))
+            gcda_files = find(os.path.join(self.env.gsh_obj_dir), "*.gcda") + find(
+                os.path.join(self.env.working_dir), "*.gcda"
+            )
+            mkdir(os.path.join(wd, "gcov", "results"))
+            gcr = os.path.join(wd, "gcov", "results")
+            Run(["gcov"] + gcda_files, cwd=os.path.join(wd, "gcov", "results"))
             total_sources = 0
             total_covered = 0
 
-            for source_file in ls(
-                    os.path.join(self.env.gsh_src_dir, '*', '*')):
+            for source_file in ls(os.path.join(self.env.gsh_src_dir, "*", "*")):
                 base_file = os.path.basename(source_file)
-                if base_file.endswith('.h') or \
-                        base_file.endswith('.ads') or \
-                        base_file.endswith('.c'):
+                if (
+                    base_file.endswith(".h")
+                    or base_file.endswith(".ads")
+                    or base_file.endswith(".c")
+                ):
                     continue
 
-                if not os.path.isfile(os.path.join(gcr, base_file + '.gcov')):
+                if not os.path.isfile(os.path.join(gcr, base_file + ".gcov")):
                     total = 1
                     covered = 0
                     with open(source_file) as fd:
-                        total = len([line for line in fd
-                                     if line.strip() and
-                                     not re.match(r' *--', line)])
+                        total = len(
+                            [
+                                line
+                                for line in fd
+                                if line.strip() and not re.match(r" *--", line)
+                            ]
+                        )
                 else:
-                    with open(os.path.join(gcr, base_file + '.gcov')) as fd:
+                    with open(os.path.join(gcr, base_file + ".gcov")) as fd:
                         total = 0
                         covered = 0
                         for line in fd:
-                            if re.match(r' *-:', line):
+                            if re.match(r" *-:", line):
                                 pass
-                            elif re.match(r' *[#=]{5}:', line):
+                            elif re.match(r" *[#=]{5}:", line):
                                 total += 1
                             else:
                                 total += 1
@@ -114,27 +131,28 @@ class MyTestsuite(Testsuite):
                 total_sources += total
                 total_covered += covered
 
-                logging.info('%6.2f %% %8d %8d/%-8d %s',
-                             float(covered) * 100.0 / float(total),
-                             total - covered,
-                             covered,
-                             total,
-                             os.path.basename(source_file))
+                logging.info(
+                    "%6.2f %% %8d %8d/%-8d %s",
+                    float(covered) * 100.0 / float(total),
+                    total - covered,
+                    covered,
+                    total,
+                    os.path.basename(source_file),
+                )
 
-            logging.info('%6.2f %% %8d/%-8d %s',
-                         float(total_covered) * 100.0 / float(total_sources),
-                         total_covered,
-                         total_sources,
-                         'TOTAL')
+            logging.info(
+                "%6.2f %% %8d/%-8d %s",
+                float(total_covered) * 100.0 / float(total_sources),
+                total_covered,
+                total_sources,
+                "TOTAL",
+            )
         super(MyTestsuite, self).tear_down()
 
     @property
     def default_driver(self):
-        return 'default'
+        return "default"
 
 
-if __name__ == '__main__':
-    suite = MyTestsuite(os.path.dirname(__file__))
-    suite.testsuite_main()
-    for k, v in suite.test_status_counters.iteritems():
-        print('%-24s: %d' % (k, v))
+if __name__ == "__main__":
+    sys.exit(MyTestsuite(os.path.dirname(__file__)).testsuite_main())

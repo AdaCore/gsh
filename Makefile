@@ -13,7 +13,12 @@ all:
 	GPR_PROJECT_PATH="`pwd`/os$(PATHSEP)`pwd`/c$(PATHSEP)`pwd`/gsh$(PATHSEP)$(GPR_PROJECT_PATH)" gprbuild -j0 -p -P posix_shell -XBUILD=dev
 # Launch the testsuite
 check:
-	@(cd testsuite && python ./run-tests -t tmp -j0 $(TEST))
+	# ON Windows we need a full installation to run correctly the testsuite
+	if [ "$(OS)" = "Windows_NT" ]; then \
+	   make all PREFIX=testsuite/prod-base; \
+	   make install PREFIX=testsuite/prod-base; \
+	fi
+	@(cd testsuite && python ./run-tests -t tmp -j1 $(TEST))
 
 .PHONY: install
 install:
