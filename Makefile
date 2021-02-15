@@ -4,7 +4,6 @@ PREFIX=install
 
 # Check if we are on unix or windows system
 EXEEXT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo ".exe"; fi))
-LUA_PLAT:=$(strip $(shell if test "$(OS)" = "Windows_NT"; then echo "mingw"; else if test `uname` = 'Darwin'; then echo "macosx"; else echo "linux"; fi; fi))
 PATHSEP:=$(shell if test "$(OS)" = "Windows_NT"; then echo ";"; else echo ":"; fi)
 
 # Main build target
