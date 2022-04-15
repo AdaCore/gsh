@@ -1,6 +1,6 @@
 #!python
 
-from e3.fs import rm
+from gnatpython.fileutils import rm
 import argparse
 import os
 
