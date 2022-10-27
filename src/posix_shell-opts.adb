@@ -94,6 +94,8 @@ package body Posix_Shell.Opts is
                Set_Xtrace (State, True);
             elsif Arg = "-e" then
                null;
+            elsif Arg = "-ec" then
+               Has_Command_String := True;
             elsif Arg = "-c" then
                Has_Command_String := True;
             elsif Arg = "-i" then
