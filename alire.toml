@@ -1,0 +1,9 @@
+name = "GSH"
+description = "GSH is an implementation of a POSIX shell developed for the Windows platform."
+version = "0.2.0-dev"
+
+authors = ["AdaCore"]
+maintainers = ["Nicolas Roche <roche@adacore.com>"]
+maintainers-logins = ["Nikokrock"]
+project-files = ["posix_shell.gpr", "os/os.gpr", "c/c.gpr", "gsh/gsh.gpr" ]
+executables = ["posix_shell"]
