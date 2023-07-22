@@ -8,7 +8,7 @@ GSH is an implementation of a [POSIX shell](http://pubs.opengroup.org/onlinepubs
 developed for the Windows platform.
 
 The aim of the project is to provide an efficient UNIX shell
-instantiation for Windows, for non interactive usage.
+instantiation for Windows, for **non interactive** usage.
 
 GSH can be used to compile projects depending on autotools, UNIX make,...
 As it targets specifically Windows platform, GSH differs significantly
@@ -21,6 +21,11 @@ This allows better compiling performance (the build times can be up to 3 or
 ![XKCD on shell escaping](http://imgs.xkcd.com/comics/backslashes.png "Understanding shell escaping!")
 
 Image from [XKCD](http://www.xkcd.com/1638/)
+
+
+Requirements
+--------------------
+GSH is built using Ada and needs an Ada build environment.   Generally this requires the gcc-ada compiler.  If you do not already have a full Ada build environment the easiest way may be to use Alire.  For details on Alire and building using it see the Alire section below.
 
 Build & Installation
 --------------------
@@ -54,6 +59,17 @@ environment:
        $CONFIG_SHELL/configure --prefix=/myinstall_dir
        make)
  
+
+Alire Building
+-------
+Alire is a package manager for Ada but also much more than that.  It can automatically configure entire environments in a sandbox to allow building with whatever versioned dependencies a project may have.  None of the required items will pollute the rest of the computer all installed into alire specific paths under the user.  To install Alire download the latest release from: https://github.com/alire-project/alire/releases  . You do not need to use the installer you can download just the command line tool like: `alr-1.2.2-bin-x86_64-windows.zip`.  This will give you the "alr" binary which is used for managing the environent.
+
+If you run alr not in an msys environment the first time you run the command it will ask to install the tools to a local alr cache folder.  Using powershell go into the gsh folder and run `./bin/alr printenv --powershell | Invoke-Expression`  to setup the build env to include the path items required.  You should likely add alr to your path (at least temporarily) as well.  `$env:PATH="$pwd/bin;" + $env:PATH`.
+
+To build and just accept defaults for dependency packages use:
+`./bin/alr --non-interactive build -- -XBUILD=prod`
+You can then find the final binary in `obj/prod/gsr.exe`
+
 
 License
 -------
