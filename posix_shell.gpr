@@ -26,7 +26,7 @@ project Posix_Shell is
 
    case Build is
       when "dev" =>  Default_Switches := Default_Switches &
-         ("-fpreserve-control-flow", "-fdump-scos");
+         ( "-fdump-scos");
       when "prod" => null;
    end case;
 
